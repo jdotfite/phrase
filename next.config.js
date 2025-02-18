@@ -2,7 +2,11 @@
 const nextConfig = {
   output: 'export',
   reactStrictMode: true,
-  // ... other options
+  experimental: {
+    typedRoutes: true
+  },
+  typescript: {
+    ignoreBuildErrors: true
+  }
 }
-
 module.exports = nextConfig

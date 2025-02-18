@@ -1,7 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Search, X } from 'lucide-react';
-import type { FilterControlsProps } from '@/types/types';
+import type { FilterControlsProps, Filters } from '@/types/types';
+import { supabase } from '@/lib/supabase';
+
+// Add interface for subcategory data
+interface SubcategoryData {
+  name: string;
+}
 
 const FilterControls: React.FC<FilterControlsProps> = ({
   filters,
@@ -9,14 +15,95 @@ const FilterControls: React.FC<FilterControlsProps> = ({
   onReset,
   categories = [],
   difficulties = [],
-  partsOfSpeech = []
+  partsOfSpeech = [],
+  loading = false
 }) => {
+  const [subcategories, setSubcategories] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch subcategories when category changes
+  useEffect(() => {
+    const fetchSubcategories = async () => {
+      if (!filters.category) {
+        setSubcategories([]);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
+        // First get category_id
+        const { data: categoryData } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('name', filters.category)
+          .single();
+
+        if (categoryData) {
+          // Then get subcategories for this category
+          const { data: subcategoryData } = await supabase
+            .from('subcategories')
+            .select('name')
+            .eq('category_id', categoryData.id)
+            .order('name');
+
+          if (subcategoryData) {
+            setSubcategories(subcategoryData.map((sub: SubcategoryData) => sub.name));
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching subcategories:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSubcategories();
+  }, [filters.category]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    onChange(e.target.name, e.target.value);
+    const { name, value } = e.target;
+    
+    // Reset subcategory when category changes
+    if (name === 'category' && value !== filters.category) {
+      onChange('subcategory', '');
+    }
+    onChange(name, value);
   };
 
   const handleSearchClear = () => {
     onChange('searchTerm', '');
+  };
+
+  const handleFilterClear = (filterName: keyof Filters) => {
+    onChange(filterName, '');
+  };
+
+  // Render active filters pills
+  const renderActiveFilters = () => {
+    const activeFilters = Object.entries(filters).filter(([_, value]) => value);
+    if (activeFilters.length === 0) return null;
+
+    return (
+      <div className="mt-4 flex flex-wrap gap-2">
+        {activeFilters.map(([key, value]) => (
+          <div
+            key={key}
+            className="flex items-center gap-1 px-2 py-1 bg-gray-700 rounded-full text-sm"
+          >
+            <span className="text-gray-400">
+              {key === 'searchTerm' ? 'Search' : key}:
+            </span>
+            <span className="text-white">{value}</span>
+            <button
+              onClick={() => handleFilterClear(key as keyof Filters)}
+              className="ml-1 text-gray-400 hover:text-white"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        ))}
+      </div>
+    );
   };
 
   return (
@@ -74,6 +161,29 @@ const FilterControls: React.FC<FilterControlsProps> = ({
           </select>
         </div>
 
+        {/* Subcategory Select */}
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Subcategory
+          </label>
+          <select
+            name="subcategory"
+            value={filters.subcategory}
+            onChange={handleChange}
+            disabled={!filters.category || isLoading}
+            className="w-full p-2 bg-gray-700 border border-gray-600 rounded 
+                     text-white focus:ring-2 focus:ring-blue-500 
+                     disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <option value="">All Subcategories</option>
+            {subcategories.map(subcategory => (
+              <option key={subcategory} value={subcategory}>
+                {subcategory}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Difficulty Select */}
         <div>
           <label className="block text-sm font-medium mb-1">
@@ -115,25 +225,9 @@ const FilterControls: React.FC<FilterControlsProps> = ({
             ))}
           </select>
         </div>
-
-        {/* Subcategory Input */}
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Subcategory
-          </label>
-          <input
-            type="text"
-            name="subcategory"
-            value={filters.subcategory}
-            onChange={handleChange}
-            placeholder="Filter by subcategory"
-            className="w-full p-2 bg-gray-700 border border-gray-600 rounded 
-                     text-white focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
       </div>
 
-      {/* Action Buttons */}
+      {/* Filter Actions */}
       <div className="flex justify-end gap-4">
         <Button
           variant="outline"
@@ -143,42 +237,10 @@ const FilterControls: React.FC<FilterControlsProps> = ({
           <X className="h-4 w-4" />
           Reset Filters
         </Button>
-        <Button
-          variant="default"
-          onClick={() => {}} // Filters are applied automatically on change
-          className="flex items-center gap-2"
-        >
-          <Search className="h-4 w-4" />
-          Apply Filters
-        </Button>
       </div>
 
-      {/* Active Filters Display */}
-      {Object.values(filters).some(Boolean) && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {Object.entries(filters).map(([key, value]) => {
-            if (!value) return null;
-            return (
-              <div
-                key={key}
-                className="flex items-center gap-1 px-2 py-1 bg-gray-700 
-                         rounded-full text-sm"
-              >
-                <span className="text-gray-400">
-                  {key === 'searchTerm' ? 'Search' : key}:
-                </span>
-                <span>{value}</span>
-                <button
-                  onClick={() => onChange(key, '')}
-                  className="ml-1 text-gray-400 hover:text-gray-300"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {/* Active Filters */}
+      {renderActiveFilters()}
     </div>
   );
 };

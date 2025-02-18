@@ -1,12 +1,38 @@
 import React, { useState, useRef } from 'react';
 import { ChevronRight, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { BulkImportFormProps, PhraseBase } from '@/types/types';
-import { validateCSVFile, processCSVFile } from '@/utils/bulkImport';
+import type { BulkImportFormProps, NewPhrase, ImportedPhrase } from '@/types/types';
+import { supabase } from '@/lib/supabase';
+import Papa from 'papaparse';
+
+interface CategoryMap {
+  [key: string]: number;
+}
+
+interface SubcategoryMap {
+  [key: string]: number;
+}
+
+interface TagMap {
+  [key: string]: number;
+}
+
+interface ParsedRow {
+  phrase: string;
+  category: string;
+  difficulty: string;
+  subcategory: string;
+  tags: string;
+  hint: string;
+  part_of_speech: string;
+}
 
 const BulkImportForm: React.FC<BulkImportFormProps> = ({
   onSuccess,
-  onError
+  onError,
+  categories = [],
+  difficulties = [],
+  partsOfSpeech = []
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [bulkImportText, setBulkImportText] = useState('');
@@ -14,39 +40,175 @@ const BulkImportForm: React.FC<BulkImportFormProps> = ({
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const convertToCSVString = (phrases: PhraseBase[]): string => {
-    return phrases.map(phrase => {
-      // No need to handle tags as array since it's already a string
-      return [
-        phrase.phrase,
-        phrase.category,
-        phrase.difficulty,
-        phrase.subcategory || '',
-        phrase.tags || '',
-        phrase.hint || '',
-        phrase.part_of_speech || ''
-      ].join(',');
-    }).join('\n');
+  const processAndValidateCSV = (text: string): NewPhrase[] => {
+    const result = Papa.parse<string[]>(text, {
+      header: false,
+      skipEmptyLines: true
+    });
+
+    if (result.errors.length > 0) {
+      throw new Error(`CSV parsing error: ${result.errors[0].message}`);
+    }
+
+    return result.data.map((row: string[], index: number) => {
+      if (row.length !== 7) {
+        throw new Error(`Row ${index + 1}: Expected 7 fields but got ${row.length}`);
+      }
+
+      const [phrase, category, difficulty, subcategory, tags, hint, part_of_speech] = row;
+
+      if (!phrase?.trim()) throw new Error(`Row ${index + 1}: Phrase is required`);
+      if (!category?.trim()) throw new Error(`Row ${index + 1}: Category is required`);
+      if (!['Easy', 'Medium', 'Hard'].includes(difficulty)) {
+        throw new Error(`Row ${index + 1}: Invalid difficulty value`);
+      }
+
+      return {
+        phrase: phrase.trim(),
+        category: category.trim(),
+        difficulty: difficulty.trim(),
+        subcategory: subcategory?.trim() || '',
+        tags: tags?.trim() || '',
+        hint: hint?.trim() || '',
+        part_of_speech: part_of_speech?.trim() || ''
+      };
+    });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!bulkImportText?.trim()) return;
-
+  const handleBulkImport = async (text: string) => {
+    if (!text?.trim()) return;
     setLoading(true);
-    try {
-      const { data, error } = await fetch('/api/phrases/bulk', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ phrases: bulkImportText }),
-      }).then(res => res.json());
 
-      if (error) throw new Error(error);
+    try {
+      const phrases = processAndValidateCSV(text);
+      
+      // Step 1: Create/get categories and build mapping
+      const categoryMap: CategoryMap = {};
+      for (const phrase of phrases) {
+        if (!categoryMap[phrase.category]) {
+          const { data: existingCategory } = await supabase
+            .from('categories')
+            .select('id')
+            .eq('name', phrase.category)
+            .single();
+
+          if (existingCategory) {
+            categoryMap[phrase.category] = existingCategory.id;
+          } else {
+            const { data: newCategory } = await supabase
+              .from('categories')
+              .insert({ name: phrase.category })
+              .select('id')
+              .single();
+
+            if (newCategory) categoryMap[phrase.category] = newCategory.id;
+          }
+        }
+      }
+
+      // Step 2: Create/get subcategories and build mapping
+      const subcategoryMap: SubcategoryMap = {};
+      for (const phrase of phrases) {
+        if (phrase.subcategory && !subcategoryMap[phrase.subcategory]) {
+          const categoryId = categoryMap[phrase.category];
+          
+          const { data: existingSubcategory } = await supabase
+            .from('subcategories')
+            .select('id')
+            .eq('name', phrase.subcategory)
+            .eq('category_id', categoryId)
+            .single();
+
+          if (existingSubcategory) {
+            subcategoryMap[phrase.subcategory] = existingSubcategory.id;
+          } else {
+            const { data: newSubcategory } = await supabase
+              .from('subcategories')
+              .insert({
+                name: phrase.subcategory,
+                category_id: categoryId
+              })
+              .select('id')
+              .single();
+
+            if (newSubcategory) subcategoryMap[phrase.subcategory] = newSubcategory.id;
+          }
+        }
+      }
+
+      // Step 3: Create/get tags and build mapping
+      const tagMap: TagMap = {};
+      for (const phrase of phrases) {
+        if (phrase.tags) {
+          const tags = phrase.tags.split(',').map(t => t.trim());
+          for (const tag of tags) {
+            if (!tagMap[tag]) {
+              const { data: existingTag } = await supabase
+                .from('tags')
+                .select('id')
+                .eq('tag', tag)
+                .single();
+
+              if (existingTag) {
+                tagMap[tag] = existingTag.id;
+              } else {
+                const { data: newTag } = await supabase
+                  .from('tags')
+                  .insert({ tag })
+                  .select('id')
+                  .single();
+
+                if (newTag) tagMap[tag] = newTag.id;
+              }
+            }
+          }
+        }
+      }
+
+      // Step 4: Insert phrases
+      const phrasesForInsert = phrases.map(phrase => ({
+        phrase: phrase.phrase,
+        category_id: categoryMap[phrase.category],
+        subcategory_id: phrase.subcategory ? subcategoryMap[phrase.subcategory] : null,
+        difficulty: phrase.difficulty,
+        hint: phrase.hint || null,
+        part_of_speech: phrase.part_of_speech
+      }));
+
+      const { data: insertedPhrases, error: phraseError } = await supabase
+        .from('phrases')
+        .insert(phrasesForInsert)
+        .select('id');
+
+      if (phraseError) throw phraseError;
+
+      // Step 5: Create phrase-tag relationships
+      if (insertedPhrases) {
+        const phraseTagsToInsert = [];
+        for (let i = 0; i < phrases.length; i++) {
+          const phrase = phrases[i];
+          const phraseId = insertedPhrases[i].id;
+          
+          if (phrase.tags) {
+            const tags = phrase.tags.split(',').map(t => t.trim());
+            for (const tag of tags) {
+              phraseTagsToInsert.push({
+                phrase_id: phraseId,
+                tag_id: tagMap[tag]
+              });
+            }
+          }
+        }
+
+        if (phraseTagsToInsert.length > 0) {
+          await supabase
+            .from('phrase_tags')
+            .insert(phraseTagsToInsert);
+        }
+      }
 
       setBulkImportText('');
-      onSuccess(data?.newIds);
+      onSuccess(insertedPhrases?.map(p => p.id));
     } catch (err) {
       console.error('Bulk import error:', err);
       onError(err instanceof Error ? err.message : 'Failed to import phrases');
@@ -57,21 +219,11 @@ const BulkImportForm: React.FC<BulkImportFormProps> = ({
 
   const handleFileSelect = async (file: File) => {
     try {
-      // Validate file
-      const validation = await validateCSVFile(file);
-      if (!validation.isValid) {
-        onError(validation.message);
-        return;
-      }
-
-      // Process file
-      const content = await processCSVFile(file);
-      // Convert the processed array to CSV string format
-      const csvString = convertToCSVString(content);
-      setBulkImportText(csvString);
+      const text = await file.text();
+      setBulkImportText(text);
     } catch (err) {
-      console.error('File processing error:', err);
-      onError(err instanceof Error ? err.message : 'Failed to process file');
+      console.error('File reading error:', err);
+      onError('Failed to read file');
     }
   };
 
@@ -85,11 +237,7 @@ const BulkImportForm: React.FC<BulkImportFormProps> = ({
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setDragActive(false);
-    }
+    setDragActive(e.type === 'dragenter' || e.type === 'dragover');
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -119,73 +267,71 @@ const BulkImportForm: React.FC<BulkImportFormProps> = ({
 
       {isExpanded && (
         <div className="mt-6">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div
-              className={`relative border-2 border-dashed rounded-lg p-6
-                ${dragActive 
-                  ? 'border-blue-500 bg-blue-500/10' 
-                  : 'border-gray-600'
-                }`}
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                onChange={handleFileInput}
-                accept=".csv"
-                className="hidden"
-              />
-              
-              <div className="text-center">
-                <Upload className="mx-auto h-12 w-12 text-gray-400" />
-                <p className="mt-2 text-sm text-gray-400">
-                  Drag and drop a CSV file, or{' '}
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="text-blue-500 hover:text-blue-400"
-                  >
-                    browse
-                  </button>
-                </p>
-              </div>
-            </div>
-
-            <textarea
-              value={bulkImportText}
-              onChange={(e) => setBulkImportText(e.target.value)}
-              className="w-full h-32 p-2 bg-gray-700 border border-gray-600 
-                       rounded text-white focus:ring-2 focus:ring-blue-500"
-              placeholder="phrase,category,difficulty,subcategory,tags,hint,part_of_speech"
+          <div
+            className={`relative border-2 border-dashed rounded-lg p-6
+              ${dragActive 
+                ? 'border-blue-500 bg-blue-500/10' 
+                : 'border-gray-600'
+              }`}
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileInput}
+              accept=".csv"
+              className="hidden"
             />
-
-            <p className="text-sm text-gray-400">
-              Format: phrase,category,difficulty,subcategory,tags,hint,part_of_speech
-            </p>
-
-            <div className="flex justify-end gap-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setBulkImportText('');
-                  setIsExpanded(false);
-                }}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={loading || !bulkImportText.trim()}
-              >
-                {loading ? 'Importing...' : 'Import Phrases'}
-              </Button>
+            
+            <div className="text-center">
+              <Upload className="mx-auto h-12 w-12 text-gray-400" />
+              <p className="mt-2 text-sm text-gray-400">
+                Drag and drop a CSV file, or{' '}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-blue-500 hover:text-blue-400"
+                >
+                  browse
+                </button>
+              </p>
             </div>
-          </form>
+          </div>
+
+          <textarea
+            value={bulkImportText}
+            onChange={(e) => setBulkImportText(e.target.value)}
+            className="w-full h-32 p-2 mt-4 bg-gray-700 border border-gray-600 
+                     rounded text-white focus:ring-2 focus:ring-blue-500"
+            placeholder="phrase,category,difficulty,subcategory,tags,hint,part_of_speech"
+          />
+
+          <p className="text-sm text-gray-400 mt-2">
+            Format: phrase,category,difficulty,subcategory,tags,hint,part_of_speech
+          </p>
+
+          <div className="flex justify-end gap-4 mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setBulkImportText('');
+                setIsExpanded(false);
+              }}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => handleBulkImport(bulkImportText)}
+              disabled={loading || !bulkImportText.trim()}
+            >
+              {loading ? 'Importing...' : 'Import Phrases'}
+            </Button>
+          </div>
         </div>
       )}
     </div>

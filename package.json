@@ -8,6 +8,7 @@
     "@types/papaparse": "^5.3.15",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "framer-motion": "^12.4.2",
     "lucide-react": "^0.323.0",
     "next": "^14.1.0",
     "papaparse": "^5.5.2",
@@ -21,11 +22,13 @@
     "dev": "next dev",
     "start": "next start",
     "build": "next build",
-    "export": "next build && next export"
+    "export": "next build && npx next export",
+    "clean": "rimraf .next out"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.17",
     "postcss": "^8.4.35",
+    "rimraf": "^5.0.1",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.3.3"
   }

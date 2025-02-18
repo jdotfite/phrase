@@ -1,34 +1,25 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
-import type {
-  Phrase,
-  NewPhrase,
-  PaginationState,
-  SortConfig,
-  Filters,
-  UsePhrasesReturn
-} from '@/types/types';
+// hooks/usePhrases.ts
 
-export const usePhrases = (): UsePhrasesReturn => {
-  // State Management
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../lib/supabase'
+import type { Phrase, PaginationState, SortConfig, Filters } from '@/types/types';
+
+export const usePhrases = () => {
   const [phrases, setPhrases] = useState<Phrase[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
-  // Pagination State
+
   const [pagination, setPagination] = useState<PaginationState>({
     currentPage: 1,
     rowsPerPage: 20,
     totalPages: 1
   });
 
-  // Sort State
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: '',
     direction: 'asc'
   });
 
-  // Filter State
   const [filters, setFilters] = useState<Filters>({
     searchTerm: '',
     category: '',
@@ -37,29 +28,56 @@ export const usePhrases = (): UsePhrasesReturn => {
     part_of_speech: ''
   });
 
-  // Fetch Phrases
   const fetchPhrases = useCallback(async () => {
     try {
       setLoading(true);
-      let query = supabase.from('phrases').select('*', { count: 'exact' });
+      let query = supabase
+        .from('phrases')
+        .select(`
+          *,
+          categories:category_id(id, name),
+          subcategories:subcategory_id(id, name),
+          phrase_tags!inner(
+            tags(id, tag)
+          )
+        `, { count: 'exact' });
 
       // Apply filters
       if (filters.category) {
-        query = query.eq('category', filters.category);
+        // First get the category id
+        const { data: categoryData } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('name', filters.category)
+          .single();
+
+        if (categoryData) {
+          query = query.eq('category_id', categoryData.id);
+        }
       }
+
       if (filters.difficulty) {
         query = query.eq('difficulty', filters.difficulty);
       }
+
       if (filters.subcategory) {
-        query = query.eq('subcategory', filters.subcategory);
+        const { data: subcategoryData } = await supabase
+          .from('subcategories')
+          .select('id')
+          .eq('name', filters.subcategory)
+          .single();
+
+        if (subcategoryData) {
+          query = query.eq('subcategory_id', subcategoryData.id);
+        }
       }
+
       if (filters.part_of_speech) {
         query = query.eq('part_of_speech', filters.part_of_speech);
       }
+
       if (filters.searchTerm) {
-        query = query.or(
-          `phrase.ilike.%${filters.searchTerm}%,tags.ilike.%${filters.searchTerm}%`
-        );
+        query = query.or(`phrase.ilike.%${filters.searchTerm}%`);
       }
 
       // Apply sorting
@@ -68,6 +86,9 @@ export const usePhrases = (): UsePhrasesReturn => {
           ascending: sortConfig.direction === 'asc',
           nullsFirst: false
         });
+      } else {
+        // Default sort
+        query = query.order('id', { ascending: false });
       }
 
       // Apply pagination
@@ -75,11 +96,22 @@ export const usePhrases = (): UsePhrasesReturn => {
       const end = start + pagination.rowsPerPage - 1;
       query = query.range(start, end);
 
-      const { data, error: supabaseError, count } = await query;
+      const { data, error: supabaseError, count } = await query as SupabaseQueryResponse<PhraseWithRelations>;
 
       if (supabaseError) throw supabaseError;
 
-      setPhrases(data as Phrase[]);
+      // Transform the data
+      const transformedData = data?.map(item => ({
+        ...item,
+        category: item.categories?.name || '',
+        subcategory: item.subcategories?.name || '',
+        tags: item.phrase_tags
+          ?.map((pt: any) => pt.tags.tag)
+          .filter(Boolean)
+          .join(',') || ''
+      }));
+
+      setPhrases(transformedData || []);
       
       if (count !== null) {
         setPagination(prev => ({
@@ -93,40 +125,30 @@ export const usePhrases = (): UsePhrasesReturn => {
     } finally {
       setLoading(false);
     }
-  }, [filters, sortConfig.key, sortConfig.direction, pagination.currentPage, pagination.rowsPerPage]);
+  }, [filters, sortConfig, pagination.currentPage, pagination.rowsPerPage]);
 
-  // Sort Handlers
-  const handleSort = useCallback((key: keyof Phrase) => {
-    setSortConfig(prev => ({
-      key,
-      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
-    }));
-  }, []);
+  // Fetch categories for the filter
+  const fetchCategories = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('name')
+        .order('name');
 
-  const sortByIdDesc = useCallback(() => {
-    setSortConfig({ key: 'id', direction: 'desc' });
-  }, []);
+      if (error) throw error;
+      return data?.map(cat => cat.name) || [];
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+      return [];
+    }
+  };
 
-  // Pagination Handlers
-  const handlePageChange = useCallback((page: number) => {
-    setPagination(prev => ({ ...prev, currentPage: page }));
-  }, []);
-
-  const handleRowsPerPageChange = useCallback((rowsPerPage: number) => {
-    setPagination(prev => ({
-      ...prev,
-      rowsPerPage,
-      currentPage: 1
-    }));
-  }, []);
-
-  // Filter Handlers
-  const handleFilterChange = useCallback((name: string, value: string) => {
+  const handleFilterChange = (name: string, value: string) => {
     setFilters(prev => ({ ...prev, [name]: value }));
     setPagination(prev => ({ ...prev, currentPage: 1 }));
-  }, []);
+  };
 
-  const resetFilters = useCallback(() => {
+  const resetFilters = () => {
     setFilters({
       searchTerm: '',
       category: '',
@@ -135,60 +157,27 @@ export const usePhrases = (): UsePhrasesReturn => {
       part_of_speech: ''
     });
     setPagination(prev => ({ ...prev, currentPage: 1 }));
-  }, []);
+  };
 
-  // CRUD Operations
-  const addPhrase = useCallback(async (newPhrase: NewPhrase) => {
-    try {
-      const { error: supabaseError } = await supabase
-        .from('phrases')
-        .insert([newPhrase]);
+  const handleSort = (key: keyof Phrase) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
 
-      if (supabaseError) throw supabaseError;
-      
-      await fetchPhrases();
-      setError(null);
-    } catch (err) {
-      console.error('Error adding phrase:', err);
-      throw err instanceof Error ? err : new Error('Failed to add phrase');
-    }
-  }, [fetchPhrases]);
+  const handlePageChange = (page: number) => {
+    setPagination(prev => ({ ...prev, currentPage: page }));
+  };
 
-  const editPhrase = useCallback(async (phrase: Phrase) => {
-    try {
-      const { error: supabaseError } = await supabase
-        .from('phrases')
-        .update(phrase)
-        .eq('id', phrase.id);
+  const handleRowsPerPageChange = (rowsPerPage: number) => {
+    setPagination(prev => ({
+      ...prev,
+      rowsPerPage,
+      currentPage: 1
+    }));
+  };
 
-      if (supabaseError) throw supabaseError;
-      
-      await fetchPhrases();
-      setError(null);
-    } catch (err) {
-      console.error('Error updating phrase:', err);
-      throw err instanceof Error ? err : new Error('Failed to update phrase');
-    }
-  }, [fetchPhrases]);
-
-  const deletePhrase = useCallback(async (id: number) => {
-    try {
-      const { error: supabaseError } = await supabase
-        .from('phrases')
-        .delete()
-        .eq('id', id);
-
-      if (supabaseError) throw supabaseError;
-      
-      await fetchPhrases();
-      setError(null);
-    } catch (err) {
-      console.error('Error deleting phrase:', err);
-      throw err instanceof Error ? err : new Error('Failed to delete phrase');
-    }
-  }, [fetchPhrases]);
-
-  // Effect to fetch phrases when dependencies change
   useEffect(() => {
     fetchPhrases();
   }, [fetchPhrases]);
@@ -197,7 +186,6 @@ export const usePhrases = (): UsePhrasesReturn => {
     phrases,
     loading,
     error,
-    setError,
     pagination,
     sortConfig,
     filters,
@@ -205,14 +193,9 @@ export const usePhrases = (): UsePhrasesReturn => {
     handlePageChange,
     handleRowsPerPageChange,
     handleFilterChange,
-    addPhrase,
-    editPhrase,
-    deletePhrase,
-    fetchPhrases,
-    applyFilters: fetchPhrases,
     resetFilters,
-    sortByIdDesc
+    fetchCategories,
+    fetchPhrases,
+    setError
   };
 };
-
-export default usePhrases;

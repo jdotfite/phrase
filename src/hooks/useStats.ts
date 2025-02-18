@@ -16,49 +16,56 @@ export const useStats = (): UseStatsReturn => {
     difficultyBreakdown: {
       easy: 0,
       medium: 0,
-      hard: 0
-    }
+      hard: 0,
+    },
   });
-  
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const calculateStats = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      const { data, error: fetchError, count } = await supabase
+      const { data: phrases, error: fetchError, count } = await supabase
         .from('phrases')
-        .select('*', { count: 'exact' });
+        .select(`
+          *,
+          categories:category_id (name)
+        `, { count: 'exact' });
 
       if (fetchError) throw fetchError;
-      if (!data) throw new Error('No data received');
-
-      const phrases = data as Phrase[];
+      if (!phrases) throw new Error('No data received');
 
       // Calculate unique categories
-      const uniqueCategories = new Set(phrases.map(p => p.category)).size;
+      const uniqueCategories = new Set(phrases.map((p) => p.categories?.name)).size;
+
+      // Map difficulty numbers to labels
+      const difficultyLabels = {
+        1: 'easy',
+        2: 'medium',
+        3: 'hard',
+      };
 
       // Calculate difficulty breakdown
       const difficultyCount = phrases.reduce((acc: Record<string, number>, phrase) => {
-        const difficulty = phrase.difficulty.toLowerCase();
-        acc[difficulty] = (acc[difficulty] || 0) + 1;
+        const difficultyLabel = difficultyLabels[phrase.difficulty] || 'unknown';
+        acc[difficultyLabel] = (acc[difficultyLabel] || 0) + 1;
         return acc;
       }, {});
 
       const total = count || phrases.length;
 
-      // Calculate percentages and ensure they sum to 100
-      let easy = Math.round((difficultyCount['easy'] || 0) / total * 100);
-      let medium = Math.round((difficultyCount['medium'] || 0) / total * 100);
-      let hard = Math.round((difficultyCount['hard'] || 0) / total * 100);
+      // Calculate percentages
+      let easy = Math.round(((difficultyCount['easy'] || 0) / total) * 100);
+      let medium = Math.round(((difficultyCount['medium'] || 0) / total) * 100);
+      let hard = Math.round(((difficultyCount['hard'] || 0) / total) * 100);
 
       // Adjust for rounding errors
       const sum = easy + medium + hard;
       if (sum !== 100) {
         const diff = 100 - sum;
-        // Add the difference to the largest category
         if (easy >= medium && easy >= hard) {
           easy += diff;
         } else if (medium >= easy && medium >= hard) {
@@ -74,8 +81,8 @@ export const useStats = (): UseStatsReturn => {
         difficultyBreakdown: {
           easy,
           medium,
-          hard
-        }
+          hard,
+        },
       });
     } catch (err) {
       console.error('Error calculating stats:', err);
@@ -93,7 +100,7 @@ export const useStats = (): UseStatsReturn => {
     stats,
     loading,
     error,
-    refetch: calculateStats
+    refetch: calculateStats,
   };
 };
 

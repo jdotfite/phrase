@@ -1,34 +1,90 @@
-import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
+import type { Session } from '@supabase/supabase-js';
 
-/**
- * Base interface for phrases
- */
+export interface PhraseWithRelations extends Phrase {
+  categories: Category;
+  subcategories?: Subcategory;
+  phrase_tags: {
+    tags: Tag;
+  }[];
+}
+
+export interface SupabaseQueryResponse<T> {
+  data: T[] | null;
+  error: any;
+  count?: number | null;
+}
+
+export interface Category {
+  id: number;
+  name: string;
+}
+
+export interface PhraseTagWithTag {
+  tag_id: number;
+  tags: {
+    id: number;
+    tag: string;
+  };
+}
+
+export type SubcategoryName = {
+  name: string;
+}
+
+export interface Subcategory {
+  id: number;
+  name: string;
+  category_id: number;
+}
+
+export interface Tag {
+  id: number;
+  tag: string;
+}
+
+export interface PhraseTag {
+  phrase_id: number;
+  tag_id: number;
+}
+
 export interface PhraseBase {
   phrase: string;
-  category: string;
-  difficulty: string;
-  subcategory: string;
-  tags: string;
-  hint: string;
+  category_id: number;
+  subcategory_id?: number | null;
+  difficulty: number;  // Changed from string to number
   part_of_speech: string;
+  hint?: string | null;
 }
 
-/**
- * Full phrase interface including ID and optional fields
- */
-export interface Phrase extends PhraseBase {
+export interface Phrase extends Omit<PhraseBase, 'category_id' | 'subcategory_id'> {
   id: number;
-  last_used?: string | null;
+  category: string;
+  subcategory?: string;
+  tags: string;
+  difficulty: number;
 }
 
-/**
- * New phrase without ID (for creation)
- */
-export type NewPhrase = PhraseBase;
+export interface NewPhrase {
+  phrase: string;
+  category: string;
+  subcategory?: string;
+  difficulty: string;
+  part_of_speech: string;
+  hint?: string;
+  tags?: string;
+}
 
-/**
- * Filter options for the phrases table
- */
+export interface Vote {
+  id: string;
+  reviewer_id: string;
+  phrase_id: number;
+  category: VoteCategory;
+  vote: boolean;
+  created_at: string;
+}
+
+export type VoteCategory = 'phrase' | 'category' | 'subcategory' | 'hint' | 'tags' | 'difficulty';
+
 export interface Filters {
   searchTerm: string;
   category: string;
@@ -37,26 +93,17 @@ export interface Filters {
   part_of_speech: string;
 }
 
-/**
- * Pagination state
- */
 export interface PaginationState {
   currentPage: number;
   rowsPerPage: number;
   totalPages: number;
 }
 
-/**
- * Sort configuration
- */
 export interface SortConfig {
   key: keyof Phrase | '';
   direction: 'asc' | 'desc';
 }
 
-/**
- * Stats data structure
- */
 export interface Stats {
   total: number;
   uniqueCategories: number;
@@ -67,20 +114,33 @@ export interface Stats {
   };
 }
 
-/**
- * Component Props
- */
+export interface Reviewer {
+  id: string;
+  name: string;
+  pin: string;
+  total_reviews: number;
+  current_streak: number;
+  last_review_at: string | null;
+}
+
+export interface BulkImportFormProps {
+  onSuccess: (importedIds?: number[]) => void;
+  onError: (errorMessage: string) => void;
+  categories?: string[];
+  difficulties?: string[];
+  partsOfSpeech?: string[];
+}
+
+export interface ImportedPhrase extends NewPhrase {
+  id: number;
+}
+
 export interface AddPhraseFormProps {
   onAddPhrase: (phrase: NewPhrase) => Promise<void>;
   categories: string[];
   difficulties: string[];
   partsOfSpeech: string[];
   loading: boolean;
-}
-
-export interface BulkImportFormProps {
-  onSuccess: (newIds?: number[]) => void;
-  onError: (message: string) => void;
 }
 
 export interface FilterControlsProps {
@@ -90,20 +150,7 @@ export interface FilterControlsProps {
   categories: string[];
   difficulties: string[];
   partsOfSpeech: string[];
-}
-
-export interface AdminNavBarProps {
-  session: Session | null;
-  setShowLoginModal: (show: boolean) => void;
-}
-
-export interface StatsSectionProps {
-  stats: Stats;
   loading?: boolean;
-}
-
-export interface LoginProps {
-  onClose: () => void;
 }
 
 export interface PhrasesTableProps {
@@ -114,8 +161,8 @@ export interface PhrasesTableProps {
   onSort: (key: keyof Phrase) => void;
   onPageChange: (page: number) => void;
   onRowsPerPageChange: (rowsPerPage: number) => void;
-  onEdit: (phrase: Phrase) => void;
-  onDelete: (id: number) => void;
+  onEdit: (phrase: Phrase) => Promise<void>;
+  onDelete: (id: number) => Promise<void>;
   onShowCardView: () => void;
   newIds?: number[];
 }
@@ -135,43 +182,10 @@ export interface CardViewModalProps {
   categories: string[];
   difficulties: string[];
   partsOfSpeech: string[];
+  reviewer?: Reviewer;
   onTagClick?: (tag: string) => void;
-}
-
-export interface TagDisplayProps {
-  tags: string;
-  onClick?: (tag: string) => void;
-}
-
-export interface LoadingSpinnerProps {
-  size?: 'small' | 'medium' | 'large';
-  className?: string;
-}
-
-export interface SelectProps {
-  value: string;
-  onChange: (value: string) => void;
-  options: string[];
-  placeholder?: string;
-  required?: boolean;
-  disabled?: boolean;
-  className?: string;
-}
-
-export interface StatCardProps {
-  title: string;
-  value: number;
-  suffix?: string;
-  delay?: number;
-}
-
-/**
- * Hook Types
- */
-export interface UsePaginationProps {
-  totalItems: number;
-  itemsPerPage: number;
-  currentPage: number;
+  loading?: boolean;
+  error?: string | null;
 }
 
 export interface UsePhrasesReturn {
@@ -190,22 +204,43 @@ export interface UsePhrasesReturn {
   editPhrase: (phrase: Phrase) => Promise<void>;
   deletePhrase: (id: number) => Promise<void>;
   fetchPhrases: () => Promise<void>;
-  applyFilters: () => void;
   resetFilters: () => void;
   sortByIdDesc: () => void;
 }
 
-/**
- * Utility Types
- */
 export interface TagValidationResult {
   isValid: boolean;
   formattedTags: string;
   errors?: string[];
 }
 
-export interface BulkImportResult {
-  success: boolean;
-  message: string;
-  newIds?: number[];
+export interface UsePaginationProps {
+  totalItems: number;
+  itemsPerPage: number;
+  currentPage: number;
+}
+
+export interface LoadingSpinnerProps {
+  size?: 'small' | 'medium' | 'large';
+  className?: string;
+}
+
+export interface TagDisplayProps {
+  tags: string;
+  onClick?: (tag: string) => void;
+}
+
+export interface SelectProps {
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+  placeholder?: string;
+  required?: boolean;
+  disabled?: boolean;
+  className?: string;
+}
+
+export interface StatsSectionProps {
+  stats: Stats | null;
+  loading: boolean;
 }

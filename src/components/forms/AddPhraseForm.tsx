@@ -1,8 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { NewPhrase, AddPhraseFormProps } from '@/types/types';
 import { validateTags } from '@/utils/phraseUtils';
+import { supabase } from '@/lib/supabase';
+
+interface FormState extends NewPhrase {
+  phrase: string;
+  category: string;
+  difficulty: string;
+  subcategory: string;
+  tags: string;
+  hint: string;
+  part_of_speech: string;
+}
+
+interface FormError {
+  [key: string]: string;
+}
 
 const AddPhraseForm: React.FC<AddPhraseFormProps> = ({
   onAddPhrase,
@@ -13,7 +28,8 @@ const AddPhraseForm: React.FC<AddPhraseFormProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [newPhrase, setNewPhrase] = useState<NewPhrase>({
+  const [subcategories, setSubcategories] = useState<string[]>([]);
+  const [formState, setFormState] = useState<FormState>({
     phrase: '',
     category: '',
     difficulty: '',
@@ -23,15 +39,49 @@ const AddPhraseForm: React.FC<AddPhraseFormProps> = ({
     part_of_speech: ''
   });
 
+  useEffect(() => {
+    const fetchSubcategories = async () => {
+      if (!formState.category) {
+        setSubcategories([]);
+        return;
+      }
+
+      const { data: categoryData } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('name', formState.category)
+        .single();
+
+      if (categoryData) {
+        const { data: subcategoryData } = await supabase
+          .from('subcategories')
+          .select('name')
+          .eq('category_id', categoryData.id)
+          .order('name');
+
+        if (subcategoryData) {
+          setSubcategories(subcategoryData.map(sub => sub.name));
+        }
+      }
+    };
+
+    fetchSubcategories();
+  }, [formState.category]);
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setNewPhrase(prev => ({ ...prev, [name]: value }));
+    setFormState(prev => {
+      if (name === 'category') {
+        return { ...prev, [name]: value, subcategory: '' };
+      }
+      return { ...prev, [name]: value };
+    });
   };
 
   const resetForm = () => {
-    setNewPhrase({
+    setFormState({
       phrase: '',
       category: '',
       difficulty: '',
@@ -48,14 +98,13 @@ const AddPhraseForm: React.FC<AddPhraseFormProps> = ({
     setError(null);
 
     try {
-      // Validate tags
-      const tagValidation = validateTags(newPhrase.tags);
+      const tagValidation = validateTags(formState.tags);
       if (!tagValidation.isValid) {
         setError(tagValidation.errors?.[0] || 'Invalid tags');
         return;
       }
 
-      await onAddPhrase(newPhrase);
+      await onAddPhrase(formState);
       resetForm();
       setIsExpanded(false);
     } catch (err) {
@@ -81,6 +130,7 @@ const AddPhraseForm: React.FC<AddPhraseFormProps> = ({
       {isExpanded && (
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Phrase Input */}
             <div>
               <label className="block text-sm font-medium mb-1">
                 Phrase
@@ -88,7 +138,7 @@ const AddPhraseForm: React.FC<AddPhraseFormProps> = ({
               <input
                 type="text"
                 name="phrase"
-                value={newPhrase.phrase}
+                value={formState.phrase}
                 onChange={handleInputChange}
                 className="w-full p-2 rounded bg-gray-700 border border-gray-600 
                          text-white focus:ring-2 focus:ring-blue-500"
@@ -98,13 +148,14 @@ const AddPhraseForm: React.FC<AddPhraseFormProps> = ({
               />
             </div>
 
+            {/* Category Select */}
             <div>
               <label className="block text-sm font-medium mb-1">
                 Category
               </label>
               <select
                 name="category"
-                value={newPhrase.category}
+                value={formState.category}
                 onChange={handleInputChange}
                 className="w-full p-2 rounded bg-gray-700 border border-gray-600 
                          text-white focus:ring-2 focus:ring-blue-500"
@@ -120,13 +171,36 @@ const AddPhraseForm: React.FC<AddPhraseFormProps> = ({
               </select>
             </div>
 
+            {/* Subcategory Select */}
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Subcategory
+              </label>
+              <select
+                name="subcategory"
+                value={formState.subcategory}
+                onChange={handleInputChange}
+                className="w-full p-2 rounded bg-gray-700 border border-gray-600 
+                         text-white focus:ring-2 focus:ring-blue-500"
+                disabled={!formState.category || loading}
+              >
+                <option value="">Select Subcategory</option>
+                {subcategories.map(subcategory => (
+                  <option key={subcategory} value={subcategory}>
+                    {subcategory}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Difficulty Select */}
             <div>
               <label className="block text-sm font-medium mb-1">
                 Difficulty
               </label>
               <select
                 name="difficulty"
-                value={newPhrase.difficulty}
+                value={formState.difficulty}
                 onChange={handleInputChange}
                 className="w-full p-2 rounded bg-gray-700 border border-gray-600 
                          text-white focus:ring-2 focus:ring-blue-500"
@@ -142,21 +216,7 @@ const AddPhraseForm: React.FC<AddPhraseFormProps> = ({
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Subcategory
-              </label>
-              <input
-                type="text"
-                name="subcategory"
-                value={newPhrase.subcategory}
-                onChange={handleInputChange}
-                className="w-full p-2 rounded bg-gray-700 border border-gray-600 
-                         text-white focus:ring-2 focus:ring-blue-500"
-                disabled={loading}
-              />
-            </div>
-
+            {/* Tags Input */}
             <div>
               <label className="block text-sm font-medium mb-1">
                 Tags (comma separated)
@@ -164,7 +224,7 @@ const AddPhraseForm: React.FC<AddPhraseFormProps> = ({
               <input
                 type="text"
                 name="tags"
-                value={newPhrase.tags}
+                value={formState.tags}
                 onChange={handleInputChange}
                 className="w-full p-2 rounded bg-gray-700 border border-gray-600 
                          text-white focus:ring-2 focus:ring-blue-500"
@@ -175,6 +235,7 @@ const AddPhraseForm: React.FC<AddPhraseFormProps> = ({
               />
             </div>
 
+            {/* Hint Input */}
             <div>
               <label className="block text-sm font-medium mb-1">
                 Hint
@@ -182,7 +243,7 @@ const AddPhraseForm: React.FC<AddPhraseFormProps> = ({
               <input
                 type="text"
                 name="hint"
-                value={newPhrase.hint}
+                value={formState.hint}
                 onChange={handleInputChange}
                 className="w-full p-2 rounded bg-gray-700 border border-gray-600 
                          text-white focus:ring-2 focus:ring-blue-500"
@@ -190,13 +251,14 @@ const AddPhraseForm: React.FC<AddPhraseFormProps> = ({
               />
             </div>
 
+            {/* Part of Speech Select */}
             <div>
               <label className="block text-sm font-medium mb-1">
                 Part of Speech
               </label>
               <select
                 name="part_of_speech"
-                value={newPhrase.part_of_speech}
+                value={formState.part_of_speech}
                 onChange={handleInputChange}
                 className="w-full p-2 rounded bg-gray-700 border border-gray-600 
                          text-white focus:ring-2 focus:ring-blue-500"

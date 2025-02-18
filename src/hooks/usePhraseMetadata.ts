@@ -9,9 +9,11 @@ interface PhraseMetadata {
   error: string | null;
 }
 
-interface DatabaseRecord {
-  category: string;
-  difficulty: string;
+interface CategoryRecord {
+  name: string;
+}
+
+interface PartOfSpeechRecord {
   part_of_speech: string;
 }
 
@@ -28,41 +30,39 @@ export const usePhraseMetadata = (): PhraseMetadata => {
       setError(null);
       
       try {
-        // Fetch all unique metadata in one query
-        const { data, error: fetchError } = await supabase
+        // Fetch categories
+        const { data: categoryData, error: categoryError } = await supabase
+          .from('categories')
+          .select('name')
+          .order('name');
+
+        if (categoryError) throw categoryError;
+
+        // Fetch parts of speech from phrases
+        const { data: posData, error: posError } = await supabase
           .from('phrases')
-          .select('category, difficulty, part_of_speech');
+          .select('part_of_speech')
+          .not('part_of_speech', 'is', null);
 
-        if (fetchError) throw fetchError;
-        if (!data) throw new Error('No data received');
-
-        const records = data as DatabaseRecord[];
+        if (posError) throw posError;
 
         // Process categories
         const uniqueCategories = Array.from(
-          new Set(
-            records
-              .map(record => record.category)
-              .filter(Boolean)
-              .sort()
-          )
+          new Set((categoryData as CategoryRecord[]).map(record => record.name))
         );
-
-        // Process difficulties (assuming these are predefined)
-        const uniqueDifficulties = ['Easy', 'Medium', 'Hard'];
 
         // Process parts of speech
         const uniquePartsOfSpeech = Array.from(
-          new Set(
-            records
-              .map(record => record.part_of_speech)
-              .filter(Boolean)
-              .sort()
-          )
-        );
+          new Set((posData as PartOfSpeechRecord[])
+            .map(record => record.part_of_speech)
+            .filter(Boolean))
+        ).sort();
+
+        // Set predefined difficulties
+        const difficultyLevels = ['Easy', 'Medium', 'Hard'];
 
         setCategories(uniqueCategories);
-        setDifficulties(uniqueDifficulties);
+        setDifficulties(difficultyLevels);
         setPartsOfSpeech(uniquePartsOfSpeech);
       } catch (err) {
         console.error('Error fetching metadata:', err);

@@ -1,7 +1,16 @@
+'use client'
+
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
-import type { Phrase, NewPhrase } from '@/types/types';
+import type { 
+  Phrase, 
+  NewPhrase,
+  Stats,
+  Filters,
+  PaginationState,
+  SortConfig 
+} from '@/types/types';
 
 // Component imports
 import AdminNavBar from '@/components/AdminNavBar';
@@ -18,11 +27,20 @@ import { usePhrases } from '@/hooks/usePhrases';
 import { usePhraseMetadata } from '@/hooks/usePhraseMetadata';
 import { useStats } from '@/hooks/useStats';
 
+// Type definitions
+interface EditorState {
+  showCardModal: boolean;
+  currentCardIndex: number;
+  isEditing: boolean;
+  editedPhrase: Phrase | null;
+  newIds: number[];
+}
+
 const AdminDashboard: React.FC = () => {
   // Auth State
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
   const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   // Initialize Hooks
   const {
@@ -54,12 +72,14 @@ const AdminDashboard: React.FC = () => {
 
   const { stats, loading: statsLoading } = useStats();
 
-  // Modal State
-  const [showCardModal, setShowCardModal] = useState(false);
-  const [currentCardIndex, setCurrentCardIndex] = useState(0);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedPhrase, setEditedPhrase] = useState<Phrase | null>(null);
-  const [newIds, setNewIds] = useState<number[]>([]);
+  // Editor State
+  const [editorState, setEditorState] = useState<EditorState>({
+    showCardModal: false,
+    currentCardIndex: 0,
+    isEditing: false,
+    editedPhrase: null,
+    newIds: []
+  });
 
   // Initialize Auth
   useEffect(() => {
@@ -87,11 +107,11 @@ const AdminDashboard: React.FC = () => {
   const handleBulkImportSuccess = (importedIds: number[] = []) => {
     fetchPhrases();
     sortByIdDesc();
-    setNewIds(importedIds);
+    setEditorState(prev => ({ ...prev, newIds: importedIds }));
     setError(null);
 
     if (importedIds.length > 0) {
-      setTimeout(() => setNewIds([]), 2000);
+      setTimeout(() => setEditorState(prev => ({ ...prev, newIds: [] })), 2000);
     }
   };
 
@@ -100,7 +120,7 @@ const AdminDashboard: React.FC = () => {
   };
 
   // Auth check
-  const checkAuth = async () => {
+  const checkAuth = async (): Promise<boolean> => {
     const { data: { session } } = await supabase.auth.getSession();
     setSession(session);
     if (!session) {
@@ -113,25 +133,37 @@ const AdminDashboard: React.FC = () => {
   // Card Modal Handlers
   const handleCardEdit = async () => {
     if (!(await checkAuth())) return;
-    setEditedPhrase(phrases[currentCardIndex]);
-    setIsEditing(true);
+    const phrase = phrases[editorState.currentCardIndex];
+    if (!phrase) return;
+    
+    setEditorState(prev => ({
+      ...prev,
+      editedPhrase: phrase,
+      isEditing: true
+    }));
   };
 
   const handleCardSave = async () => {
-    if (!editedPhrase) return;
-    await editPhrase(editedPhrase);
-    setShowCardModal(false);
-    setIsEditing(false);
+    if (!editorState.editedPhrase) return;
+    await editPhrase(editorState.editedPhrase);
+    setEditorState(prev => ({
+      ...prev,
+      showCardModal: false,
+      isEditing: false
+    }));
   };
 
   const handleCardCancel = () => {
-    setEditedPhrase(null);
-    setIsEditing(false);
+    setEditorState(prev => ({
+      ...prev,
+      editedPhrase: null,
+      isEditing: false
+    }));
   };
 
   const handleTagClick = (tag: string) => {
     handleFilterChange('searchTerm', tag);
-    setShowCardModal(false);
+    setEditorState(prev => ({ ...prev, showCardModal: false }));
   };
 
   if (isLoading) {
@@ -201,8 +233,8 @@ const AdminDashboard: React.FC = () => {
           onRowsPerPageChange={handleRowsPerPageChange}
           onEdit={editPhrase}
           onDelete={deletePhrase}
-          onShowCardView={() => setShowCardModal(true)}
-          newIds={newIds}
+          onShowCardView={() => setEditorState(prev => ({ ...prev, showCardModal: true }))}
+          newIds={editorState.newIds}
         />
 
         {/* Modals */}
@@ -214,21 +246,24 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {showCardModal && (
+        {editorState.showCardModal && (
           <CardViewModal
-            isOpen={showCardModal}
-            onClose={() => setShowCardModal(false)}
+            isOpen={editorState.showCardModal}
+            onClose={() => setEditorState(prev => ({ ...prev, showCardModal: false }))}
             phrases={phrases}
-            currentIndex={currentCardIndex}
-            onNavigate={setCurrentCardIndex}
-            isEditing={isEditing}
-            editedPhrase={editedPhrase}
+            currentIndex={editorState.currentCardIndex}
+            onNavigate={(index) => setEditorState(prev => ({ ...prev, currentCardIndex: index }))}
+            isEditing={editorState.isEditing}
+            editedPhrase={editorState.editedPhrase}
             onEdit={handleCardEdit}
             onSave={handleCardSave}
             onCancel={handleCardCancel}
             onEditChange={(field, value) => {
-              if (editedPhrase) {
-                setEditedPhrase({ ...editedPhrase, [field]: value });
+              if (editorState.editedPhrase) {
+                setEditorState(prev => ({
+                  ...prev,
+                  editedPhrase: { ...prev.editedPhrase!, [field]: value }
+                }));
               }
             }}
             categories={categories}
