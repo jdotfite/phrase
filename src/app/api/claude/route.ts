@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server';
 
 // Add this new GET handler
 export async function GET() {
+  console.log('GET request received');
   return NextResponse.json({ message: 'Claude API route is working' });
 }
 
-// Your existing POST handler
 export async function POST(req: Request) {
+  console.log('POST request received');
   const apiKey = process.env.CLAUDE_API_KEY;
   
   if (!apiKey) {

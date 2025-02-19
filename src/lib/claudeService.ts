@@ -13,24 +13,26 @@ export interface GenerateHintResponse {
 
 // src/lib/claudeService.ts
 const makeClaudeRequest = async (messages: Array<{ role: string; content: string }>) => {
-  // Get the base URL dynamically
-  const baseUrl = process.env.NEXT_PUBLIC_VERCEL_URL 
-    ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`
-    : '';
-    
-  const response = await fetch(`${baseUrl}/api/claude`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ messages })
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`API request failed: ${response.status} - ${errorText}`);
+  console.log('Attempting API request with messages:', messages);
+  try {
+    const response = await fetch('/api/claude', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ messages })
+    });
+    console.log('Response status:', response.status);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log('Error response text:', errorText);
+      throw new Error(`API request failed: ${response.status} - ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Request error details:', error);
+    throw error;
   }
-  return await response.json();
 };
 
 export const generateTags = async (phrase: string, currentHint: string = ''): Promise<GenerateTagsResponse> => {
