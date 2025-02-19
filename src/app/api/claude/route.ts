@@ -1,28 +1,27 @@
-﻿// src/app/api/claude/route.ts
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 
-export const runtime = 'edge';  // Add this
-export const dynamic = 'force-dynamic';  // Add this
+const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
+const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
+  if (!CLAUDE_API_KEY) {
+    console.error('Claude API key is not configured');
+    return NextResponse.json(
+      { error: 'Claude API key is not configured' },
+      { status: 500 }
+    );
+  }
+
   try {
-    const apiKey = process.env.CLAUDE_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: 'API configuration error' },
-        { status: 500 }
-      );
-    }
-
-    const body = await request.json();
+    const body = await req.json();
+    console.log('Received request for Claude API:', body); // Debug log
     
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const claudeResponse = await fetch(CLAUDE_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'anthropic-version': '2023-06-01',
-        'x-api-key': apiKey,
-        'anthropic-beta': 'messages-2023-12-15'
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
         model: 'claude-3-opus-20240229',
@@ -31,12 +30,23 @@ export async function POST(request: Request) {
       })
     });
 
-    const data = await response.json();
+    if (!claudeResponse.ok) {
+      const errorText = await claudeResponse.text();
+      console.error('Claude API error:', errorText);
+      return NextResponse.json(
+        { error: `Claude API error: ${claudeResponse.statusText}` },
+        { status: claudeResponse.status }
+      );
+    }
+
+    const data = await claudeResponse.json();
+    console.log('Successful response from Claude:', data); // Debug log
     return NextResponse.json(data);
+
   } catch (error) {
-    console.error('API Error:', error);
+    console.error('API route error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
+      { error: 'Failed to process request' },
       { status: 500 }
     );
   }
