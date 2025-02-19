@@ -11,16 +11,21 @@ export interface GenerateHintResponse {
   error?: string;
 }
 
+const apiUrl =
+  process.env.NEXT_PUBLIC_VERCEL_URL
+    ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/api/claude`
+    : '/api/claude';
+
 // src/lib/claudeService.ts
 const makeClaudeRequest = async (messages: Array<{ role: string; content: string }>) => {
   console.log('Attempting API request with messages:', messages);
   try {
-    const response = await fetch('/api/claude', {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ messages })
+      body: JSON.stringify({ messages }),
     });
     console.log('Response status:', response.status);
     if (!response.ok) {
