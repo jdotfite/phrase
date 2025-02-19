@@ -1,6 +1,7 @@
 // app/api/claude/route.ts
 import { NextResponse } from 'next/server';
 
+import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
   const apiKey = process.env.CLAUDE_API_KEY;
   
@@ -11,7 +12,6 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
-
   try {
     const body = await req.json();
     
@@ -19,8 +19,9 @@ export async function POST(req: Request) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
         'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
+        'anthropic-beta': 'messages-2023-12-15'  // Add this line
       },
       body: JSON.stringify({
         model: 'claude-3-opus-20240229',
@@ -28,6 +29,7 @@ export async function POST(req: Request) {
         messages: body.messages
       })
     });
+
 
     if (!response.ok) {
       const errorData = await response.text();
