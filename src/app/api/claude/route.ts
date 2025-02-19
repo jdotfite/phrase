@@ -1,24 +1,20 @@
+﻿// src/app/api/claude/route.ts
 import { NextResponse } from 'next/server';
 
-// Add this new GET handler
-export async function GET() {
-  console.log('GET request received');
-  return NextResponse.json({ message: 'Claude API route is working' });
-}
+export const runtime = 'edge';  // Add this
+export const dynamic = 'force-dynamic';  // Add this
 
-export async function POST(req: Request) {
-  console.log('POST request received');
-  const apiKey = process.env.CLAUDE_API_KEY;
-  
-  if (!apiKey) {
-    console.error('Missing CLAUDE_API_KEY in environment');
-    return NextResponse.json(
-      { error: 'API configuration error' },
-      { status: 500 }
-    );
-  }
+export async function POST(request: Request) {
   try {
-    const body = await req.json();
+    const apiKey = process.env.CLAUDE_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: 'API configuration error' },
+        { status: 500 }
+      );
+    }
+
+    const body = await request.json();
     
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -35,24 +31,10 @@ export async function POST(req: Request) {
       })
     });
 
-
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error('Claude API error:', {
-        status: response.status,
-        statusText: response.statusText,
-        error: errorData
-      });
-      return NextResponse.json(
-        { error: `API error: ${response.status} - ${errorData}` },
-        { status: response.status }
-      );
-    }
-
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Route handler error:', error);
+    console.error('API Error:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
