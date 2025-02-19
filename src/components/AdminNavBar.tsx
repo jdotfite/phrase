@@ -18,12 +18,12 @@ const AdminNavBar: React.FC<AdminNavBarProps> = ({
   };
 
   return (
+    <div className="max-w-[1920px] mx-auto">
     <nav className="bg-gray-800 p-6 rounded-lg shadow mb-8">
-      <div className="max-w-7xl mx-auto flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <div className="text-white text-xl font-bold">
-            Admin Dashboard
-          </div>
+      <div className="flex justify-between items-center">
+        <div className="flex items-center">
+          <div className="text-white text-xl font-bold">Admin Dashboard</div>
+    
           {session?.user && (
             <span className="text-gray-400 text-sm">
               {session.user.email}
@@ -52,6 +52,7 @@ const AdminNavBar: React.FC<AdminNavBarProps> = ({
         </div>
       </div>
     </nav>
+    </div>
   );
 };
 
