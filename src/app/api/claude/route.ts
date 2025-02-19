@@ -1,7 +1,11 @@
-// app/api/claude/route.ts
 import { NextResponse } from 'next/server';
 
-import { NextResponse } from 'next/server';
+// Add this new GET handler
+export async function GET() {
+  return NextResponse.json({ message: 'Claude API route is working' });
+}
+
+// Your existing POST handler
 export async function POST(req: Request) {
   const apiKey = process.env.CLAUDE_API_KEY;
   
@@ -21,7 +25,7 @@ export async function POST(req: Request) {
         'Content-Type': 'application/json',
         'anthropic-version': '2023-06-01',
         'x-api-key': apiKey,
-        'anthropic-beta': 'messages-2023-12-15'  // Add this line
+        'anthropic-beta': 'messages-2023-12-15'
       },
       body: JSON.stringify({
         model: 'claude-3-opus-20240229',
