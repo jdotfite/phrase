@@ -29,7 +29,7 @@ const makeClaudeRequest = async (messages: Array<{ role: string; content: string
   }
 
   return await response.json();
-};
+}; 
 
 export const generateTags = async (phrase: string): Promise<GenerateTagsResponse> => {
   try {
