@@ -4,15 +4,14 @@ import { NextResponse } from 'next/server';
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
 
-// CORS headers for your frontend domain
+// Add CORS headers for your frontend domain
 const corsHeaders = {
   'Access-Control-Allow-Origin': 'https://phrase-coral.vercel.app',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Headers': 'Content-Type'
 };
 
 export async function POST(req: Request) {
-  // Add CORS headers to all responses
   if (!CLAUDE_API_KEY) {
     return NextResponse.json(
       { error: 'Claude API key is not configured' },
