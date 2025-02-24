@@ -4,18 +4,13 @@ import { NextResponse } from 'next/server';
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
 
-// Add CORS headers for your frontend domain
-const corsHeaders = {
-  'Access-Control-Allow-Origin': 'https://phrase-coral.vercel.app',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type'
-};
+export const runtime = 'edge'; // Add this line
 
 export async function POST(req: Request) {
   if (!CLAUDE_API_KEY) {
     return NextResponse.json(
       { error: 'Claude API key is not configured' },
-      { status: 500, headers: corsHeaders }
+      { status: 500 }
     );
   }
 
@@ -41,23 +36,18 @@ export async function POST(req: Request) {
       console.error('Claude API error:', errorText);
       return NextResponse.json(
         { error: `Claude API error: ${claudeResponse.statusText}` },
-        { status: claudeResponse.status, headers: corsHeaders }
+        { status: claudeResponse.status }
       );
     }
 
     const data = await claudeResponse.json();
-    return NextResponse.json(data, { headers: corsHeaders });
+    return NextResponse.json(data);
 
   } catch (error) {
     console.error('API route error:', error);
     return NextResponse.json(
       { error: 'Failed to process request' },
-      { status: 500, headers: corsHeaders }
+      { status: 500 }
     );
   }
-}
-
-// Handle OPTIONS preflight request
-export async function OPTIONS() {
-  return NextResponse.json({}, { headers: corsHeaders });
 }
