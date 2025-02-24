@@ -12,7 +12,7 @@ export interface GenerateHintResponse {
 }
 
 const makeClaudeRequest = async (messages: Array<{ role: string; content: string }>) => {
-  const response = await fetch('/api/claude', {
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/claude`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
