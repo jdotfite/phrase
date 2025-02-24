@@ -4,16 +4,9 @@ import { NextResponse } from 'next/server';
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
 
-export const runtime = 'edge'; // Add this line
+export const runtime = 'edge';
 
 export async function POST(req: Request) {
-  if (!CLAUDE_API_KEY) {
-    return NextResponse.json(
-      { error: 'Claude API key is not configured' },
-      { status: 500 }
-    );
-  }
-
   try {
     const body = await req.json();
     
@@ -22,7 +15,8 @@ export async function POST(req: Request) {
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': CLAUDE_API_KEY,
-        'anthropic-version': '2023-06-01'
+        'anthropic-version': '2023-06-01',
+        'Accept': 'application/json'
       },
       body: JSON.stringify({
         model: 'claude-3-opus-20240229',
@@ -34,20 +28,34 @@ export async function POST(req: Request) {
     if (!claudeResponse.ok) {
       const errorText = await claudeResponse.text();
       console.error('Claude API error:', errorText);
-      return NextResponse.json(
-        { error: `Claude API error: ${claudeResponse.statusText}` },
-        { status: claudeResponse.status }
+      return new NextResponse(
+        JSON.stringify({ error: `Claude API error: ${claudeResponse.statusText}` }),
+        {
+          status: claudeResponse.status,
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
       );
     }
 
     const data = await claudeResponse.json();
-    return NextResponse.json(data);
+    return new NextResponse(JSON.stringify(data), {
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
 
   } catch (error) {
     console.error('API route error:', error);
-    return NextResponse.json(
-      { error: 'Failed to process request' },
-      { status: 500 }
+    return new NextResponse(
+      JSON.stringify({ error: 'Failed to process request' }),
+      {
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      }
     );
   }
 }
