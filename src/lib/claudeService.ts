@@ -1,3 +1,4 @@
+// src/lib/claudeService.ts
 'use client';
 
 export interface GenerateTagsResponse {
@@ -10,17 +11,11 @@ export interface GenerateHintResponse {
   error?: string;
 }
 
-// Determine the API URL based on environment
-const API_URL = process.env.NEXT_PUBLIC_API_URL || '/api/claude';
-
 const makeClaudeRequest = async (messages: Array<{ role: string; content: string }>) => {
-  console.log('Making request to:', API_URL);
-  
-  const response = await fetch(API_URL, {
+  const response = await fetch('/api/claude', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
     },
     body: JSON.stringify({ messages })
   });
@@ -31,6 +26,7 @@ const makeClaudeRequest = async (messages: Array<{ role: string; content: string
 
   return await response.json();
 };
+
 export const generateTags = async (phrase: string): Promise<GenerateTagsResponse> => {
   try {
     const data = await makeClaudeRequest([{

@@ -1,22 +1,27 @@
-﻿// src/app/api/claude/route.ts
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
 
-export const runtime = 'edge';
-
 export async function POST(req: Request) {
+  if (!CLAUDE_API_KEY) {
+    console.error('Claude API key is not configured');
+    return NextResponse.json(
+      { error: 'Claude API key is not configured' },
+      { status: 500 }
+    );
+  }
+
   try {
     const body = await req.json();
+    console.log('Received request for Claude API:', body); // Debug log
     
     const claudeResponse = await fetch(CLAUDE_API_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'x-api-key': CLAUDE_API_KEY,
-        'anthropic-version': '2023-06-01',
-        'Accept': 'application/json'
+        'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
         model: 'claude-3-opus-20240229',
@@ -28,34 +33,21 @@ export async function POST(req: Request) {
     if (!claudeResponse.ok) {
       const errorText = await claudeResponse.text();
       console.error('Claude API error:', errorText);
-      return new NextResponse(
-        JSON.stringify({ error: `Claude API error: ${claudeResponse.statusText}` }),
-        {
-          status: claudeResponse.status,
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        }
+      return NextResponse.json(
+        { error: `Claude API error: ${claudeResponse.statusText}` },
+        { status: claudeResponse.status }
       );
     }
 
     const data = await claudeResponse.json();
-    return new NextResponse(JSON.stringify(data), {
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    });
+    console.log('Successful response from Claude:', data); // Debug log
+    return NextResponse.json(data);
 
   } catch (error) {
     console.error('API route error:', error);
-    return new NextResponse(
-      JSON.stringify({ error: 'Failed to process request' }),
-      {
-        status: 500,
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      }
+    return NextResponse.json(
+      { error: 'Failed to process request' },
+      { status: 500 }
     );
   }
 }
