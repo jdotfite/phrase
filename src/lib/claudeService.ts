@@ -11,77 +11,52 @@ export interface GenerateHintResponse {
   error?: string;
 }
 
-// src/lib/claudeService.ts
 const makeClaudeRequest = async (messages: Array<{ role: string; content: string }>) => {
-  console.log('Attempting API request with messages:', messages);
-  try {
-    const response = await fetch('/api/claude', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ messages })
-    });
-    console.log('Response status:', response.status);
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.log('Error response text:', errorText);
-      throw new Error(`API request failed: ${response.status} - ${errorText}`);
-    }
-    return await response.json();
-  } catch (error) {
-    console.error('Request error details:', error);
-    throw error;
+  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/claude`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ messages })
+  });
+
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.statusText}`);
   }
+
+  return await response.json();
 };
 
-export const generateTags = async (phrase: string, currentHint: string = ''): Promise<GenerateTagsResponse> => {
+export const generateTags = async (phrase: string): Promise<GenerateTagsResponse> => {
   try {
     const data = await makeClaudeRequest([{
       role: 'user',
-      content: `Generate exactly 3 descriptive tags for this catch phrase: "${phrase}"
-                Current hint (for reference): "${currentHint}"
-
-                Strict Rules for Tag Generation:
-                1. Generate EXACTLY 3 tags
-                2. Each tag must be a SINGLE word (no spaces, hyphens, or special characters)
-                3. Each tag must be 16 characters or less
-                4. Each tag must start with a capital letter
-                5. Tags must be DIRECTLY related to the meaning, theme, or context of the phrase
-                6. Tags MUST NOT contain any words from the phrase or the hint
-                7. Tags must be distinct in meaning (no synonyms between tags)
-                8. Tags should be specific and meaningful (avoid generic terms)
+      content: `Generate exactly 3 descriptive tags for this catch phrase: "${phrase}".
+                Rules for tags:
+                1. Must be single words, no spaces or hyphens
+                2. All lowercase
+                3. Maximum 15 characters per tag
+                4. No special characters or numbers
+                5. No generic words like "fun" or "game"
+                6. Focus on theme, subject matter, or skill required
+                7. Avoid duplicate meaning tags
                 
-                Return exactly 3 tags separated by commas, nothing else.
-                Example format for "Laser Hair Removal": MedSpa,Aesthetics,Grooming`
+                Return only the 3 tags separated by commas, nothing else.
+                Example format: strategy,teamwork,creativity`
     }]);
 
-    const tagsString = data.content[0].text.trim();
-    const tags = tagsString
+    const tags = data.content[0].text
       .split(',')
       .map((tag: string) => tag.trim())
-      .filter(Boolean); // Remove empty strings
+      .filter((tag: string) => 
+        tag.length <= 15 && 
+        /^[a-z]+$/.test(tag) &&
+        !['fun', 'game', 'play'].includes(tag)
+      );
 
-    // Validate number of tags
     if (tags.length !== 3) {
-      throw new Error(`Expected 3 tags, got ${tags.length}`);
+      throw new Error('Invalid tag generation result');
     }
-
-    // Validate each tag
-    tags.forEach((tag: string, index: number) => {
-      if (tag.length > 16) {
-        throw new Error(`Tag ${index + 1} exceeds 16 characters: ${tag}`);
-      }
-      if (!/^[A-Z][a-zA-Z]*$/.test(tag)) {
-        throw new Error(`Tag ${index + 1} has invalid format: ${tag}`);
-      }
-      if (phrase.toLowerCase().includes(tag.toLowerCase())) {
-        throw new Error(`Tag ${index + 1} contains words from phrase: ${tag}`);
-      }
-      if (currentHint && currentHint.toLowerCase().includes(tag.toLowerCase())) {
-        throw new Error(`Tag ${index + 1} contains words from hint: ${tag}`);
-      }
-    });
 
     return { tags };
   } catch (error) {
@@ -97,58 +72,24 @@ export const generateHint = async (phrase: string): Promise<GenerateHintResponse
   try {
     const data = await makeClaudeRequest([{
       role: 'user',
-      content: `Create a clever hint for the catch phrase: "${phrase}"
-
-                Strict Rules for Hint Generation:
-                1. CRITICAL: Total length INCLUDING SPACES must be 18 or fewer characters
-                2. Must be EXACTLY 3 short words
-                3. Each word MUST start with a capital letter
-                4. MUST NOT contain any words from the phrase
-                5. Must be clever and indirect (no obvious synonyms)
-                6. Should guide players toward the concept
-                7. Keep words very short to meet character limit
-                8. Count spaces in the 18-character limit
+      content: `Create a helpful hint for the catch phrase: "${phrase}".
+                Rules for hints:
+                1. Maximum 50 characters
+                2. Don't reveal the exact answer
+                3. Focus on context or category
+                4. No direct synonyms
+                5. Can be a clever riddle or wordplay
+                6. Should help players think in right direction
+                7. No explicit "This is..." or "Think about..." phrases
                 
-                Return only the 3-word hint with proper capitalization, nothing else.
-                Valid Examples (note character counts):
-                - For "Laser Hair Removal": "Spa Fix Beauty" (12 chars)
-                - For "Mountain Climbing": "Up High Peak" (11 chars)
-                - For "Birthday Party": "Fun Cake Day" (11 chars)
-                
-                Remember: Total characters (with spaces) MUST be 18 or less!`
+                Return only the hint text, nothing else.
+                Example: For "BOOKWORM" -> "Library's favorite customer"`
     }]);
 
-    let hint = data.content[0].text.trim();
+    const hint = data.content[0].text.trim();
 
-    // Remove any punctuation that might have been added
-    hint = hint.replace(/[.,!?]$/, '').trim();
-
-    // Validate hint format
-    const words = hint.split(' ').filter(Boolean); // Remove empty strings
-
-    // Detailed validation with specific error messages
-    if (words.length !== 3) {
-      throw new Error(`Expected 3 words, got ${words.length}: "${hint}"`);
-    }
-
-    if (hint.length > 18) {
-      throw new Error(`Hint exceeds 18 characters: "${hint}" (${hint.length} chars)`);
-    }
-
-    const invalidWords = words.filter(word => !/^[A-Z][a-zA-Z]*$/.test(word));
-    if (invalidWords.length > 0) {
-      throw new Error(`Invalid word format: ${invalidWords.join(', ')}`);
-    }
-
-    const phraseWords = phrase.toLowerCase().split(' ');
-    const conflictingWords = words.filter(word => 
-      phraseWords.some(phraseWord => 
-        phraseWord.toLowerCase() === word.toLowerCase()
-      )
-    );
-    
-    if (conflictingWords.length > 0) {
-      throw new Error(`Hint contains words from phrase: ${conflictingWords.join(', ')}`);
+    if (hint.length > 50) {
+      throw new Error('Hint exceeds maximum length');
     }
 
     return { hint };
@@ -156,9 +97,7 @@ export const generateHint = async (phrase: string): Promise<GenerateHintResponse
     console.error('Error generating hint:', error);
     return {
       hint: '',
-      error: error instanceof Error ? 
-        error.message : 
-        'Failed to generate hint'
+      error: error instanceof Error ? error.message : 'Failed to generate hint'
     };
   }
 };
