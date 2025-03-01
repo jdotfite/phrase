@@ -12,7 +12,10 @@ export interface GenerateHintResponse {
 }
 
 const makeClaudeRequest = async (messages: Array<{ role: string; content: string }>) => {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/claude`, {
+  console.log('Making Claude request with messages:', messages);
+  
+  // Use relative URL path instead of environment variable
+  const response = await fetch('/api/claude', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -21,7 +24,9 @@ const makeClaudeRequest = async (messages: Array<{ role: string; content: string
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.statusText}`);
+    const errorText = await response.text();
+    console.error('API error response:', errorText);
+    throw new Error(`API request failed: ${response.status} - ${response.statusText}`);
   }
 
   return await response.json();
