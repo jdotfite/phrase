@@ -1,5 +1,5 @@
 ﻿PROJECT ANALYSIS
-Generated: 02/16/2025 22:34:05
+Generated: 02/28/2025 15:31:40
 Directory: C:\_websites\catch-phrase\src
 
 ===========================================
@@ -116,7 +116,7 @@ Write-Host "Analysis complete. Output saved to $outputFile"
 
 FILE: .\db-structure.txt
 SIZE: 5.06 KB
-LAST MODIFIED: 02/13/2025 11:33:35
+LAST MODIFIED: 02/28/2025 15:29:32
 
 phrases table:
 [
@@ -441,9 +441,82 @@ export default function AdminPage() {
 
 ============================================================
 
+FILE: .\app\api\claude\route.ts
+SIZE: 1.54 KB
+LAST MODIFIED: 02/28/2025 15:29:32
+
+import { NextResponse } from 'next/server';
+
+const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
+const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
+
+export async function POST(req: Request) {
+  if (!CLAUDE_API_KEY) {
+    console.error('Claude API key is not configured');
+    return NextResponse.json(
+      { error: 'Claude API key is not configured' },
+      { status: 500 }
+    );
+  }
+
+  try {
+    const body = await req.json();
+    console.log('Received request for Claude API:', body); // Debug log
+    
+    const claudeResponse = await fetch(CLAUDE_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CLAUDE_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-opus-20240229',
+        max_tokens: 150,
+        messages: body.messages
+      })
+    });
+
+    if (!claudeResponse.ok) {
+      const errorText = await claudeResponse.text();
+      console.error('Claude API error:', errorText);
+      return NextResponse.json(
+        { error: `Claude API error: ${claudeResponse.statusText}` },
+        { status: claudeResponse.status }
+      );
+    }
+
+    const data = await claudeResponse.json();
+    console.log('Successful response from Claude:', data); // Debug log
+    return NextResponse.json(data);
+
+  } catch (error) {
+    console.error('API route error:', error);
+    return NextResponse.json(
+      { error: 'Failed to process request' },
+      { status: 500 }
+    );
+  }
+}
+
+============================================================
+
+FILE: .\app\api\test\route.ts
+SIZE: 0.14 KB
+LAST MODIFIED: 02/18/2025 21:17:34
+
+import { NextResponse } from 'next/server';
+
+export async function GET() {
+ return NextResponse.json({ message: 'Hello from test API' });
+}
+
+
+============================================================
+
 FILE: .\app\review\page.tsx
-SIZE: 19.22 KB
-LAST MODIFIED: 02/16/2025 22:29:59
+SIZE: 20.55 KB
+LAST MODIFIED: 02/17/2025 15:59:57
 
 'use client';
 
@@ -453,6 +526,7 @@ import ReviewerSelection from '@/components/reviewer/ReviewerSelection';
 import ReviewProgress from '@/components/reviewer/ReviewProgress';
 import { CategoryFilter } from '@/components/reviewer/CategoryFilter';
 import { usePhrases } from '@/hooks/usePhrases';
+import { generateTags, generateHint } from '@/lib/claudeService';
 import type {
   Phrase,
   Reviewer,
@@ -471,6 +545,7 @@ interface FieldProps {
   onChange?: (value: string) => void;
   options?: string[];
   type?: 'text' | 'select' | 'number';
+  currentPhrase?: Phrase;
 }
 
 interface PhraseFieldProps {
@@ -495,69 +570,122 @@ const Field: React.FC<FieldProps> = ({
   onChange,
   options = [],
   type = 'text',
+  currentPhrase
 }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [tagInputs, setTagInputs] = useState<string[]>(() => {
+    if (value && label === 'Tags') {
+      const tags = value.toString().split(',').map(tag => tag.trim());
+      return [...tags.slice(0, 3), ...Array(3 - tags.length).fill('')].slice(0, 3);
+    }
+    return ['', '', ''];
+  });
+
+  useEffect(() => {
+    if (value && label === 'Tags') {
+      const tags = value.toString().split(',').map(tag => tag.trim());
+      setTagInputs([...tags.slice(0, 3), ...Array(3 - tags.length).fill('')].slice(0, 3));
+    }
+  }, [value, label]);
 
   const handleGenerateTags = async () => {
-    if (!isEditing || !onChange) return;
+    if (!isEditing || !onChange || !currentPhrase?.phrase) return;
 
     setIsLoading(true);
-    const phrase = phrases[currentIndex]?.phrase || '';
-    const tags = await generateTags(phrase);
-    if (tags.length > 0) {
-      onChange(tags.join(',')); // Update the tags field with commas
+    try {
+      const result = await generateTags(currentPhrase.phrase);
+      if (result.tags.length > 0) {
+        const newTags = result.tags.slice(0, 3);
+        setTagInputs([...newTags, ...Array(3 - newTags.length).fill('')]);
+        onChange(newTags.join(','));
+      }
+    } catch (error) {
+      console.error('Error generating tags:', error);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
-  const handleTagsChange = (inputValue: string) => {
+  const handleGenerateHint = async () => {
+    if (!isEditing || !onChange || !currentPhrase?.phrase) return;
+  
+    setIsLoading(true);
+    try {
+      const result = await generateHint(currentPhrase.phrase);
+      if (result.hint) {
+        onChange(result.hint);
+      }
+    } catch (error) {
+      console.error('Error generating hint:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTagChange = (index: number, newValue: string) => {
     if (!onChange) return;
 
-    // Remove spaces and enforce comma separation
-    let sanitizedValue = inputValue.replace(/\s/g, '');
-
-    // Ensure only three tags are allowed
-    const tagsArray = sanitizedValue.split(',').map(tag => tag.trim()).filter(Boolean);
-    if (tagsArray.length > 3) {
-      sanitizedValue = tagsArray.slice(0, 3).join(',');
-    }
-
-    onChange(sanitizedValue);
+    const newTags = [...tagInputs];
+    newTags[index] = newValue.trim().replace(/\s+/g, '');
+    setTagInputs(newTags);
+    const validTags = newTags.filter(Boolean);
+    onChange(validTags.join(','));
   };
 
   if (isEditing && label === 'Tags') {
-    const tagsCount = value?.split(',').filter(Boolean).length || 0;
-
     return (
       <div className="mb-4">
         <label className="block text-gray-400 text-sm mb-1">{label}</label>
-        <div className="flex items-center gap-2">
-          <input
-            type={type}
-            value={value?.toString() || ''}
-            onChange={(e) => handleTagsChange(e.target.value)}
-            className="w-full p-2 rounded bg-gray-700 text-white border border-gray-600"
-            placeholder="Enter up to 3 tags, separated by commas"
-            disabled={tagsCount >= 3} // Disable input after 3 tags
-          />
+        <div className="space-y-2">
+          <div className="grid grid-cols-3 gap-2">
+            {tagInputs.map((tag, index) => (
+              <input
+                key={`tag-${index}`}
+                type="text"
+                value={tag}
+                onChange={(e) => handleTagChange(index, e.target.value)}
+                className="p-2 rounded bg-gray-700 text-white border border-gray-600"
+                placeholder={`Tag ${index + 1}`}
+                maxLength={16}
+              />
+            ))}
+          </div>
           <button
             onClick={handleGenerateTags}
-            disabled={isLoading || tagsCount >= 3}
-            className="px-3 py-2 bg-blue-600 rounded-lg hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed"
+            disabled={isLoading}
+            className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed w-full"
           >
-            {isLoading ? 'Generating...' : 'Generate Tags'}
+            {isLoading ? 'Generating...' : 'ðŸ¤– Ask AI'}
           </button>
-        </div>
-        <div className="text-sm text-gray-400 mt-1">
-          {tagsCount >= 3
-            ? 'Maximum of 3 tags reached.'
-            : 'Enter up to 3 tags, separated by commas (no spaces).'}
         </div>
       </div>
     );
   }
 
-  // Rest of the Field component remains the same
+  if (isEditing && label === 'Hint') {
+    return (
+      <div className="mb-4">
+        <label className="block text-gray-400 text-sm mb-1">{label}</label>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={value?.toString() || ''}
+            onChange={(e) => onChange?.(e.target.value)}
+            className="flex-1 p-2 rounded bg-gray-700 text-white border border-gray-600"
+          />
+          <button
+            onClick={handleGenerateHint}
+            disabled={isLoading}
+            className="shrink-0 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            <span>ðŸ¤–</span>
+            <span>Ask AI</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (isEditing) {
     if (type === 'select') {
       return (
@@ -602,41 +730,30 @@ const Field: React.FC<FieldProps> = ({
 const PhraseField: React.FC<PhraseFieldProps> = ({
   phrase,
   onVote,
-  rating
+  rating = false
 }) => {
-  const baseFieldClass = `mb-4 rounded-lg p-3 ${
-    rating === true ? 'bg-green-900' :
-    rating === false ? 'bg-red-900' :
-    'bg-gray-700'
-  }`;
-
+  const buttonKey = `flag-button-${rating}`;
+  
   return (
-    <div className={baseFieldClass}>
-      <div className="grid grid-cols-[100px_1fr_auto] gap-3 items-center">
-        <div className="text-gray-300 px-3 py-1 text-sm">
-          Phrase
+    <div className="mb-4">
+      <label className="block text-gray-400 text-sm mb-1">Phrase</label>
+      <div className="flex gap-2">
+        <div className="flex-1 p-2 rounded bg-gray-700">
+          <span className="text-white">{phrase}</span>
         </div>
-        <div className="px-3 py-2">
-          <span className="text-lg text-white">{phrase}</span>
-        </div>
-        <div className="flex gap-2 justify-end">
-          <button
-            onClick={() => onVote(false)}
-            className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              rating === false ? 'bg-red-600' : 'hover:bg-gray-500'
-            }`}
-          >
-            ðŸ‘Ž
-          </button>
-          <button
-            onClick={() => onVote(true)}
-            className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              rating === true ? 'bg-green-600' : 'hover:bg-gray-500'
-            }`}
-          >
-            ðŸ‘
-          </button>
-        </div>
+        <button
+          key={buttonKey}
+          onClick={() => onVote(!rating)}
+          type="button"
+          className={`px-4 py-2 rounded flex items-center justify-center gap-2 ${
+            rating 
+              ? 'bg-blue-600 hover:bg-blue-700' 
+              : 'bg-gray-700 hover:bg-blue-600'
+          }`}
+        >
+          <span>ðŸš©</span>
+          <span>Flag for Removal</span>
+        </button>
       </div>
     </div>
   );
@@ -646,11 +763,12 @@ const ReviewPage: React.FC = () => {
   const [currentReviewer, setCurrentReviewer] = useState<Reviewer | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [previousIndex, setPreviousIndex] = useState<number | null>(null);
-  const [phraseRating, setPhraseRating] = useState<boolean | undefined>();
+  const [phraseRating, setPhraseRating] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
   const [subcategories, setSubcategories] = useState<string[]>([]);
   const [isEditing] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [editedPhrase, setEditedPhrase] = useState<EditedPhrase>({
     id: -1,
     category: undefined,
@@ -659,6 +777,7 @@ const ReviewPage: React.FC = () => {
     difficulty: undefined,
     tags: undefined
   });
+  const [hasChanges, setHasChanges] = useState(false);
 
   const {
     phrases,
@@ -668,7 +787,6 @@ const ReviewPage: React.FC = () => {
     fetchPhrases
   } = usePhrases();
 
-  // Fetch categories when component mounts
   useEffect(() => {
     const loadCategories = async () => {
       const fetchedCategories = await fetchCategoriesFromHook();
@@ -679,7 +797,6 @@ const ReviewPage: React.FC = () => {
     loadCategories();
   }, [fetchCategoriesFromHook]);
 
-  // Load subcategories when the category changes
   useEffect(() => {
     const loadSubcategories = async () => {
       if (editedPhrase.category) {
@@ -708,7 +825,6 @@ const ReviewPage: React.FC = () => {
     loadSubcategories();
   }, [editedPhrase.category]);
 
-  // Load phrase data when the current phrase changes
   useEffect(() => {
     const loadPhraseData = async () => {
       const currentPhrase = phrases[currentIndex];
@@ -727,12 +843,13 @@ const ReviewPage: React.FC = () => {
 
         setEditedPhrase({
           id: currentPhrase.id,
-          category: categoryData?.name || null,
-          subcategory: subcategoryData?.name || null,
-          hint: currentPhrase.hint || null,
-          difficulty: currentPhrase.difficulty || null,
-          tags: currentPhrase.tags || null
+          category: categoryData?.name || undefined,
+          subcategory: subcategoryData?.name || undefined,
+          hint: currentPhrase.hint || undefined,
+          difficulty: currentPhrase.difficulty || undefined,
+          tags: currentPhrase.tags || undefined
         });
+        setHasChanges(false);
       }
     };
 
@@ -750,44 +867,54 @@ const ReviewPage: React.FC = () => {
     setPhraseRating(undefined);
   };
 
-  const handleVote = async (isLike: boolean) => {
+  const handleVote = async (newFlagState: boolean) => {
     if (!currentReviewer || !phrases[currentIndex]) return;
-
+  
+    setPhraseRating(newFlagState);
+  
     try {
-      const voteData: Omit<Vote, 'id'> = {
-        reviewer_id: currentReviewer.id,
-        phrase_id: phrases[currentIndex].id,
-        category: 'phrase',
-        vote: isLike,
-        created_at: new Date().toISOString()
-      };
-
-      const { error } = await supabase
-        .from('votes')
-        .insert(voteData);
-
-      if (error) throw error;
-
-      setPhraseRating(isLike);
-
-      const { error: reviewerError } = await supabase
-        .from('reviewers')
-        .update({
-          total_reviews: (currentReviewer.total_reviews || 0) + 1,
-          last_review_at: new Date().toISOString(),
-          current_streak: (currentReviewer.current_streak || 0) + 1
-        })
-        .eq('id', currentReviewer.id);
-
-      if (reviewerError) throw reviewerError;
+      if (newFlagState) {
+        const { error } = await supabase
+          .from('votes')
+          .insert({
+            reviewer_id: currentReviewer.id,
+            phrase_id: phrases[currentIndex].id,
+            category: 'phrase',
+            vote: false,
+            created_at: new Date().toISOString()
+          });
+  
+        if (error) {
+          setPhraseRating(!newFlagState);
+          throw error;
+        }
+      } else {
+        const { error: deleteError } = await supabase
+          .from('votes')
+          .delete()
+          .eq('reviewer_id', currentReviewer.id)
+          .eq('phrase_id', phrases[currentIndex].id)
+          .eq('category', 'phrase');
+  
+        if (deleteError) {
+          setPhraseRating(!newFlagState);
+          throw deleteError;
+        }
+      }
     } catch (err) {
       console.error('Error recording vote:', err);
     }
   };
 
+  const handleFieldChange = (field: keyof EditedPhrase, value: string) => {
+    setEditedPhrase(prev => ({ ...prev, [field]: value }));
+    setHasChanges(true);
+  };
+
   const handleSave = async () => {
     if (!editedPhrase.id || editedPhrase.id === -1) return;
 
+    setIsSaving(true);
     try {
       const categoryId = await getCategoryId(editedPhrase.category);
       const subcategoryId = await getSubcategoryId(editedPhrase.category, editedPhrase.subcategory);
@@ -814,7 +941,7 @@ const ReviewPage: React.FC = () => {
         const existingTags = existingTagsData?.map((pt: PhraseTagWithTag) => pt.tags.tag) || [];
 
         const tagsToRemove = existingTags.filter((tag: string) => !newTags.includes(tag));
-        for (const tagToRemove of tagsToRemove) {
+                for (const tagToRemove of tagsToRemove) {
           const { data: tagData } = await supabase
             .from('tags')
             .select('id')
@@ -864,8 +991,11 @@ const ReviewPage: React.FC = () => {
       }
 
       await fetchPhrases();
+      setHasChanges(false);
     } catch (err) {
       console.error('Error saving changes:', err);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -894,11 +1024,9 @@ const ReviewPage: React.FC = () => {
   };
 
   const handleNext = () => {
-    if (phraseRating !== undefined) {
-      setPreviousIndex(currentIndex);
-      setCurrentIndex(prev => prev + 1);
-      setPhraseRating(undefined);
-    }
+    setPreviousIndex(currentIndex);
+    setCurrentIndex(prev => prev + 1);
+    setPhraseRating(false); // Reset rating for next phrase
   };
 
   const handleBack = () => {
@@ -936,7 +1064,7 @@ const ReviewPage: React.FC = () => {
           <p>You've reviewed all available phrases.</p>
           <button
             onClick={() => setCurrentReviewer(null)}
-            className="mt-4 px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700"
+            className="mt-4 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
           >
             Switch Reviewer
           </button>
@@ -955,64 +1083,32 @@ const ReviewPage: React.FC = () => {
               <p className="text-gray-400 mt-2">
                 Reviewer: {currentReviewer.name} ({currentReviewer.total_reviews} reviews)
               </p>
-              <div className="mt-4">
-                <ReviewProgress
-                  reviewed={currentIndex}
-                  remaining={phrases.length - currentIndex - 1}
-                  streak={currentReviewer.current_streak}
-                />
-              </div>
             </div>
             <button
               onClick={() => setCurrentReviewer(null)}
-              className="px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700"
+              className="px-4 py-2 bg-gray-800 rounded hover:bg-gray-700"
             >
               Switch Reviewer
             </button>
           </div>
         </div>
 
-        <CategoryFilter
-          categories={categories}
-          selectedCategory={selectedCategory}
-          onSelect={handleCategorySelect}
-        />
+        <div className="flex items-center gap-4 mb-6">
+          <CategoryFilter
+            categories={categories}
+            selectedCategory={selectedCategory}
+            onSelect={handleCategorySelect}
+          />
+          <div className="flex-1">
+            <ReviewProgress streak={currentReviewer.current_streak} />
+          </div>
+        </div>
 
-        <div className="bg-gray-800 rounded-lg p-6">
+        <div className="bg-gray-800 rounded p-6">
           <PhraseField
             phrase={currentPhrase.phrase}
             onVote={handleVote}
             rating={phraseRating}
-          />
-          <Field
-            label="Category"
-            value={editedPhrase.category || ''}
-            isEditing={isEditing}
-            onChange={async (value) => {
-              setEditedPhrase({ ...editedPhrase, category: value, subcategory: null });
-            }}
-            type="select"
-            options={categories}
-          />
-          <Field
-            label="Subcategory"
-            value={editedPhrase.subcategory || ''}
-            isEditing={isEditing}
-            onChange={value => setEditedPhrase({ ...editedPhrase, subcategory: value })}
-            type="select"
-            options={subcategories}
-          />
-          <Field
-            label="Tags"
-            value={editedPhrase.tags}
-            isEditing={isEditing}
-            onChange={value => setEditedPhrase({ ...editedPhrase, tags: value })}
-          />
-          <Field
-            label="Hint"
-            value={editedPhrase.hint}
-            isEditing={isEditing}
-            onChange={value => setEditedPhrase({ ...editedPhrase, hint: value })}
           />
           <Field
             label="Difficulty"
@@ -1023,27 +1119,54 @@ const ReviewPage: React.FC = () => {
               '-'
             }
             isEditing={isEditing}
-            onChange={value => {
+            onChange={(value) => {
               const difficultyMap = { 'Easy': 1, 'Medium': 2, 'Hard': 3 };
-              setEditedPhrase({
-                ...editedPhrase,
-                difficulty: difficultyMap[value as keyof typeof difficultyMap]
-              });
+              handleFieldChange('difficulty', difficultyMap[value as keyof typeof difficultyMap].toString());
             }}
             type="select"
             options={['Easy', 'Medium', 'Hard']}
           />
+          <Field
+            label="Category"
+            value={editedPhrase.category || ''}
+            isEditing={isEditing}
+            onChange={(value) => handleFieldChange('category', value)}
+            type="select"
+            options={categories}
+          />
+          <Field
+            label="Subcategory"
+            value={editedPhrase.subcategory || ''}
+            isEditing={isEditing}
+            onChange={(value) => handleFieldChange('subcategory', value)}
+            type="select"
+            options={subcategories}
+          />
+          <Field
+            label="Tags"
+            value={editedPhrase.tags}
+            isEditing={isEditing}
+            onChange={(value) => handleFieldChange('tags', value)}
+            currentPhrase={currentPhrase}
+          />
+          <Field
+            label="Hint"
+            value={editedPhrase.hint}
+            isEditing={isEditing}
+            onChange={(value) => handleFieldChange('hint', value)}
+            currentPhrase={currentPhrase}
+          />
           <div className="flex justify-between items-center mt-6">
             <button
               onClick={handleSave}
-              className="px-4 py-2 bg-blue-600 rounded-lg hover:bg-blue-700"
+              disabled={!hasChanges || isSaving}
+              className={`px-4 py-2 md:text-base rounded ${
+                hasChanges ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 cursor-not-allowed'
+              }`}
             >
-              Save Changes
+              {isSaving ? 'Saving...' : 'Save Changes'}
             </button>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-400">
-                {phraseRating === undefined ? 'Please rate the phrase to continue' : 'Ready for next phrase!'}
-              </span>
               <div className="flex gap-2">
                 {previousIndex !== null && (
                   <button
@@ -1054,11 +1177,8 @@ const ReviewPage: React.FC = () => {
                   </button>
                 )}
                 <button
-                  className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${
-                    phraseRating !== undefined ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 cursor-not-allowed'
-                  }`}
+                  className="w-12 h-12 rounded-full flex items-center justify-center bg-blue-600 hover:bg-blue-700"
                   onClick={handleNext}
-                  disabled={phraseRating === undefined}
                 >
                   â†’
                 </button>
@@ -2236,7 +2356,7 @@ export default AdminDashboard;
 
 FILE: .\components\AdminNavBar.tsx
 SIZE: 1.57 KB
-LAST MODIFIED: 02/09/2025 10:21:22
+LAST MODIFIED: 02/28/2025 15:29:32
 
 import React from 'react';
 import { supabase } from '@/lib/supabase';
@@ -4583,10 +4703,8 @@ export default RowsPerPageSelect;
 ============================================================
 
 FILE: .\components\reviewer\CategoryFilter.tsx
-SIZE: 1.09 KB
-LAST MODIFIED: 02/13/2025 15:26:00
-
-// components/reviewer/CategoryFilter.tsx
+SIZE: 1.06 KB
+LAST MODIFIED: 02/17/2025 11:03:54
 
 import React from 'react';
 import {
@@ -4609,16 +4727,16 @@ export const CategoryFilter: React.FC<CategoryFilterProps> = ({
   onSelect
 }) => {
   return (
-    <div className="mb-6">
+    <div className="w-1/2">
       <Select 
         value={selectedCategory || "all"} 
         onValueChange={(value) => onSelect(value === "all" ? null : value)}
       >
         <SelectTrigger className="w-full bg-gray-800 border-gray-700">
-          <SelectValue placeholder="Filter by Category" />
+          <SelectValue placeholder="Choose a Category" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Categories</SelectItem>
+          <SelectItem value="all">Choose a Category</SelectItem>
           {categories.map(category => (
             <SelectItem key={category} value={category}>
               {category}
@@ -4944,49 +5062,37 @@ export default ReviewerSelection;
 ============================================================
 
 FILE: .\components\reviewer\ReviewProgress.tsx
-SIZE: 1.07 KB
-LAST MODIFIED: 02/13/2025 13:40:26
+SIZE: 0.82 KB
+LAST MODIFIED: 02/17/2025 11:07:30
 
 import React from 'react';
-import { motion } from 'framer-motion';
 import { Flame } from 'lucide-react';
 
 interface ReviewProgressProps {
-  reviewed: number;
-  remaining: number;
   streak: number;
 }
 
-const ReviewProgress: React.FC<ReviewProgressProps> = ({
-  reviewed,
-  remaining,
-  streak,
-}) => {
-  const total = reviewed + remaining;
-  const percentage = total > 0 ? Math.round((reviewed / total) * 100) : 0;
+const ReviewProgress: React.FC<ReviewProgressProps> = ({ streak }) => {
+  const percentage = (streak % 10) * 10; // Calculate percentage based on streak mod 10
 
   return (
-    <div className="bg-gray-800 rounded-lg p-4 mb-6">
-      <div className="flex justify-between items-center mb-2">
-        <div className="text-gray-300">
-          Progress: {reviewed}/{total} phrases
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-gray-300">Streak:</span>
-          <span className="text-white font-bold">{streak}</span>
-        </div>
+    <div className="flex items-center gap-2 px-4 py-2 bg-gray-800 rounded-lg hover:bg-gray-700">
+      <div className="text-gray-300 flex items-center gap-2 ">
+       
+        Review Hot Streak: {streak}
       </div>
-      <div className="w-full bg-gray-700 rounded-full h-2">
+      <div className="w-24 bg-gray-700 rounded-full h-2">
         <div
-          className="bg-blue-500 h-2 rounded-full"
+          className="bg-orange-500 h-2 rounded-full transition-all duration-300"
           style={{ width: `${percentage}%` }}
         />
       </div>
+       <Flame className="w-4 h-4 text-orange-500" />
     </div>
   );
 };
 
-export default ReviewProgress; 
+export default ReviewProgress;
 
 ============================================================
 
@@ -5499,7 +5605,7 @@ export default StatsSection;
 
 FILE: .\components\table\PhrasesTable.tsx
 SIZE: 8.7 KB
-LAST MODIFIED: 02/13/2025 12:18:33
+LAST MODIFIED: 02/20/2025 13:30:59
 
 import React from 'react';
 import { ChevronDown, ChevronUp, Pencil, Trash2, Eye } from 'lucide-react';
@@ -7355,14 +7461,185 @@ export type { Toast };
 
 ============================================================
 
+FILE: .\lib\claudeService.ts
+SIZE: 5.93 KB
+LAST MODIFIED: 02/28/2025 15:29:32
+
+// src/lib/claudeService.ts
+'use client';
+
+export interface GenerateTagsResponse {
+  tags: string[];
+  error?: string;
+}
+
+export interface GenerateHintResponse {
+  hint: string;
+  error?: string;
+}
+
+// src/lib/claudeService.ts
+const makeClaudeRequest = async (messages: Array<{ role: string; content: string }>) => {
+  console.log('Attempting API request with messages:', messages);
+  try {
+    const response = await fetch('/api/claude', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ messages })
+    });
+    console.log('Response status:', response.status);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.log('Error response text:', errorText);
+      throw new Error(`API request failed: ${response.status} - ${errorText}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Request error details:', error);
+    throw error;
+  }
+};
+
+export const generateTags = async (phrase: string, currentHint: string = ''): Promise<GenerateTagsResponse> => {
+  try {
+    const data = await makeClaudeRequest([{
+      role: 'user',
+      content: `Generate exactly 3 descriptive tags for this catch phrase: "${phrase}"
+                Current hint (for reference): "${currentHint}"
+
+                Strict Rules for Tag Generation:
+                1. Generate EXACTLY 3 tags
+                2. Each tag must be a SINGLE word (no spaces, hyphens, or special characters)
+                3. Each tag must be 16 characters or less
+                4. Each tag must start with a capital letter
+                5. Tags must be DIRECTLY related to the meaning, theme, or context of the phrase
+                6. Tags MUST NOT contain any words from the phrase or the hint
+                7. Tags must be distinct in meaning (no synonyms between tags)
+                8. Tags should be specific and meaningful (avoid generic terms)
+                
+                Return exactly 3 tags separated by commas, nothing else.
+                Example format for "Laser Hair Removal": MedSpa,Aesthetics,Grooming`
+    }]);
+
+    const tagsString = data.content[0].text.trim();
+    const tags = tagsString
+      .split(',')
+      .map((tag: string) => tag.trim())
+      .filter(Boolean); // Remove empty strings
+
+    // Validate number of tags
+    if (tags.length !== 3) {
+      throw new Error(`Expected 3 tags, got ${tags.length}`);
+    }
+
+    // Validate each tag
+    tags.forEach((tag: string, index: number) => {
+      if (tag.length > 16) {
+        throw new Error(`Tag ${index + 1} exceeds 16 characters: ${tag}`);
+      }
+      if (!/^[A-Z][a-zA-Z]*$/.test(tag)) {
+        throw new Error(`Tag ${index + 1} has invalid format: ${tag}`);
+      }
+      if (phrase.toLowerCase().includes(tag.toLowerCase())) {
+        throw new Error(`Tag ${index + 1} contains words from phrase: ${tag}`);
+      }
+      if (currentHint && currentHint.toLowerCase().includes(tag.toLowerCase())) {
+        throw new Error(`Tag ${index + 1} contains words from hint: ${tag}`);
+      }
+    });
+
+    return { tags };
+  } catch (error) {
+    console.error('Error generating tags:', error);
+    return {
+      tags: [],
+      error: error instanceof Error ? error.message : 'Failed to generate tags'
+    };
+  }
+};
+
+export const generateHint = async (phrase: string): Promise<GenerateHintResponse> => {
+  try {
+    const data = await makeClaudeRequest([{
+      role: 'user',
+      content: `Create a clever hint for the catch phrase: "${phrase}"
+
+                Strict Rules for Hint Generation:
+                1. CRITICAL: Total length INCLUDING SPACES must be 18 or fewer characters
+                2. Must be EXACTLY 3 short words
+                3. Each word MUST start with a capital letter
+                4. MUST NOT contain any words from the phrase
+                5. Must be clever and indirect (no obvious synonyms)
+                6. Should guide players toward the concept
+                7. Keep words very short to meet character limit
+                8. Count spaces in the 18-character limit
+                
+                Return only the 3-word hint with proper capitalization, nothing else.
+                Valid Examples (note character counts):
+                - For "Laser Hair Removal": "Spa Fix Beauty" (12 chars)
+                - For "Mountain Climbing": "Up High Peak" (11 chars)
+                - For "Birthday Party": "Fun Cake Day" (11 chars)
+                
+                Remember: Total characters (with spaces) MUST be 18 or less!`
+    }]);
+
+    let hint = data.content[0].text.trim();
+
+    // Remove any punctuation that might have been added
+    hint = hint.replace(/[.,!?]$/, '').trim();
+
+    // Validate hint format
+    const words = hint.split(' ').filter(Boolean); // Remove empty strings
+
+    // Detailed validation with specific error messages
+    if (words.length !== 3) {
+      throw new Error(`Expected 3 words, got ${words.length}: "${hint}"`);
+    }
+
+    if (hint.length > 18) {
+      throw new Error(`Hint exceeds 18 characters: "${hint}" (${hint.length} chars)`);
+    }
+
+    const invalidWords = words.filter(word => !/^[A-Z][a-zA-Z]*$/.test(word));
+    if (invalidWords.length > 0) {
+      throw new Error(`Invalid word format: ${invalidWords.join(', ')}`);
+    }
+
+    const phraseWords = phrase.toLowerCase().split(' ');
+    const conflictingWords = words.filter(word => 
+      phraseWords.some(phraseWord => 
+        phraseWord.toLowerCase() === word.toLowerCase()
+      )
+    );
+    
+    if (conflictingWords.length > 0) {
+      throw new Error(`Hint contains words from phrase: ${conflictingWords.join(', ')}`);
+    }
+
+    return { hint };
+  } catch (error) {
+    console.error('Error generating hint:', error);
+    return {
+      hint: '',
+      error: error instanceof Error ? 
+        error.message : 
+        'Failed to generate hint'
+    };
+  }
+};
+
+============================================================
+
 FILE: .\lib\supabase.ts
 SIZE: 0.55 KB
-LAST MODIFIED: 02/16/2025 18:09:10
+LAST MODIFIED: 02/18/2025 10:42:19
 
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../types/supabase'
 
-const supabaseUrl = 'https://odtetapubiiqzlfrcfxr.supabase.co'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
