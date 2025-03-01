@@ -12,10 +12,7 @@ export interface GenerateHintResponse {
 }
 
 const makeClaudeRequest = async (messages: Array<{ role: string; content: string }>) => {
-  console.log('Making Claude request with messages:', messages);
-  
-  // Use the test-claude endpoint instead
-  const response = await fetch('/api/test-claude', {
+  const response = await fetch('/api/claude', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
