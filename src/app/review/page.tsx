@@ -7,6 +7,7 @@ import ReviewProgress from '@/components/reviewer/ReviewProgress';
 import { CategoryFilter } from '@/components/reviewer/CategoryFilter';
 import { usePhrases } from '@/hooks/usePhrases';
 import { generateTags, generateHint } from '@/lib/claudeService';
+import WordCreator from '@/components/reviewer/WordCreator';
 import type {
   Phrase,
   Reviewer,
@@ -17,6 +18,9 @@ import type {
   Tag,
   SubcategoryName
 } from '@/types/types';
+
+// Mode type definition
+type ReviewMode = 'review' | 'create';
 
 interface FieldProps {
   label: string;
@@ -240,6 +244,7 @@ const PhraseField: React.FC<PhraseFieldProps> = ({
 };
 
 const ReviewPage: React.FC = () => {
+  const [mode, setMode] = useState<ReviewMode>('review');
   const [currentReviewer, setCurrentReviewer] = useState<Reviewer | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [previousIndex, setPreviousIndex] = useState<number | null>(null);
@@ -333,8 +338,10 @@ const ReviewPage: React.FC = () => {
       }
     };
 
-    loadPhraseData();
-  }, [phrases, currentIndex]);
+    if (mode === 'review') {
+      loadPhraseData();
+    }
+  }, [phrases, currentIndex, mode]);
 
   const handleReviewerSelect = (reviewer: Reviewer) => {
     setCurrentReviewer(reviewer);
@@ -517,6 +524,10 @@ const ReviewPage: React.FC = () => {
     }
   };
 
+  const handleModeChange = (newMode: ReviewMode) => {
+    setMode(newMode);
+  };
+
   if (phrasesLoading) {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
@@ -534,6 +545,17 @@ const ReviewPage: React.FC = () => {
     );
   }
 
+  // Show word creator if in create mode
+  if (mode === 'create') {
+    return (
+      <WordCreator 
+        reviewer={currentReviewer} 
+        categories={categories}
+        onSwitchMode={() => setMode('review')}
+      />
+    );
+  }
+
   const currentPhrase = phrases[currentIndex];
 
   if (!currentPhrase) {
@@ -542,12 +564,20 @@ const ReviewPage: React.FC = () => {
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4">All caught up! 🎉</h2>
           <p>You've reviewed all available phrases.</p>
-          <button
-            onClick={() => setCurrentReviewer(null)}
-            className="mt-4 px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
-          >
-            Switch Reviewer
-          </button>
+          <div className="flex gap-4 justify-center mt-6">
+            <button
+              onClick={() => setCurrentReviewer(null)}
+              className="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700"
+            >
+              Switch Reviewer
+            </button>
+            <button
+              onClick={() => setMode('create')}
+              className="px-4 py-2 bg-green-600 rounded hover:bg-green-700"
+            >
+              Create New Words
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -564,12 +594,20 @@ const ReviewPage: React.FC = () => {
                 Reviewer: {currentReviewer.name} ({currentReviewer.total_reviews} reviews)
               </p>
             </div>
-            <button
-              onClick={() => setCurrentReviewer(null)}
-              className="px-4 py-2 bg-gray-800 rounded hover:bg-gray-700"
-            >
-              Switch Reviewer
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setMode('create')}
+                className="px-4 py-2 bg-green-600 rounded hover:bg-green-700"
+              >
+                Create New Words
+              </button>
+              <button
+                onClick={() => setCurrentReviewer(null)}
+                className="px-4 py-2 bg-gray-800 rounded hover:bg-gray-700"
+              >
+                Switch Reviewer
+              </button>
+            </div>
           </div>
         </div>
 

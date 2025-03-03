@@ -11,6 +11,11 @@ export interface GenerateHintResponse {
   error?: string;
 }
 
+export interface GeneratePhrasesResponse {
+  phrases: string[];
+  error?: string;
+}
+
 const makeClaudeRequest = async (messages: Array<{ role: string; content: string }>) => {
   const response = await fetch('/api/claude', {
     method: 'POST',
@@ -74,9 +79,9 @@ export const generateHint = async (phrase: string): Promise<GenerateHintResponse
   try {
     const data = await makeClaudeRequest([{
       role: 'user',
-      content: `Create a helpful hint for the catch phrase: "${phrase}".
+      content: `Create a VERY SHORT helpful hint for the catch phrase: "${phrase}".
                 Rules for hints:
-                1. Maximum 50 characters
+                1. MUST BE 30 CHARACTERS OR LESS - THIS IS CRITICAL
                 2. Don't reveal the exact answer
                 3. Focus on context or category
                 4. No direct synonyms
@@ -91,7 +96,8 @@ export const generateHint = async (phrase: string): Promise<GenerateHintResponse
     const hint = data.content[0].text.trim();
 
     if (hint.length > 50) {
-      throw new Error('Hint exceeds maximum length');
+      // Truncate if still over limit
+      return { hint: hint.substring(0, 47) + "..." };
     }
 
     return { hint };
@@ -100,6 +106,43 @@ export const generateHint = async (phrase: string): Promise<GenerateHintResponse
     return {
       hint: '',
       error: error instanceof Error ? error.message : 'Failed to generate hint'
+    };
+  }
+};
+
+export const generatePhrases = async (inspiration: string, count: number = 5): Promise<GeneratePhrasesResponse> => {
+  try {
+    const data = await makeClaudeRequest([{
+      role: 'user',
+      content: `Generate ${count} unique and interesting catch phrases or words based on this inspiration: "${inspiration}".
+                Rules for generated words/phrases:
+                1. Mix of single words and short phrases (2-3 words)
+                2. Suitable for a word game
+                3. Each entry should be distinct and creative
+                4. No extremely obscure terms
+                5. Family-friendly content only
+                6. No proper nouns unless very well known
+                7. Varying difficulty levels
+                
+                Return only the list of words/phrases separated by commas, nothing else.
+                Example format: Slumber party, Déjà vu, Photograph, Brain teaser, Pumpkin spice`
+    }]);
+
+    const phrases = data.content[0].text
+      .split(',')
+      .map((phrase: string) => phrase.trim())
+      .filter((phrase: string) => phrase.length > 0);
+
+    if (phrases.length === 0) {
+      throw new Error('No phrases were generated');
+    }
+
+    return { phrases };
+  } catch (error) {
+    console.error('Error generating phrases:', error);
+    return {
+      phrases: [],
+      error: error instanceof Error ? error.message : 'Failed to generate phrases'
     };
   }
 };

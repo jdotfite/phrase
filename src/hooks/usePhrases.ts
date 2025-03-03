@@ -134,11 +134,15 @@ export const usePhrases = () => {
         .from('categories')
         .select('name')
         .order('name');
-
-      if (error) throw error;
-      return data?.map(cat => cat.name) || [];
-    } catch (err) {
-      console.error('Error fetching categories:', err);
+        
+      if (error) {
+        console.error('Supabase error fetching categories:', error);
+        return [];
+      }
+      
+      return data.map(category => category.name);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
       return [];
     }
   };
