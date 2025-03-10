@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Catch Phrase Admin
+A Next.js application for managing catch phrases, with features for reviewing, categorizing, and maintaining a database of phrases.
+Project Structure
 
-## Getting Started
+/app: Next.js app router pages
 
-First, run the development server:
+/admin: Admin dashboard for managing phrases
+/review: Reviewer interface for rating and reviewing phrases
+/components-demo: Showcase of Shadcn UI components
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+/components: Reusable UI components
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+/common: Shared utilities like filters, tables, etc.
+/ui: Shadcn UI components
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Learn More
+/features: Feature-specific components
 
-To learn more about Next.js, take a look at the following resources:
+/admin: Admin dashboard components
+/review: Review interface components
+/shared: Shared features (forms, modals)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+/hooks: Custom React hooks
 
-## Deploy on Vercel
+usePhrases: For fetching and managing phrases
+useStats: For statistics calculations
+and more...
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+/lib: Utility functions and services
+
+/services: API services
+/utils: Helper functions
+
+
+
+Database Structure
+The application uses Supabase with tables for:
+
+phrases: Stores the main phrase data
+categories: Main categories for organizing phrases
+subcategories: Subcategories within main categories
+tags: Tags for additional classification
+phrase_tags: Linking table between phrases and tags
+votes: Stores user ratings for phrases
+reviewers: Information about reviewers
+
+Getting Started
+
+Clone the repository
+Install dependencies: npm install
+Set up environment variables:
+
+Create a .env.local file with Supabase credentials
+
+
+Run the development server: npm run dev
+Open http://localhost:3000 in your browser
+
+UI Components
+The project uses Shadcn UI for its component library. You can see a demo of available components at /components-demo.
+Admin Dashboard
+Access the admin dashboard at /admin. Features include:
+
+View and manage phrases
+Import phrases in bulk
+View statistics and analytics
+Filter and search phrases
+
+Review Interface
+Access the review interface at /review. Features include:
+
+Review phrases for quality and accuracy
+Rate phrases and provide feedback
+Create new phrases

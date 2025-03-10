@@ -1,13 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
-import ReviewerSelection from '@/components/reviewer/ReviewerSelection';
-import ReviewProgress from '@/components/reviewer/ReviewProgress';
-import { CategoryFilter } from '@/components/reviewer/CategoryFilter';
+import { supabase } from '@/lib/services/supabase';
+import ReviewerSelection from '@/features/review/ReviewerSelection';
+import ReviewProgress from '@/features/review/ReviewProgress';
+import { CategoryFilter } from '@/features/review/CategoryFilter';
 import { usePhrases } from '@/hooks/usePhrases';
-import { generateTags, generateHint } from '@/lib/claudeService';
-import WordCreator from '@/components/reviewer/WordCreator';
+import { generateTags, generateHint } from '@/lib/services/claudeService';
+import WordCreator from '@/features/review/WordCreator';
 import type {
   Phrase,
   Reviewer,
@@ -285,22 +285,36 @@ const ReviewPage: React.FC = () => {
   useEffect(() => {
     const loadSubcategories = async () => {
       if (editedPhrase.category) {
-        const { data: categoryData } = await supabase
-          .from('categories')
-          .select('id')
-          .eq('name', editedPhrase.category)
-          .single();
-
-        if (categoryData) {
-          const { data: subcategoryData } = await supabase
+        try {
+          const { data: categoryData, error } = await supabase
+            .from('categories')
+            .select('id')
+            .eq('name', editedPhrase.category)
+            .single();
+    
+          if (error || !categoryData) {
+            console.error('Error fetching category:', error);
+            setSubcategories([]);
+            return;
+          }
+    
+          // At this point, we know categoryData exists and has an id
+          const { data: subcategoryData, error: subError } = await supabase
             .from('subcategories')
             .select('name')
             .eq('category_id', categoryData.id)
             .order('name');
-
-          if (subcategoryData) {
-            setSubcategories(subcategoryData.map(sub => sub.name));
+    
+          if (subError || !subcategoryData) {
+            console.error('Error fetching subcategories:', subError);
+            setSubcategories([]);
+            return;
           }
+    
+          setSubcategories(subcategoryData.map(sub => sub.name));
+        } catch (err) {
+          console.error('Exception in loadSubcategories:', err);
+          setSubcategories([]);
         }
       } else {
         setSubcategories([]);

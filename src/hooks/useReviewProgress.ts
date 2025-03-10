@@ -1,5 +1,5 @@
-﻿import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { useState, useEffect } from "react";
+import { supabase } from '@/lib/services/supabase';
 import type { Reviewer } from "@/types/types";
 
 interface ReviewProgress {
@@ -45,3 +45,4 @@ export const useReviewProgress = (
 
   return progress;
 };
+

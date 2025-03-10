@@ -1,7 +1,7 @@
 // hooks/usePhrases.ts
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase'
+import { supabase } from '@/lib/services/supabase'
 import type { Phrase, PaginationState, SortConfig, Filters } from '@/types/types';
 
 export const usePhrases = () => {

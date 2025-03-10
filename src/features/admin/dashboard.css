@@ -1,0 +1,95 @@
+@keyframes flash {
+  0%, 100% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: var(--accent);
+  }
+}
+
+.animate-flash {
+  animation: flash 1.5s ease-in-out;
+}
+
+/* Table row hover effect */
+.table-row-hover {
+  transition: background-color 0.15s ease;
+}
+
+.table-row-hover:hover {
+  background-color: var(--muted);
+}
+
+/* Ensure top margin for pie labels */
+.recharts-pie-label-text {
+  margin-top: 5px; /* Fix for cut-off text */
+}
+
+/* Chart hover effects */
+.recharts-wrapper {
+  margin-top: 5px;
+}
+
+/* Chart style updates */
+.recharts-bar-rectangle:hover {
+  filter: brightness(1.2);
+  cursor: pointer;
+}
+
+.recharts-pie-sector:hover {
+  filter: brightness(1.2);
+  cursor: pointer;
+}
+
+/* Custom grayscale palette for charts */
+.chart-gray-100 {
+  fill: #f5f5f5;
+}
+
+.chart-gray-200 {
+  fill: #e0e0e0;
+}
+
+.chart-gray-300 {
+  fill: #cccccc;
+}
+
+.chart-gray-400 {
+  fill: #bbbbbb;
+}
+
+.chart-gray-500 {
+  fill: #999999;
+}
+
+.chart-gray-600 {
+  fill: #777777;
+}
+
+.chart-gray-700 {
+  fill: #555555;
+}
+
+.chart-gray-800 {
+  fill: #333333;
+}
+
+/* Tooltip styling */
+.custom-tooltip {
+  background-color: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Login button styling */
+.login-button {
+  background-color: white;
+  color: black;
+  border: 1px solid var(--border);
+}
+
+.login-button:hover {
+  background-color: #f0f0f0;
+}
