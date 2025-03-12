@@ -25,9 +25,10 @@ const TagDisplay: React.FC<TagDisplayProps> = ({
           key={`${tag}-${idx}`}
           onClick={() => onClick?.(tag)}
           className={cn(
-            "px-2 py-0.5 text-xs rounded-full bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
-            onClick ? "hover:bg-gray-300 dark:hover:bg-gray-600 cursor-pointer" : "cursor-default",
-            "transition-colors duration-150"
+            "px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
+            onClick ? "hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer" : "cursor-default",
+            "transition-colors duration-150",
+            className
           )}
         >
           {tag}

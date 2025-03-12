@@ -13,18 +13,18 @@ import type {
 } from '@/types/types';
 
 // Component imports
-import AdminNavBar from '@/features/admin/AdminNavBar';
+import AdminNavBar from '@/components/admin/AdminNavBar';
 import StatsSection from '@/components/common/StatsSection';
-import AddPhraseForm from '@/features/shared/AddPhraseForm';
-import BulkImportForm from '@/features/shared/BulkImportForm';
+import AddPhraseForm from '@/components/shared/AddPhraseForm';
+import BulkImportForm from '@/components/shared/BulkImportForm';
 import FilterControls from '@/components/common/FilterControls';
 import PhrasesTable from '@/components/common/PhrasesTable';
-import CardViewModal from '@/features/shared/CardViewModal';
+import CardViewModal from '@/components/shared/CardViewModal';
 import Login from '@/components/common/Login';
 
 // Hook imports
 import { usePhrases } from '@/hooks/usePhrases';
-import { usePhraseMetadata } from '@/hooks/usePhraseMetadata';
+import { usePhraseMetadata } from '@/hooks/use-data/usePhraseMetadata';
 import { useStats } from '@/hooks/useStats';
 
 		// Type definitions

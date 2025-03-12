@@ -8,7 +8,7 @@ import { Clock, Users, FileText, Award, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import FilterControls from '@/components/common/FilterControls';
 import PhrasesTable from '@/components/common/PhrasesTable';
-import BulkImportForm from '@/features/shared/BulkImportForm';
+import BulkImportForm from '@/components/shared/BulkImportForm';
 import Login from '@/components/common/Login';
 import { useStats } from '@/hooks/useStats';
 import { usePhrases } from '@/hooks/usePhrases';
