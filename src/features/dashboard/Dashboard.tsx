@@ -11,7 +11,7 @@ import './styles/dashboard.css';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/features/charts';
 
 // Components
-import { PhrasesTable } from '@/features/phrases/PhrasesTable';
+import { PhrasesTable } from '@/features/phrases/phrasesTable';
 import { DataTableFilters } from '@/features/filters/DataTableFilters';
 import { DashboardHeader } from '@/features/dashboard/components/DashboardHeader';
 import ExportModal from '@/features/dashboard/components/ExportModal';
