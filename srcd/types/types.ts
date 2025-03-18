@@ -97,13 +97,8 @@ export interface PaginationState {
   currentPage: number;
   rowsPerPage: number;
   totalPages: number;
-  totalItems?: number; // Make sure this is included
 }
-export interface TableState {
-  sortConfig: SortConfig;
-  pagination: PaginationState;
-  filters: Filters;
-}
+
 export interface SortConfig {
   key: keyof Phrase | '';
   direction: 'asc' | 'desc';
@@ -159,14 +154,17 @@ export interface FilterControlsProps {
 }
 
 export interface PhrasesTableProps {
-  phrases: any[]; // This should match the actual data structure
-  loading?: boolean;
-  tableState: TableState;
-  onTableStateChange: (updates: Partial<TableState>) => void;
-  onEdit?: (id: number) => void;
-  onDelete?: (id: number) => void;
+  phrases: Phrase[];
+  loading: boolean;
+  pagination: PaginationState;
+  sortConfig: SortConfig;
+  onSort: (key: keyof Phrase) => void;
+  onPageChange: (page: number) => void;
+  onRowsPerPageChange: (rowsPerPage: number) => void;
+  onEdit: (phrase: Phrase) => Promise<void>;
+  onDelete: (id: number) => Promise<void>;
+  onShowCardView: () => void;
   newIds?: number[];
-  onShowFilters?: () => void;
 }
 
 export interface CardViewModalProps {

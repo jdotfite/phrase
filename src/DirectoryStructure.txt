@@ -1,0 +1,117 @@
+DIRECTORY STRUCTURE REPORT
+Generated: 2025-03-17 22:23:59
+Computer: OFFICE
+Current User: Justin
+PowerShell Version: 5.1.19041.5607
+---------------------------------------------
+
+[DIR] C:\_websites\catch-phrase\src
+    [FILE] code-base.ps1 | Size: 2.94 KB | Type: .ps1 | Modified: 2025-02-13 10:17:39
+    [FILE] db-structure.txt | Size: 28.94 KB | Type: .txt | Modified: 2025-03-10 14:35:18
+    [FILE] DirectoryStructure.txt | Size: 0 B | Type: .txt | Modified: 2025-03-17 22:23:59
+    [FILE] file-structure.ps1 | Size: 2.99 KB | Type: .ps1 | Modified: 2025-03-17 11:11:08
+    [DIR] app
+        [FILE] favicon.ico | Size: 25.32 KB | Type: .ico | Modified: 2025-02-06 09:46:52
+        [FILE] globals.css | Size: 1.67 KB | Type: .css | Modified: 2025-03-04 21:05:06
+        [FILE] layout.tsx | Size: 592 B | Type: .tsx | Modified: 2025-03-05 16:27:42
+        [FILE] page.tsx | Size: 239 B | Type: .tsx | Modified: 2025-02-07 09:27:36
+        [DIR] admin
+            [FILE] page.tsx | Size: 253 B | Type: .tsx | Modified: 2025-03-15 17:17:29
+        [DIR] api
+            [DIR] claude
+                [FILE] route.ts | Size: 1.41 KB | Type: .ts | Modified: 2025-03-01 15:23:07
+                [DIR] suggest-category
+                    [FILE] route.ts | Size: 2.76 KB | Type: .ts | Modified: 2025-03-04 10:15:32
+        [DIR] review
+            [FILE] page.tsx | Size: 22.26 KB | Type: .tsx | Modified: 2025-03-16 16:09:18
+    [DIR] components
+        [DIR] common
+            [FILE] TagDisplay.tsx | Size: 1.03 KB | Type: .tsx | Modified: 2025-03-11 21:48:59
+        [DIR] review
+            [FILE] CardSwiper.css | Size: 5.78 KB | Type: .css | Modified: 2025-03-04 09:36:22
+            [FILE] CategoryFilter.tsx | Size: 1.06 KB | Type: .tsx | Modified: 2025-02-17 11:03:54
+            [FILE] Leaderboard.tsx | Size: 1.25 KB | Type: .tsx | Modified: 2025-02-12 10:08:18
+            [FILE] PinPad.tsx | Size: 1.98 KB | Type: .tsx | Modified: 2025-02-12 00:51:24
+            [FILE] ReviewerCard.tsx | Size: 1.07 KB | Type: .tsx | Modified: 2025-02-12 10:06:04
+            [FILE] ReviewerSelection.tsx | Size: 4.07 KB | Type: .tsx | Modified: 2025-03-05 15:21:07
+            [FILE] ReviewProgress.tsx | Size: 836 B | Type: .tsx | Modified: 2025-02-17 11:07:30
+            [FILE] WordCreator.tsx | Size: 21.29 KB | Type: .tsx | Modified: 2025-03-05 15:03:18
+        [DIR] ui
+            [FILE] alert.tsx | Size: 2.23 KB | Type: .tsx | Modified: 2025-02-09 10:34:20
+            [FILE] button.tsx | Size: 1.69 KB | Type: .tsx | Modified: 2025-02-09 10:32:42
+            [FILE] card.tsx | Size: 1.79 KB | Type: .tsx | Modified: 2025-03-04 21:20:49
+            [FILE] chart.tsx | Size: 2.92 KB | Type: .tsx | Modified: 2025-03-07 09:03:03
+            [FILE] checkbox.tsx | Size: 1.07 KB | Type: .tsx | Modified: 2025-03-07 17:11:30
+            [FILE] dialog.tsx | Size: 4.78 KB | Type: .tsx | Modified: 2025-02-09 15:31:45
+            [FILE] dropdown-menu.tsx | Size: 7.37 KB | Type: .tsx | Modified: 2025-03-07 08:43:08
+            [FILE] input.tsx | Size: 768 B | Type: .tsx | Modified: 2025-03-04 21:21:03
+            [FILE] label.tsx | Size: 724 B | Type: .tsx | Modified: 2025-03-04 21:21:19
+            [FILE] modal.tsx | Size: 3.93 KB | Type: .tsx | Modified: 2025-02-09 10:34:53
+            [FILE] pill-tabs.tsx | Size: 1.42 KB | Type: .tsx | Modified: 2025-03-17 21:44:17
+            [FILE] select.tsx | Size: 5.51 KB | Type: .tsx | Modified: 2025-03-04 21:25:38
+            [FILE] stat-card.tsx | Size: 1.61 KB | Type: .tsx | Modified: 2025-03-04 21:07:38
+            [FILE] table.tsx | Size: 2.79 KB | Type: .tsx | Modified: 2025-03-04 21:21:35
+            [FILE] tabs.tsx | Size: 1.88 KB | Type: .tsx | Modified: 2025-03-12 09:01:44
+            [FILE] toast.tsx | Size: 4.88 KB | Type: .tsx | Modified: 2025-02-09 10:39:17
+            [FILE] toaster.tsx | Size: 1.30 KB | Type: .tsx | Modified: 2025-02-09 10:39:36
+    [DIR] features
+        [DIR] auth
+            [FILE] PinPad.tsx | Size: 2.47 KB | Type: .tsx | Modified: 2025-03-17 09:58:57
+            [FILE] ReviewerLoginButton.tsx | Size: 1.06 KB | Type: .tsx | Modified: 2025-03-17 11:15:00
+            [FILE] ReviewerLoginModal.tsx | Size: 5.00 KB | Type: .tsx | Modified: 2025-03-17 21:39:28
+            [FILE] ReviewerProfileDropdown.tsx | Size: 3.20 KB | Type: .tsx | Modified: 2025-03-17 21:39:18
+            [FILE] types.ts | Size: 0 B | Type: .ts | Modified: 2025-03-16 19:36:17
+        [DIR] charts
+            [FILE] ChartContainer.tsx | Size: 842 B | Type: .tsx | Modified: 2025-03-16 15:49:31
+            [FILE] ChartTooltip.tsx | Size: 269 B | Type: .tsx | Modified: 2025-03-15 18:35:43
+            [FILE] ChartTooltipContent.tsx | Size: 1.50 KB | Type: .tsx | Modified: 2025-03-16 15:49:59
+            [FILE] index.ts | Size: 160 B | Type: .ts | Modified: 2025-03-15 18:35:43
+        [DIR] dashboard
+            [FILE] Dashboard.tsx | Size: 32.50 KB | Type: .tsx | Modified: 2025-03-17 21:55:00
+            [DIR] components
+                [FILE] DashboardHeader.tsx | Size: 1.79 KB | Type: .tsx | Modified: 2025-03-17 21:44:48
+                [FILE] ExportModal.tsx | Size: 4.29 KB | Type: .tsx | Modified: 2025-03-17 21:35:28
+            [DIR] styles
+                [FILE] dashboard.css | Size: 1.53 KB | Type: .css | Modified: 2025-03-06 22:07:22
+        [DIR] data
+            [DIR] hooks
+                [FILE] usePhraseMetadata.ts | Size: 2.39 KB | Type: .ts | Modified: 2025-03-05 15:03:18
+                [FILE] usePhrases.ts | Size: 6.12 KB | Type: .ts | Modified: 2025-03-17 21:29:25
+                [FILE] useReviewers.ts | Size: 971 B | Type: .ts | Modified: 2025-03-05 15:03:18
+                [FILE] useStats.ts | Size: 2.84 KB | Type: .ts | Modified: 2025-03-05 15:03:18
+        [DIR] filters
+            [FILE] FilterModal.tsx | Size: 5.50 KB | Type: .tsx | Modified: 2025-03-05 16:59:06
+        [DIR] import
+            [FILE] BulkImportForm.tsx | Size: 3.89 KB | Type: .tsx | Modified: 2025-03-06 22:11:26
+        [DIR] phrases
+            [DIR] phrasesTable
+                [FILE] index.tsx | Size: 17.45 KB | Type: .tsx | Modified: 2025-03-17 21:30:16
+    [DIR] hooks
+        [FILE] useReviewProgress.ts | Size: 1.18 KB | Type: .ts | Modified: 2025-03-05 15:03:18
+        [FILE] use-table-state.ts | Size: 3.45 KB | Type: .ts | Modified: 2025-03-09 15:24:47
+        [DIR] dashboard
+            [FILE] usePhraseTimeline.ts | Size: 891 B | Type: .ts | Modified: 2025-03-09 21:46:08
+        [DIR] use-ui
+            [FILE] useDebounce.ts | Size: 4.11 KB | Type: .ts | Modified: 2025-02-09 15:42:39
+            [FILE] usePagination.ts | Size: 2.35 KB | Type: .ts | Modified: 2025-02-09 10:17:17
+            [FILE] useToast.ts | Size: 3.94 KB | Type: .ts | Modified: 2025-02-09 10:40:35
+    [DIR] lib
+        [FILE] utils.ts | Size: 166 B | Type: .ts | Modified: 2025-03-04 21:05:08
+        [DIR] services
+            [FILE] claudeService.ts | Size: 5.79 KB | Type: .ts | Modified: 2025-03-04 11:02:57
+            [FILE] supabase.ts | Size: 567 B | Type: .ts | Modified: 2025-02-18 10:42:19
+        [DIR] utils
+            [FILE] bulkImport.ts | Size: 5.11 KB | Type: .ts | Modified: 2025-03-05 15:03:18
+            [FILE] databaseMaintenance.ts | Size: 5.37 KB | Type: .ts | Modified: 2025-03-05 15:03:18
+            [FILE] formatters.ts | Size: 4.56 KB | Type: .ts | Modified: 2025-02-09 10:16:11
+            [FILE] phraseUtils.ts | Size: 6.53 KB | Type: .ts | Modified: 2025-02-09 10:18:26
+            [FILE] safeStorage.ts | Size: 812 B | Type: .ts | Modified: 2025-03-05 15:17:36
+            [FILE] statsUtils.ts | Size: 4.29 KB | Type: .ts | Modified: 2025-02-09 10:15:14
+            [FILE] validators.ts | Size: 3.81 KB | Type: .ts | Modified: 2025-02-09 10:13:27
+    [DIR] providers
+        [FILE] ThemeProvider.tsx | Size: 787 B | Type: .tsx | Modified: 2025-03-06 21:02:46
+    [DIR] services
+        [FILE] dashboard-data-service.ts | Size: 7.64 KB | Type: .ts | Modified: 2025-03-09 21:52:03
+    [DIR] types
+        [FILE] supabase.ts | Size: 3.57 KB | Type: .ts | Modified: 2025-02-16 18:12:15
+        [FILE] types.ts | Size: 5.43 KB | Type: .ts | Modified: 2025-03-17 11:40:41

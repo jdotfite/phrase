@@ -5,9 +5,7 @@ import { supabase } from '@/lib/services/supabase';
 import ReviewerSelection from '@/components/review/ReviewerSelection';
 import ReviewProgress from '@/components/review/ReviewProgress';
 import { CategoryFilter } from '@/components/review/CategoryFilter';
-
-import { usePhrases } from '@/features/data/hooks/usePhrases';
-
+import { usePhrases } from '@/hooks/use-data/usePhrases';
 import { generateTags, generateHint } from '@/lib/services/claudeService';
 import WordCreator from '@/components/review/WordCreator';
 import type {
