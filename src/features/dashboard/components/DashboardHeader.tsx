@@ -14,6 +14,8 @@ interface DashboardHeaderProps {
   currentReviewer: Reviewer | null;
   onLoginSuccess?: (reviewer: Reviewer) => void;
   onLogout: () => void;
+  onAddWordsClick: () => void;
+  onReviewWordsClick: () => void;
 }
 
 export function DashboardHeader({ 
@@ -22,7 +24,9 @@ export function DashboardHeader({
   onExportClick,
   currentReviewer,
   onLoginSuccess,
-  onLogout
+  onLogout,
+  onAddWordsClick,
+  onReviewWordsClick
 }: DashboardHeaderProps) {
   return (
     <div className="flex justify-between items-center">
@@ -47,6 +51,8 @@ export function DashboardHeader({
             reviewerIndex={0} 
             onLogout={onLogout}
             onExportClick={onExportClick}
+            onAddWordsClick={onAddWordsClick}
+            onReviewWordsClick={onReviewWordsClick}
           />
         ) : (
           <ReviewerLoginButton 

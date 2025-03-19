@@ -30,13 +30,17 @@ interface ReviewerProfileDropdownProps {
   reviewerIndex: number; // To determine the emoji and color
   onLogout: () => void;
   onExportClick: () => void;
+  onAddWordsClick: () => void;
+  onReviewWordsClick: () => void;
 }
 
 export function ReviewerProfileDropdown({
   reviewer,
   reviewerIndex = 0,
   onLogout,
-  onExportClick
+  onExportClick,
+  onAddWordsClick,
+  onReviewWordsClick
 }: ReviewerProfileDropdownProps) {
   const avatarEmoji = AVATAR_EMOJIS[reviewerIndex % AVATAR_EMOJIS.length];
   const avatarColor = AVATAR_COLORS[reviewerIndex % AVATAR_COLORS.length];
@@ -60,11 +64,11 @@ export function ReviewerProfileDropdown({
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem className="cursor-pointer">
+        <DropdownMenuItem className="cursor-pointer" onClick={onAddWordsClick}>
           <Plus className="mr-2 h-4 w-4" />
           <span>Add Words</span>
         </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer">
+        <DropdownMenuItem className="cursor-pointer" onClick={onReviewWordsClick}>
           <CheckSquare className="mr-2 h-4 w-4" />
           <span>Review Words</span>
         </DropdownMenuItem>

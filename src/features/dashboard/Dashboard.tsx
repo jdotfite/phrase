@@ -9,6 +9,8 @@ import './styles/dashboard.css';
 
 // Import chart components
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/features/charts';
+import WordCreatorModal from '@/features/phrases/WordCreatorModal';
+import ReviewModal from '@/features/phrases/ReviewModal';
 
 // Components
 import { PhrasesTable } from '@/features/phrases/phrasesTable';
@@ -49,11 +51,25 @@ import type { Reviewer } from '@/types/types';
 const Dashboard = () => {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const [showWordCreatorModal, setShowWordCreatorModal] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  
 
   // ======= REVIEWER AUTH STATE =======
   // State for current logged-in reviewer
   const [currentReviewer, setCurrentReviewer] = useState<Reviewer | null>(null);
+  const handleAddWordsClick = () => {
+    setShowWordCreatorModal(true);
+  };
   
+  const handleReviewWordsClick = () => {
+    setShowReviewModal(true);
+  };
+  
+  const handleWordAdded = () => {
+    // Refresh data after a word is added
+    fetchPhrases();
+  };
   // ======= DASHBOARD UI STATE =======
   const [activeTab, setActiveTab] = useState('phrases');
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -523,14 +539,15 @@ constexpr size_t category_count = ${Object.keys(data).length};
     <div className="container mx-auto py-6 space-y-6">
       {/* Header with login */}
       <DashboardHeader
-        theme={theme}
-        setTheme={setTheme}
-        onExportClick={() => setShowExportModal(true)}
-        currentReviewer={currentReviewer}
-        onLoginSuccess={handleLoginSuccess}
-        onLogout={handleLogout}
-      />
-
+  theme={theme}
+  setTheme={setTheme}
+  onExportClick={() => setShowExportModal(true)}
+  currentReviewer={currentReviewer}
+  onLoginSuccess={handleLoginSuccess}
+  onLogout={handleLogout}
+  onAddWordsClick={handleAddWordsClick}
+  onReviewWordsClick={handleReviewWordsClick}
+/>
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="border rounded-md">
@@ -667,6 +684,24 @@ constexpr size_t category_count = ${Object.keys(data).length};
       </div>
 
       <div className="mb-6">
+        {/* Word Creator Modal */}
+{currentReviewer && (
+  <WordCreatorModal
+    isOpen={showWordCreatorModal}
+    onClose={() => setShowWordCreatorModal(false)}
+    reviewer={currentReviewer}
+    onWordAdded={handleWordAdded}
+  />
+)}
+
+{/* Review Modal */}
+{currentReviewer && (
+  <ReviewModal
+    isOpen={showReviewModal}
+    onClose={() => setShowReviewModal(false)}
+    reviewer={currentReviewer}
+  />
+)}
   <PillTabs
     tabs={[
       { value: 'phrases', label: 'Phrases' },

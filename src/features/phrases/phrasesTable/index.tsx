@@ -214,9 +214,9 @@ export function PhrasesTable({
   // Helper function to get difficulty bar color and width
   const getDifficultyBar = (difficulty: number) => {
     const colorClass = 
-      difficulty === 1 ? 'bg-green-500' : 
-      difficulty === 2 ? 'bg-yellow-500' : 
-      difficulty === 3 ? 'bg-red-500' : 'bg-gray-400';
+      difficulty === 1 ? 'bg-gray-200' : 
+      difficulty === 2 ? 'bg-gray-200' : 
+      difficulty === 3 ? 'bg-gray-200' : 'bg-gray-200';
     
     const width = 
       difficulty === 1 ? 'w-1/3' : 
