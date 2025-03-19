@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/services/supabase';
-import { generateTags, generateHint } from '@/lib/services/claudeService';
+import { generateTags, generateHint, generatePhrases, suggestCategory } from '@/lib/services/claudeService';
 import type { Reviewer } from '@/types/types';
 
 interface WordCreatorModalProps {
@@ -20,7 +20,6 @@ interface WordCreatorModalProps {
 interface NewWord {
   phrase: string;
   category: string;
-  subcategory?: string;
   difficulty: number;
   hint?: string;
   tags: string[];
@@ -33,12 +32,10 @@ const WordCreatorModal: React.FC<WordCreatorModalProps> = ({
   onWordAdded
 }) => {
   const [categories, setCategories] = useState<string[]>([]);
-  const [subcategories, setSubcategories] = useState<string[]>([]);
   const [inspiration, setInspiration] = useState('');
   const [newWord, setNewWord] = useState<NewWord>({
     phrase: '',
     category: '',
-    subcategory: '',
     difficulty: 1,
     hint: '',
     tags: ['', '', '']
@@ -47,6 +44,7 @@ const WordCreatorModal: React.FC<WordCreatorModalProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingTags, setIsGeneratingTags] = useState(false);
   const [isGeneratingHint, setIsGeneratingHint] = useState(false);
+  const [isGeneratingCategory, setIsGeneratingCategory] = useState(false);
   const [generatedWords, setGeneratedWords] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -72,41 +70,6 @@ const WordCreatorModal: React.FC<WordCreatorModalProps> = ({
     fetchCategories();
   }, []);
 
-  // Fetch subcategories when category changes
-  useEffect(() => {
-    const fetchSubcategories = async () => {
-      if (!newWord.category) {
-        setSubcategories([]);
-        return;
-      }
-      
-      try {
-        const { data: categoryData } = await supabase
-          .from('categories')
-          .select('id')
-          .eq('name', newWord.category)
-          .single();
-          
-        if (categoryData) {
-          const { data: subcategoryData } = await supabase
-            .from('subcategories')
-            .select('name')
-            .eq('category_id', categoryData.id)
-            .order('name');
-            
-          if (subcategoryData) {
-            setSubcategories(subcategoryData.map(sub => sub.name));
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching subcategories:', err);
-        setSubcategories([]);
-      }
-    };
-
-    fetchSubcategories();
-  }, [newWord.category]);
-
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
@@ -114,7 +77,6 @@ const WordCreatorModal: React.FC<WordCreatorModalProps> = ({
       setNewWord({
         phrase: '',
         category: '',
-        subcategory: '',
         difficulty: 1,
         hint: '',
         tags: ['', '', '']
@@ -189,52 +151,53 @@ const WordCreatorModal: React.FC<WordCreatorModalProps> = ({
     setError(null);
     
     try {
-      // Sample generated phrases - this would normally come from Claude API
-      // In a real implementation, replace this with the actual API call
-      const mockPhrases = [
-        `${inspiration} specialist`,
-        `${inspiration} master`,
-        `${inspiration} expert`,
-        `${inspiration} pro`,
-        `${inspiration} guru`
-      ];
+      // Use the real Claude API to generate phrases
+      const result = await generatePhrases(inspiration, 5);
       
-      setGeneratedWords(mockPhrases);
-      
-      // Select the first generated word
-      const firstPhrase = mockPhrases[0];
-      
-      // Generate tags and hint for the selected phrase
-      setIsGeneratingTags(true);
-      setIsGeneratingHint(true);
-      
-      try {
-        const [tagsResult, hintResult] = await Promise.all([
-          generateTags(firstPhrase),
-          generateHint(firstPhrase)
-        ]);
-        
-        setNewWord(prev => ({
-          ...prev,
-          phrase: firstPhrase,
-          hint: hintResult.hint || '',
-          tags: tagsResult.tags.slice(0, 3)
-        }));
-      } catch (error) {
-        console.error('Error generating tags/hint:', error);
-        // Fallback values if API calls fail
-        setNewWord(prev => ({
-          ...prev,
-          phrase: firstPhrase,
-          hint: `Information about ${inspiration}`,
-          tags: [`${inspiration}`, 'new', 'word']
-        }));
-      } finally {
-        setIsGeneratingTags(false);
-        setIsGeneratingHint(false);
+      if (result.error) {
+        throw new Error(result.error);
       }
       
-      setWordGenerated(true);
+      if (result.phrases.length > 0) {
+        setGeneratedWords(result.phrases);
+        
+        // Select the first generated word
+        const firstPhrase = result.phrases[0];
+        
+        // Generate tags and hint for the selected phrase
+        setIsGeneratingTags(true);
+        setIsGeneratingHint(true);
+        
+        try {
+          const [tagsResult, hintResult] = await Promise.all([
+            generateTags(firstPhrase),
+            generateHint(firstPhrase)
+          ]);
+          
+          setNewWord(prev => ({
+            ...prev,
+            phrase: firstPhrase,
+            hint: hintResult.hint || '',
+            tags: tagsResult.tags.slice(0, 3)
+          }));
+        } catch (error) {
+          console.error('Error generating tags/hint:', error);
+          // Fallback values if API calls fail
+          setNewWord(prev => ({
+            ...prev,
+            phrase: firstPhrase,
+            hint: `Information about ${inspiration}`,
+            tags: [`${inspiration}`, 'new', 'word']
+          }));
+        } finally {
+          setIsGeneratingTags(false);
+          setIsGeneratingHint(false);
+        }
+        
+        setWordGenerated(true);
+      } else {
+        setError('No phrases were generated. Please try again with different inspiration.');
+      }
     } catch (error) {
       console.error('Error generating phrases:', error);
       setError('Failed to generate phrases. Please try again.');
@@ -243,7 +206,7 @@ const WordCreatorModal: React.FC<WordCreatorModalProps> = ({
     }
   };
 
-  const handleSelectWord = (phrase: string) => {
+  const handleSelectWord = async (phrase: string) => {
     // Update the word with the selected phrase
     setNewWord(prev => ({
       ...prev,
@@ -253,34 +216,44 @@ const WordCreatorModal: React.FC<WordCreatorModalProps> = ({
     // Set loading states
     setIsGeneratingTags(true);
     setIsGeneratingHint(true);
+    setIsGeneratingCategory(true);
     
-    // Use dummy data instead of API calls since they're failing
-    setTimeout(() => {
-      // Generate some related tags based on the phrase
-      const words = phrase.split(/\s+/);
-      const dummyTags = [
-        words[0]?.toLowerCase() || 'general',
-        phrase.length > 6 ? 'complex' : 'simple',
-        words.length > 1 ? 'multi-word' : 'single-word'
-      ];
+    try {
+      // Generate tags, hint and category for the selected phrase using Claude
+      const [tagsResult, hintResult, categoryResult] = await Promise.all([
+        generateTags(phrase),
+        generateHint(phrase),
+        suggestCategory(phrase, categories)
+      ]);
       
-      // Generate a simple hint
-      const dummyHint = `A term related to ${words[0]?.toLowerCase() || phrase}`;
-      
-      // Update the word with the generated tags and hint
       setNewWord(prev => ({
         ...prev,
-        hint: dummyHint,
-        tags: dummyTags
+        hint: hintResult.hint || '',
+        tags: tagsResult.tags.slice(0, 3),
+        category: categoryResult.category || prev.category
       }));
-      
+    } catch (error) {
+      console.error('Error generating phrase metadata:', error);
+      // Fallback values if API calls fail
+      const words = phrase.split(/\s+/);
+      setNewWord(prev => ({
+        ...prev,
+        hint: `About ${words[0]?.toLowerCase() || phrase}`,
+        tags: [
+          words[0]?.toLowerCase() || 'general',
+          phrase.length > 6 ? 'complex' : 'simple',
+          words.length > 1 ? 'multi' : 'single'
+        ]
+      }));
+    } finally {
       // Reset loading states
       setIsGeneratingTags(false);
       setIsGeneratingHint(false);
+      setIsGeneratingCategory(false);
       
       // Set word as generated
       setWordGenerated(true);
-    }, 800); // Simulate API call delay
+    }
   };
 
   const handleSubmit = async () => {
@@ -309,28 +282,13 @@ const WordCreatorModal: React.FC<WordCreatorModalProps> = ({
         throw new Error('Category not found');
       }
       
-      // Get subcategory ID if selected
-      let subcategoryId = null;
-      if (newWord.subcategory) {
-        const { data: subcategoryData } = await supabase
-          .from('subcategories')
-          .select('id')
-          .eq('name', newWord.subcategory)
-          .eq('category_id', categoryData.id)
-          .single();
-          
-        if (subcategoryData) {
-          subcategoryId = subcategoryData.id;
-        }
-      }
-      
       // Insert phrase
       const { data: phraseData, error: phraseError } = await supabase
         .from('phrases')
         .insert({
           phrase: newWord.phrase,
           category_id: categoryData.id,
-          subcategory_id: subcategoryId,
+          subcategory_id: null, // No subcategory
           difficulty: newWord.difficulty,
           hint: newWord.hint || null,
           created_by: reviewer.id,
@@ -392,7 +350,6 @@ const WordCreatorModal: React.FC<WordCreatorModalProps> = ({
         setNewWord({
           phrase: '',
           category: '',
-          subcategory: '',
           difficulty: 1,
           hint: '',
           tags: ['', '', '']
@@ -512,7 +469,15 @@ const WordCreatorModal: React.FC<WordCreatorModalProps> = ({
               
               {/* Category */}
               <div>
-                <label className="block text-sm text-neutral-400 mb-2">Category</label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-sm text-neutral-400">Category</label>
+                  {isGeneratingCategory && (
+                    <span className="text-xs text-neutral-400">
+                      <Loader2 className="inline h-3 w-3 animate-spin mr-1" /> 
+                      AI selecting...
+                    </span>
+                  )}
+                </div>
                 <Select
                   value={newWord.category}
                   onValueChange={(value) => handleChange('category', value)}
@@ -530,29 +495,11 @@ const WordCreatorModal: React.FC<WordCreatorModalProps> = ({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              
-              {/* Subcategory */}
-              <div>
-                <label className="block text-sm text-neutral-400 mb-2">Subcategory</label>
-                <Select
-                  value={newWord.subcategory}
-                  onValueChange={(value) => handleChange('subcategory', value)}
-                  disabled={!newWord.category || subcategories.length === 0}
-                >
-                  <SelectTrigger className="bg-transparent border-neutral-700 text-white">
-                    <SelectValue placeholder="Select subcategory" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-black border border-neutral-700 text-white">
-                    {subcategories.map(subcategory => (
-                      <SelectItem 
-                        key={subcategory} 
-                        value={subcategory}
-                        className="hover:bg-neutral-800"
-                      >{subcategory}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {newWord.category && (
+                  <p className="text-xs text-neutral-400 mt-1">
+                    Category selected by AI based on the phrase content
+                  </p>
+                )}
               </div>
               
               {/* Tags */}

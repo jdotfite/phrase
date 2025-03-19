@@ -20,7 +20,6 @@ interface ReviewModalProps {
 interface EditedPhrase {
   id: number;
   category: string | undefined;
-  subcategory?: string | undefined;
   hint?: string | undefined;
   difficulty?: number | undefined;
   tags?: string[] | undefined;
@@ -34,7 +33,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [categories, setCategories] = useState<string[]>([]);
-  const [subcategories, setSubcategories] = useState<string[]>([]);
   const [isFlagged, setIsFlagged] = useState(false);
   const [isApproved, setIsApproved] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
@@ -45,7 +43,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
   const [editedPhrase, setEditedPhrase] = useState<EditedPhrase>({
     id: -1,
     category: undefined,
-    subcategory: undefined,
     hint: undefined,
     difficulty: undefined,
     tags: undefined
@@ -150,12 +147,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
           .eq('id', currentPhrase.category_id)
           .single();
 
-        const { data: subcategoryData } = await supabase
-          .from('subcategories')
-          .select('name')
-          .eq('id', currentPhrase.subcategory_id)
-          .single();
-
         // Get tags as array
         let tagsArray: string[] = [];
         if (currentPhrase.tags) {
@@ -165,7 +156,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
         setEditedPhrase({
           id: currentPhrase.id,
           category: categoryData?.name || undefined,
-          subcategory: subcategoryData?.name || undefined,
           hint: currentPhrase.hint || undefined,
           difficulty: currentPhrase.difficulty || undefined,
           tags: tagsArray
@@ -177,41 +167,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
 
     loadPhraseData();
   }, [phrases, currentIndex]);
-
-  // Fetch subcategories when category changes
-  useEffect(() => {
-    const fetchSubcategories = async () => {
-      if (!editedPhrase.category) {
-        setSubcategories([]);
-        return;
-      }
-      
-      try {
-        const { data: categoryData } = await supabase
-          .from('categories')
-          .select('id')
-          .eq('name', editedPhrase.category)
-          .single();
-          
-        if (categoryData) {
-          const { data: subcategoryData } = await supabase
-            .from('subcategories')
-            .select('name')
-            .eq('category_id', categoryData.id)
-            .order('name');
-            
-          if (subcategoryData) {
-            setSubcategories(subcategoryData.map(sub => sub.name));
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching subcategories:', err);
-        setSubcategories([]);
-      }
-    };
-
-    fetchSubcategories();
-  }, [editedPhrase.category]);
 
   const handleCategorySelect = (category: string) => {
     setSelectedCategory(category);
@@ -406,21 +361,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
       if (!categoryData) throw new Error('Category not found');
       const categoryId = categoryData.id;
       
-      // Get subcategory ID
-      let subcategoryId = null;
-      if (editedPhrase.subcategory) {
-        const { data: subcategoryData } = await supabase
-          .from('subcategories')
-          .select('id')
-          .eq('name', editedPhrase.subcategory)
-          .eq('category_id', categoryId)
-          .single();
-          
-        if (subcategoryData) {
-          subcategoryId = subcategoryData.id;
-        }
-      }
-      
       // Update phrase
       const { error: phraseError } = await supabase
         .from('phrases')
@@ -428,7 +368,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
           hint: editedPhrase.hint,
           difficulty: editedPhrase.difficulty,
           category_id: categoryId,
-          subcategory_id: subcategoryId
+          subcategory_id: null
         })
         .eq('id', editedPhrase.id);
 
@@ -512,7 +452,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
         <DialogTitle className="sr-only">Review Phrases</DialogTitle>
         <DialogDescription className="sr-only">Review and approve phrases for your collection</DialogDescription>
         
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-5">
           <div>
             <h2 className="text-xl font-bold text-white">Phrase Review</h2>
             <p className="text-sm text-neutral-400">Reviewer: {reviewer.name} ({reviewer.total_reviews || 0} reviews)</p>
@@ -536,7 +476,7 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
         </div>
         
         {/* Review Hot Streak */}
-        <div className="mb-6 space-y-1">
+        <div className="mb-5 space-y-1">
           <div className="text-sm text-neutral-400">Review Hot Streak: {streak}</div>
           <div className="h-2 bg-neutral-800 rounded-full overflow-hidden">
             <div 
@@ -630,29 +570,6 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
                       value={category}
                       className="hover:bg-neutral-800"
                     >{category}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {/* Subcategory */}
-            <div>
-              <label className="block text-sm text-neutral-400 mb-2">Subcategory</label>
-              <Select
-                value={editedPhrase.subcategory || ''}
-                onValueChange={(value) => handleFieldChange('subcategory', value)}
-                disabled={!editedPhrase.category || subcategories.length === 0}
-              >
-                <SelectTrigger className="bg-transparent border-neutral-700 text-white">
-                  <SelectValue placeholder="Select subcategory" />
-                </SelectTrigger>
-                <SelectContent className="bg-black border border-neutral-700 text-white">
-                  {subcategories.map(subcategory => (
-                    <SelectItem 
-                      key={subcategory} 
-                      value={subcategory}
-                      className="hover:bg-neutral-800"
-                    >{subcategory}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
