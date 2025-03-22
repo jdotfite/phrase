@@ -20,22 +20,11 @@ import { FilterProvider } from '@/features/phrases/stores/filterContext';
 import { StatsCards } from '@/features/dashboard/components/StatsCards';
 import AnalyticsSection from '@/features/dashboard/components/AnalyticsSection';
 
-// Recharts components
-import {
-  RadialBarChart, RadialBar, BarChart, Bar, PieChart, Pie, LineChart, Line,
-  XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, Cell, PolarGrid, PolarRadiusAxis
-} from 'recharts';
 
 // UI Components
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { PillTabs, PillTabsContent } from '@/components/ui/pill-tabs'; 
-
-// Icons
-import {
-  FileText, Users, Award, Moon, Sun, Filter, TrendingUp,
-  BarChart2, PieChartIcon, FileDownIcon, X
-} from "lucide-react";
 
 // Hooks
 import { useStats } from '@/features/data/hooks/useStats';

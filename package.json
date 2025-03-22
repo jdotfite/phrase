@@ -33,7 +33,8 @@
     "start": "next start",
     "build": "next build",
     "export": "next build",
-    "clean": "rimraf .next out"
+    "clean": "rimraf .next out",
+    "debug": "set DEBUG=* && next dev"
   },
   "devDependencies": {
     "@shadcn/ui": "^0.0.4",

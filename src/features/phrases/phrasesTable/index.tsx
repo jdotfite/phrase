@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Search, Columns, Pencil, Trash, ChevronLeft, ChevronRight, MoreHorizontal, X } from 'lucide-react';
 import { TableState } from '@/components/tables/types';
 import TagDisplay from '@/components/ui/tags';
+import { DifficultyIndicator } from '@/components/ui/difficulty-indicator';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,6 +65,11 @@ export function PhrasesTable({
 
   // Current visible columns
   const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
+
+  // Helper function to get difficulty bar
+  const getDifficultyBar = (difficulty: number) => {
+    return <DifficultyIndicator difficulty={difficulty} />;
+  };
 
   // Handle search input changes
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -211,24 +217,7 @@ export function PhrasesTable({
     }
   };
 
-  // Helper function to get difficulty bar color and width
-  const getDifficultyBar = (difficulty: number) => {
-    const colorClass = 
-      difficulty === 1 ? 'bg-gray-200' : 
-      difficulty === 2 ? 'bg-gray-200' : 
-      difficulty === 3 ? 'bg-gray-200' : 'bg-gray-200';
-    
-    const width = 
-      difficulty === 1 ? 'w-1/3' : 
-      difficulty === 2 ? 'w-2/3' : 
-      difficulty === 3 ? 'w-full' : 'w-0';
-    
-    return (
-      <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-600">
-        <div className={`${colorClass} ${width} h-2.5 rounded-full`}></div>
-      </div>
-    );
-  };
+
 
   // Determine which data to show
   const displayData = searchValue && searchResults.length > 0 ? searchResults : phrases;
