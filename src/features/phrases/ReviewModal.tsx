@@ -15,6 +15,7 @@ interface ReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   reviewer: Reviewer;
+  selectedPhraseId?: number | null;
 }
 
 interface EditedPhrase {
@@ -28,7 +29,8 @@ interface EditedPhrase {
 const ReviewModal: React.FC<ReviewModalProps> = ({
   isOpen,
   onClose,
-  reviewer
+  reviewer,
+  selectedPhraseId 
 }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -85,6 +87,14 @@ const ReviewModal: React.FC<ReviewModalProps> = ({
     }
   }, [isOpen, selectedCategory, reviewer.id]);
 
+  useEffect(() => {
+    if (isOpen && selectedPhraseId && phrases.length > 0) {
+      const index = phrases.findIndex(p => p.id === selectedPhraseId);
+      if (index !== -1) {
+        setCurrentIndex(index);
+      }
+    }
+  }, [isOpen, selectedPhraseId, phrases]);
   // Check if current phrase is flagged
   useEffect(() => {
     const checkFlagged = async () => {

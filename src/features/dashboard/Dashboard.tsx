@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/services/supabase';
 import { useTheme } from 'next-themes';
-import { saveAs } from 'file-saver';
 import './styles/dashboard.css';
 
 // Import chart components
@@ -14,23 +13,22 @@ import ReviewModal from '@/features/phrases/ReviewModal';
 
 // Components
 import { PhrasesTable } from '@/features/phrases/phrasesTable';
-import { DataTableFilters } from '@/features/filters/DataTableFilters';
 import { DashboardHeader } from '@/features/dashboard/components/DashboardHeader';
 import ExportModal from '@/features/dashboard/components/ExportModal';
-import BulkImportForm from '@/features/import/BulkImportForm';
 import FilterModal from '@/features/filters/FilterModal';
+import { FilterProvider } from '@/features/phrases/stores/filterContext';
+import { StatsCards } from '@/features/dashboard/components/StatsCards';
+import AnalyticsSection from '@/features/dashboard/components/AnalyticsSection';
 
 // Recharts components
 import {
   RadialBarChart, RadialBar, BarChart, Bar, PieChart, Pie, LineChart, Line,
-  XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, Cell,
-  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis
+  XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer, Cell, PolarGrid, PolarRadiusAxis
 } from 'recharts';
 
 // UI Components
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PillTabs, PillTabsContent } from '@/components/ui/pill-tabs'; 
 
 // Icons
@@ -44,17 +42,24 @@ import { useStats } from '@/features/data/hooks/useStats';
 import { usePhrases } from '@/features/data/hooks/usePhrases';
 import { usePhraseMetadata } from '@/features/data/hooks/usePhraseMetadata';
 import { useReviewers } from '@/features/data/hooks/useReviewers';
+import { useDeletePhrase } from '@/features/phrases/hooks/useDeletePhrase';
 
 // Types
-import type { Reviewer } from '@/types/types';
+import type { Reviewer, Phrase } from '@/types/types';
 
 const Dashboard = () => {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [showWordCreatorModal, setShowWordCreatorModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
-  
+  const [selectedPhraseId, setSelectedPhraseId] = useState<number | null>(null); 
 
+  // Added this state for tracking newly added phrase IDs
+  const [newIds, setNewIds] = useState<number[]>([]);
+  
+  // Initialize the delete phrase mutation
+  const deletePhraseMutation = useDeletePhrase();
+  
   // ======= REVIEWER AUTH STATE =======
   // State for current logged-in reviewer
   const [currentReviewer, setCurrentReviewer] = useState<Reviewer | null>(null);
@@ -66,10 +71,30 @@ const Dashboard = () => {
     setShowReviewModal(true);
   };
   
-  const handleWordAdded = () => {
+  const handleWordAdded = (id: number) => {
+    // Track newly added phrase ID
+    setNewIds(prev => [...prev, id]);
     // Refresh data after a word is added
     fetchPhrases();
   };
+  
+  // Add handlers for edit and delete
+  const handleEdit = (id: number) => {
+    setSelectedPhraseId(id);
+    setShowReviewModal(true);
+  };
+
+  const handleDelete = (id: number) => {
+    if (window.confirm('Are you sure you want to delete this phrase?')) {
+      deletePhraseMutation.mutate(id, {
+        onSuccess: () => {
+          // Refresh the phrases list after deletion
+          fetchPhrases();
+        }
+      });
+    }
+  };
+  
   // ======= DASHBOARD UI STATE =======
   const [activeTab, setActiveTab] = useState('phrases');
   const [showFilterModal, setShowFilterModal] = useState(false);
@@ -95,6 +120,7 @@ const Dashboard = () => {
     editPhrase,
     deletePhrase,
     resetFilters,
+    fetchPhrases,
   } = usePhrases();
   const { categories, difficulties, partsOfSpeech } = usePhraseMetadata();
 
@@ -123,6 +149,8 @@ const Dashboard = () => {
       part_of_speech: ''
     }
   });
+
+ 
   
   // ======= CHART DATA =======
   // Data for the radial chart
@@ -534,154 +562,24 @@ constexpr size_t category_count = ${Object.keys(data).length};
     if (!str) return "";
     return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
   };
+
   // ======= RENDER =======
   return (
     <div className="container mx-auto py-6 space-y-6">
-      {/* Header with login */}
-      <DashboardHeader
-  theme={theme}
-  setTheme={setTheme}
-  onExportClick={() => setShowExportModal(true)}
-  currentReviewer={currentReviewer}
-  onLoginSuccess={handleLoginSuccess}
-  onLogout={handleLogout}
-  onAddWordsClick={handleAddWordsClick}
-  onReviewWordsClick={handleReviewWordsClick}
-/>
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border rounded-md">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Total Phrases</CardTitle>
-            <CardDescription>Growth trend over time</CardDescription>
-          </CardHeader>
-          <CardContent className="pb-0">
-            <div className="h-[120px]">
-              <ChartContainer config={chartConfig}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={phrasesOverTime} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                    <CartesianGrid stroke="#3F3F46" strokeDasharray="3 3" opacity={0.3} />
-                    <XAxis dataKey="month" tick={{ fill: 'white', fontSize: 10 }} axisLine={{ stroke: '#3F3F46' }} tickLine={{ stroke: '#3F3F46' }} />
-                    <YAxis tick={{ fill: 'white', fontSize: 10 }} axisLine={{ stroke: '#3F3F46' }} tickLine={{ stroke: '#3F3F46' }} />
-                    <ChartTooltip content={props => <ChartTooltipContent {...props} config={chartConfig} />} />
-                    <Line
-                      type="monotone"
-                      dataKey="phrases"
-                      stroke="var(--color-phrases)"
-                      strokeWidth={2}
-                      dot={{ fill: 'var(--color-phrases)', r: 4 }}
-                      activeDot={{ r: 6, fill: 'var(--color-phrases)' }}
-                      isAnimationActive={false}
-                    />
-                    {phrasesOverTime[0]?.phrases === null && (
-                      <text
-                        x="50%"
-                        y="50%"
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        fill="#FF6B6B"
-                        fontSize="14px"
-                        fontWeight="bold"
-                      >
-                        No Data Available
-                      </text>
-                    )}
-                  </LineChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <div className="flex w-full items-start gap-2 text-sm">
-              <div className="grid gap-0">
-                <div className="flex items-center gap-1 font-medium text-lg">
-                  {stats?.total || 1392} total phrases <TrendingUp className="h-4 w-4 ml-1 text-green-500" />
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  Last 6 months
-                </div>
-              </div>
-            </div>
-          </CardFooter>
-        </Card>
-
-        <Card className="border rounded-md">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Difficulty Distribution</CardTitle>
-            <CardDescription>Distribution by difficulty level</CardDescription>
-          </CardHeader>
-          <CardContent className="pb-0">
-            <div className="h-[120px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={[
-                      { name: 'Easy', value: stats?.difficultyBreakdown?.easy || 30 },
-                      { name: 'Medium', value: stats?.difficultyBreakdown?.medium || 20 },
-                      { name: 'Hard', value: stats?.difficultyBreakdown?.hard || 10 },
-                    ]}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={25}
-                    outerRadius={45}
-                    paddingAngle={2}
-                    dataKey="value"
-                    label={({ name }) => name}
-                  >
-                    <Cell fill="hsl(var(--primary) / 60%)" />
-                    <Cell fill="hsl(var(--primary) / 80%)" />
-                    <Cell fill="hsl(var(--primary))" />
-                  </Pie>
-                  <ChartTooltip content={props => <ChartTooltipContent {...props} config={chartConfig} />} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-          <CardFooter className="pt-3">
-            <div className="flex w-full items-center gap-4 text-sm justify-around">
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full bg-primary/60"></div>
-                <span className="text-xs">Easy</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full bg-primary/80"></div>
-                <span className="text-xs">Medium</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full bg-primary"></div>
-                <span className="text-xs">Hard</span>
-              </div>
-            </div>
-          </CardFooter>
-        </Card>
-
-        <Card className="border rounded-md">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Top Reviewers</CardTitle>
-            <CardDescription>Most active contributors</CardDescription>
-          </CardHeader>
-          <CardContent className="p-2 pb-4">
-            <div className="space-y-2 mt-2">
-              {reviewers?.slice(0, 3).map((reviewer, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs">
-                      {reviewer.name.charAt(0).toUpperCase()}
-                    </div>
-                    <span className="text-sm font-medium">{reviewer.name}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="text-sm font-bold">
-                      {reviewer.total_reviews || (index === 0 ? 4 : index === 1 ? 1 : 0)}
-                    </span>
-                    <span className="text-xs text-muted-foreground ml-1">reviews</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+    {/* Header with login */}
+    <DashboardHeader
+      theme={theme}
+      setTheme={setTheme}
+      onExportClick={() => setShowExportModal(true)}
+      currentReviewer={currentReviewer}
+      onLoginSuccess={handleLoginSuccess}
+      onLogout={handleLogout}
+      onAddWordsClick={handleAddWordsClick}
+      onReviewWordsClick={handleReviewWordsClick}
+    />
+    
+    {/* Add the StatsCards component here */}
+    <StatsCards />
 
       <div className="mb-6">
         {/* Word Creator Modal */}
@@ -697,218 +595,47 @@ constexpr size_t category_count = ${Object.keys(data).length};
 {/* Review Modal */}
 {currentReviewer && (
   <ReviewModal
-    isOpen={showReviewModal}
-    onClose={() => setShowReviewModal(false)}
-    reviewer={currentReviewer}
-  />
+  isOpen={showReviewModal}
+  onClose={() => {
+    setShowReviewModal(false);
+    setSelectedPhraseId(null);
+  }}
+  reviewer={currentReviewer}
+  selectedPhraseId={selectedPhraseId}
+/>
 )}
   <PillTabs
     tabs={[
       { value: 'phrases', label: 'Phrases' },
-      { value: 'analytics', label: 'Analytics' },
-      { value: 'import', label: 'Import' }
+      { value: 'analytics', label: 'Analytics' }
     ]}
     activeTab={activeTab}
     onTabChange={setActiveTab}
     className="py-3 border-dashed border-y"
   />
 
-  {/* Phrases Tab */}
-  <PillTabsContent value="phrases" activeTab={activeTab}>
-    <div className="flex flex-col space-y-4">
+{/* Phrases Tab */}
+<PillTabsContent value="phrases" activeTab={activeTab}>
+  <div className="flex flex-col space-y-4">
+    {/* Wrap your existing PhrasesTable with FilterProvider */}
+    <FilterProvider>
       <PhrasesTable
         phrases={phrases}
         loading={phrasesLoading}
         tableState={tableState}
         onTableStateChange={handleTableStateChange}
-        onEdit={editPhrase}
-        onDelete={deletePhrase}
-        newIds={[]}
-        onShowFilters={() => setShowFilterModal(true)}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        newIds={newIds}
       />
-    </div>
-  </PillTabsContent>
+    </FilterProvider>
+  </div>
+</PillTabsContent>
 
         {/* Analytics Tab */}
         <PillTabsContent value="analytics" activeTab={activeTab}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Monthly Activity */}
-            <Card className="border rounded-md">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Monthly Activity</CardTitle>
-                <CardDescription>Reviews, additions and edits over time</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[250px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={monthlyActivityData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
-                      <CartesianGrid vertical={false} stroke="hsl(var(--muted-foreground) / 20%)" strokeDasharray="3 3" />
-                      <XAxis dataKey="name" tick={{ fill: "hsl(var(--foreground))" }} tickLine={{ stroke: "hsl(var(--muted-foreground) / 40%)" }} axisLine={{ stroke: "hsl(var(--muted-foreground) / 40%)" }} />
-                      <YAxis tick={{ fill: "hsl(var(--foreground))" }} tickLine={{ stroke: "hsl(var(--muted-foreground) / 40%)" }} axisLine={{ stroke: "hsl(var(--muted-foreground) / 40%)" }} />
-                      <ChartTooltip 
-                        content={props => 
-                          <ChartTooltipContent 
-                            {...props} 
-                            config={chartConfig}
-                          />
-                        }
-                      />
-                      <Legend wrapperStyle={{ paddingTop: 20 }} />
-                      <Bar dataKey="reviews" fill="hsl(var(--primary) / 80%)" />
-                      <Bar dataKey="additions" fill="hsl(var(--primary) / 60%)" />
-                      <Bar dataKey="edits" fill="hsl(var(--primary) / 40%)" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Category Distribution */}
-            <Card className="border rounded-md">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Category Distribution</CardTitle>
-                <CardDescription>Phrases by category</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[250px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={categoryData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={90}
-                        paddingAngle={2}
-                        dataKey="value"
-                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      >
-                        <Cell fill="hsl(var(--primary))" />
-                        <Cell fill="hsl(var(--primary) / 90%)" />
-                        <Cell fill="hsl(var(--primary) / 80%)" />
-                        <Cell fill="hsl(var(--primary) / 70%)" />
-                        <Cell fill="hsl(var(--primary) / 60%)" />
-                      </Pie>
-                      <ChartTooltip 
-                        content={props => 
-                          <ChartTooltipContent 
-                            {...props} 
-                            config={chartConfig}
-                          />
-                        }
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Top Reviewers Performance */}
-            <Card className="border rounded-md">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Top Reviewers Performance</CardTitle>
-                <CardDescription>Reviews and streaks by contributor</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[250px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      layout="vertical"
-                      data={[
-                        { name: "Kari", reviews: 120, streak: 14 },
-                        { name: "Sarah", reviews: 85, streak: 7 },
-                        { name: "Justin", reviews: 65, streak: 5 },
-                        { name: "Alex", reviews: 45, streak: 3 },
-                        { name: "Morgan", reviews: 30, streak: 2 }
-                      ]}
-                      margin={{ top: 20, right: 30, left: 60, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground) / 20%)" />
-                      <XAxis
-                        type="number"
-                        tick={{ fill: "hsl(var(--foreground))" }}
-                        tickLine={{ stroke: "hsl(var(--muted-foreground) / 40%)" }}
-                        axisLine={{ stroke: "hsl(var(--muted-foreground) / 40%)" }}
-                      />
-                      <YAxis
-                        dataKey="name"
-                        type="category"
-                        tick={{ fill: "hsl(var(--foreground))" }}
-                        tickLine={{ stroke: "hsl(var(--muted-foreground) / 40%)" }}
-                        axisLine={{ stroke: "hsl(var(--muted-foreground) / 40%)" }}
-                      />
-                      <ChartTooltip 
-                        content={props => 
-                          <ChartTooltipContent 
-                            {...props} 
-                            config={chartConfig}
-                          />
-                        }
-                      />
-                      <Legend />
-                      <Bar dataKey="reviews" fill="hsl(var(--primary) / 80%)" />
-                      <Bar dataKey="streak" fill="hsl(var(--primary) / 40%)" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Words Added This Month */}
-            <Card className="border rounded-md">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Words Added This Month</CardTitle>
-                <CardDescription>Progress towards the goal of 100 words</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-[250px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <RadialBarChart
-                      data={wordsAddedData}
-                      innerRadius="80%"
-                      outerRadius="100%"
-                      startAngle={180}
-                      endAngle={0}
-                    >
-                      <PolarGrid stroke="hsl(var(--muted))" />
-                      <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} />
-                      <RadialBar
-                        dataKey="value"
-                        cornerRadius={10}
-                        background
-                        fill="hsl(var(--primary))"
-                      />
-                      <text
-                        x="50%"
-                        y="50%"
-                        textAnchor="middle"
-                        dominantBaseline="middle"
-                        className="fill-foreground text-2xl font-bold"
-                      >
-                        {wordsAddedData[0].value} / 100
-                      </text>
-                    </RadialBarChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <div className="w-full flex justify-between items-center">
-                  <div className="text-sm text-muted-foreground">
-                    Goal: <span className="font-bold text-foreground">100 words</span>
-                  </div>
-                  <div className="text-sm text-muted-foreground">
-                    Remaining: <span className="font-bold text-foreground">{100 - wordsAddedData[0].value}</span>
-                  </div>
-                </div>
-              </CardFooter>
-            </Card>
-          </div>
-          </PillTabsContent>
-
-        {/* Import Tab */}
-        <PillTabsContent value="import" activeTab={activeTab}>
-          <BulkImportForm onSuccess={() => setActiveTab('phrases')} onError={() => {}} />
-          </PillTabsContent>
+          <AnalyticsSection />
+        </PillTabsContent>
           </div>
 
       {/* Modals */}

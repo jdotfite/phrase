@@ -5,7 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Search, Columns, Pencil, Trash, ChevronLeft, ChevronRight, MoreHorizontal, X } from 'lucide-react';
 import { TableState } from '@/components/tables/types';
-import TagDisplay from '@/components/common/TagDisplay';
+import TagDisplay from '@/components/ui/tags';
 import {
   DropdownMenu,
   DropdownMenuContent,

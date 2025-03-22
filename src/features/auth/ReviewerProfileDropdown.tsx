@@ -48,7 +48,7 @@ export function ReviewerProfileDropdown({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex items-center gap-2 outline-none">
-        <div className={`w-9 h-9 rounded-md flex items-center justify-center overflow-hidden bg-gradient-to-b ${avatarColor}`}>
+        <div className={`w-9 h-9 rounded-full flex items-center justify-center overflow-hidden bg-gradient-to-b ${avatarColor}`}>
           <div className="text-2xl transform scale-150 translate-y-1">
             {avatarEmoji}
           </div>
