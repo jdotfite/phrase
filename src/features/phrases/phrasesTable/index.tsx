@@ -25,6 +25,7 @@ import {
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/services/supabase';
+import { useTheme } from '@/providers/ThemeContext';
 
 interface PhrasesTableProps {
   phrases: any[];
@@ -51,12 +52,56 @@ export function PhrasesTable({
   const [searchValue, setSearchValue] = useState(tableState.filters.search || '');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const { accent } = useTheme();
+
+  // Get accent-specific color values for various parts of the UI
+  const getAccentColors = () => {
+    switch (accent) {
+      case 'blue':
+        return {
+          highlight: 'bg-blue-500/10 border-blue-500/30',
+          button: 'bg-blue-500 hover:bg-blue-600',
+          outline: 'border-blue-500/50 text-blue-500',
+          text: 'text-blue-500'
+        };
+      case 'green':
+        return {
+          highlight: 'bg-emerald-500/10 border-emerald-500/30',
+          button: 'bg-emerald-500 hover:bg-emerald-600',
+          outline: 'border-emerald-500/50 text-emerald-500',
+          text: 'text-emerald-500'
+        };
+      case 'purple':
+        return {
+          highlight: 'bg-purple-500/10 border-purple-500/30',
+          button: 'bg-purple-500 hover:bg-purple-600',
+          outline: 'border-purple-500/50 text-purple-500',
+          text: 'text-purple-500'
+        };
+      case 'orange':
+        return {
+          highlight: 'bg-orange-500/10 border-orange-500/30',
+          button: 'bg-orange-500 hover:bg-orange-600',
+          outline: 'border-orange-500/50 text-orange-500',
+          text: 'text-orange-500'
+        };
+      default: // grayscale
+        return {
+          highlight: 'bg-gray-500/10 border-gray-500/30',
+          button: 'bg-gray-500 hover:bg-gray-600',
+          outline: 'border-gray-500/50 text-gray-500',
+          text: 'text-gray-500'
+        };
+    }
+  };
+
+  const accentColors = getAccentColors();
 
   // Columns configuration for dropdown
   const columns = [
     { key: 'phrase', label: 'Phrase' },
     { key: 'category', label: 'Category' },
-    { key: 'hint', label: 'Hint' }, // Moved hint to be after category
+    { key: 'hint', label: 'Hint' }, 
     { key: 'tags', label: 'Tags' },
     { key: 'difficulty', label: 'Difficulty' },
     { key: 'reviewed', label: 'Reviewed' }
@@ -216,11 +261,15 @@ export function PhrasesTable({
     }
   };
 
-
-
   // Determine which data to show
   const displayData = searchValue && searchResults.length > 0 ? searchResults : phrases;
 
+  // Create flash animation class with accent color
+  const getNewRowClass = (id: number) => {
+    if (!newIds.includes(id)) return '';
+    
+    return cn("transition-colors", accentColors.highlight);
+  };
 
   return (
     <div className="space-y-2">
@@ -229,20 +278,20 @@ export function PhrasesTable({
         <div className="flex items-center gap-4">
           {/* Rows per page dropdown */}
           <Select
-  value={tableState.pagination.rowsPerPage.toString()}
-  onValueChange={handleRowsPerPageChange}
->
-  <SelectTrigger className="w-[120px]">
-    <SelectValue placeholder={`${tableState.pagination.rowsPerPage} per page`} />
-  </SelectTrigger>
-  <SelectContent>
-    {[10, 25, 50, 100].map(value => (  // Removed 20 from here
-      <SelectItem key={value} value={value.toString()}>
-        {value} per page
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
+            value={tableState.pagination.rowsPerPage.toString()}
+            onValueChange={handleRowsPerPageChange}
+          >
+            <SelectTrigger className={cn("w-[120px] border", accentColors.outline)}>
+              <SelectValue placeholder={`${tableState.pagination.rowsPerPage} per page`} />
+            </SelectTrigger>
+            <SelectContent>
+              {[10, 25, 50, 100].map(value => (
+                <SelectItem key={value} value={value.toString()}>
+                  {value} per page
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           
           {/* Page info */}
           <span className="text-sm text-muted-foreground">
@@ -264,7 +313,7 @@ export function PhrasesTable({
               onChange={handleSearchChange}
               onKeyDown={handleKeyDown}
               onBlur={performGlobalSearch}
-              className="pl-10 pr-10"
+              className={cn("pl-10 pr-10 border", accentColors.outline)}
             />
             {searchValue && (
               <button
@@ -279,8 +328,8 @@ export function PhrasesTable({
           {/* Column visibility */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9">
-                <Columns className="mr-2 h-4 w-4" />
+              <Button variant="outline" size="sm" className={cn("h-9 border", accentColors.outline)}>
+                <Columns className={cn("mr-2 h-4 w-4", accentColors.text)} />
                 Columns
               </Button>
             </DropdownMenuTrigger>
@@ -305,35 +354,38 @@ export function PhrasesTable({
           
           {/* Pagination buttons */}
           <Button
-  variant="outline"
-  size="sm"
-  onClick={() => handlePageChange(tableState.pagination.currentPage - 1)}
-  disabled={tableState.pagination.currentPage <= 1}
->
-  <ChevronLeft className="h-4 w-4" />
-</Button>
-<Button
-  variant="outline"
-  size="sm"
-  onClick={() => handlePageChange(tableState.pagination.currentPage + 1)}
-  disabled={tableState.pagination.currentPage >= tableState.pagination.totalPages}
->
-  <ChevronRight className="h-4 w-4" />
-</Button>
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(tableState.pagination.currentPage - 1)}
+            disabled={tableState.pagination.currentPage <= 1}
+            className={cn("border", accentColors.outline)}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(tableState.pagination.currentPage + 1)}
+            disabled={tableState.pagination.currentPage >= tableState.pagination.totalPages}
+            className={cn("border", accentColors.outline)}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
       {/* Main table */}
-      <div className="rounded-md border">
+      <div className={cn("rounded-md p-1 border", accentColors.outline)}>
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-card">
             <TableRow>
               {/* Checkbox column */}
               <TableHead className="w-12">
                 <Checkbox
                   checked={selectedRows.length > 0 && selectedRows.length === displayData.length}
                   indeterminate={selectedRows.length > 0 && selectedRows.length < displayData.length ? true : undefined}
-  onCheckedChange={toggleSelectAll}
+                  onCheckedChange={toggleSelectAll}
+                  className={accentColors.text}
                 />
               </TableHead>
               
@@ -341,6 +393,11 @@ export function PhrasesTable({
               {!hiddenColumns.includes('phrase') && (
                 <TableHead onClick={() => handleSort('phrase')} className="cursor-pointer">
                   Phrase
+                  {tableState.sortConfig.key === 'phrase' && (
+                    <span className={cn("ml-1", accentColors.text)}>
+                      {tableState.sortConfig.direction === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
                 </TableHead>
               )}
               
@@ -348,6 +405,11 @@ export function PhrasesTable({
               {!hiddenColumns.includes('category') && (
                 <TableHead onClick={() => handleSort('category')} className="cursor-pointer">
                   Category
+                  {tableState.sortConfig.key === 'category' && (
+                    <span className={cn("ml-1", accentColors.text)}>
+                      {tableState.sortConfig.direction === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
                 </TableHead>
               )}
               
@@ -355,6 +417,11 @@ export function PhrasesTable({
               {!hiddenColumns.includes('hint') && (
                 <TableHead onClick={() => handleSort('hint')} className="cursor-pointer">
                   Hint
+                  {tableState.sortConfig.key === 'hint' && (
+                    <span className={cn("ml-1", accentColors.text)}>
+                      {tableState.sortConfig.direction === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
                 </TableHead>
               )}
               
@@ -362,6 +429,11 @@ export function PhrasesTable({
               {!hiddenColumns.includes('tags') && (
                 <TableHead onClick={() => handleSort('tags')} className="cursor-pointer">
                   Tags
+                  {tableState.sortConfig.key === 'tags' && (
+                    <span className={cn("ml-1", accentColors.text)}>
+                      {tableState.sortConfig.direction === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
                 </TableHead>
               )}
               
@@ -369,6 +441,11 @@ export function PhrasesTable({
               {!hiddenColumns.includes('difficulty') && (
                 <TableHead onClick={() => handleSort('difficulty')} className="cursor-pointer">
                   Difficulty
+                  {tableState.sortConfig.key === 'difficulty' && (
+                    <span className={cn("ml-1", accentColors.text)}>
+                      {tableState.sortConfig.direction === 'asc' ? '↑' : '↓'}
+                    </span>
+                  )}
                 </TableHead>
               )}
               
@@ -411,8 +488,8 @@ export function PhrasesTable({
                 <TableRow 
                   key={phrase.id}
                   className={cn(
-                    selectedRows.includes(phrase.id) && "bg-muted",
-                    newIds.includes(phrase.id) && "animate-flash"
+                    selectedRows.includes(phrase.id) && accentColors.highlight,
+                    getNewRowClass(phrase.id)
                   )}
                 >
                   {/* Checkbox */}
@@ -420,6 +497,7 @@ export function PhrasesTable({
                     <Checkbox
                       checked={selectedRows.includes(phrase.id)}
                       onCheckedChange={() => toggleRowSelection(phrase.id)}
+                      className={accentColors.text}
                     />
                   </TableCell>
                   
@@ -457,7 +535,7 @@ export function PhrasesTable({
                     <TableCell>
                       <div className="flex justify-center">
                         {phrase.reviewed ? (
-                          <Check className="h-5 w-5 text-green-500" />
+                          <Check className={cn("h-5 w-5", accentColors.text)} />
                         ) : (
                           <Check className="h-5 w-5 text-gray-300" />
                         )}
@@ -478,7 +556,7 @@ export function PhrasesTable({
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem onClick={() => onEdit?.(phrase.id)}>
-                            <Pencil className="h-4 w-4 mr-2" />
+                            <Pencil className={cn("h-4 w-4 mr-2", accentColors.text)} />
                             Edit
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />

@@ -15,7 +15,6 @@ import WordCreatorModal from '@/features/phrases/WordCreatorModal';
 import ReviewModal from '@/features/phrases/ReviewModal';
 import AnalyticsSection from '@/features/dashboard/components/AnalyticsSection';
 import { PhrasesSection } from './components/PhrasesSection';
-import { AccentDemo } from '@/components/ui/theme/AccentDemo';
 
 // Hooks
 import { useTheme } from 'next-themes';
@@ -108,7 +107,7 @@ const Dashboard: React.FC = () => {
         onAddWordsClick={handleAddWordsClick}
         onReviewWordsClick={handleReviewWordsClick}
       />
-
+    
       {/* Stats Cards */}
       <StatsCards />
 

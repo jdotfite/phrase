@@ -1,7 +1,6 @@
 ﻿PROJECT ANALYSIS
-Generated: 03/22/2025 23:09:00
+Generated: 03/23/2025 16:17:25
 Directory: C:\_websites\phrase\src
-
 ===========================================
 ENVIRONMENT INFORMATION
 ===========================================
@@ -15,317 +14,170 @@ FILE CONTENTS:
 
 ============================================================
 
-FILE: .\code-base.ps1
-SIZE: 2.94 KB
-LAST MODIFIED: 02/13/2025 10:17:39
-
-# Get current directory path and script start time
-$currentPath = (Get-Location).Path
-$startTime = Get-Date
-$outputFile = "code_dump_$(Get-Date -Format 'yyyyMMdd_HHmmss').txt"
-
-# Add exclusion patterns for folders and files
-$excludedPaths = @(
-    'node_modules',
-    '.git',
-    'bin',
-    'obj',
-    'dist',
-    'build',
-    '.vscode',
-    'packages'
-)
-
-# Write initial info to console
-Write-Host "Starting analysis of $currentPath"
-Write-Host "Excluding folders: $($excludedPaths -join ', ')"
-
-# Initial file header
-$envInfo = @"
-PROJECT ANALYSIS
-Generated: $(Get-Date)
-Directory: $currentPath
-
-===========================================
-ENVIRONMENT INFORMATION
-===========================================
-PowerShell Version: $($PSVersionTable.PSVersion)
-OS: $(Get-CimInstance -ClassName Win32_OperatingSystem | Select-Object -ExpandProperty Caption)
-Computer Name: $env:COMPUTERNAME
-"@
-Set-Content -Path $outputFile -Value $envInfo -Encoding utf8
-
-Write-Host "Gathering file list..."
-
-# Get all files, excluding problematic paths
-$allFiles = Get-ChildItem -Path $currentPath -Recurse -File | Where-Object {
-    $fullPath = $_.FullName
-    $exclude = $false
-    foreach ($path in $excludedPaths) {
-        if ($fullPath -like "*\$path\*") {
-            $exclude = $true
-            break
-        }
-    }
-    -not $exclude -and
-    $_.Name -ne $outputFile -and
-    -not $_.Name.EndsWith(".tmp")
-}
-
-# Process each file
-"`n============================================================`n" | Out-File $outputFile -Append -Encoding utf8
-"FILE CONTENTS:" | Out-File $outputFile -Append -Encoding utf8
-
-$fileCounter = 0
-$totalFiles = $allFiles.Count
-
-# Avoid division by zero
-if ($totalFiles -eq 0) {
-    Write-Host "No files found to process. Exiting."
-    exit
-}
-
-$allFiles | Where-Object {
-    $_.Extension -notmatch '\.(exe|dll|pdb|obj|bin|cache|jpg|jpeg|png|gif|bmp|ico|mp3|mp4|zip|rar|7z)$' -and
-    $_.Length -lt 5MB
-} | ForEach-Object {
-    $fileCounter++
-    $percentComplete = [math]::Round(($fileCounter / $totalFiles) * 100, 1)
-    Write-Progress -Activity "Processing Files" -Status "$fileCounter of $totalFiles ($percentComplete%)" -PercentComplete $percentComplete
-    Write-Host "Processing ($fileCounter/$totalFiles): $($_.Name)"
-
-    try {
-        # Write file metadata
-        $relPath = $_.FullName.Replace($currentPath, ".")
-        $fileSize = [math]::Round($_.Length / 1KB, 2)
-        
-        "`n============================================================`n" | Out-File $outputFile -Append -Encoding utf8
-        "FILE: $relPath`nSIZE: $fileSize KB`nLAST MODIFIED: $($_.LastWriteTime)`n" | Out-File $outputFile -Append -Encoding utf8
-        
-        # Append file content
-        Get-Content $_.FullName -Raw | Out-File $outputFile -Append -Encoding utf8
-    } catch {
-        Write-Warning "Error processing $($_.FullName): $_"
-    }
-}
-
-Write-Host "Analysis complete. Output saved to $outputFile"
-
-
-============================================================
-
-FILE: .\file-structure.ps1
-SIZE: 2.99 KB
-LAST MODIFIED: 03/17/2025 11:11:08
-
-# Directory Structure Generator for AI Readability
-# This script creates a clean, hierarchical text document of the current directory structure
-# Format is optimized for AI processing with consistent indentation and clear labeling
-
-$outputFile = "DirectoryStructure.txt"
-$indentChar = "    " # 4 spaces for indentation
-
-function Get-FormattedSize {
-    param (
-        [long]$SizeInBytes
-    )
-    
-    if ($SizeInBytes -lt 1KB) {
-        return "$SizeInBytes B"
-    }
-    elseif ($SizeInBytes -lt 1MB) {
-        return "{0:N2} KB" -f ($SizeInBytes / 1KB)
-    }
-    elseif ($SizeInBytes -lt 1GB) {
-        return "{0:N2} MB" -f ($SizeInBytes / 1MB)
-    }
-    else {
-        return "{0:N2} GB" -f ($SizeInBytes / 1GB)
-    }
-}
-
-function Get-DirectoryStructure {
-    param (
-        [string]$Path,
-        [int]$Level = 0,
-        [System.IO.StreamWriter]$Writer
-    )
-
-    $indent = $indentChar * $Level
-    
-    # Get directory information
-    $dirInfo = Get-Item -Path $Path
-    $dirName = Split-Path -Path $Path -Leaf
-    if ($Level -eq 0) {
-        $dirName = Resolve-Path -Path $Path
-    }
-    
-    # Write directory entry
-    $Writer.WriteLine("$indent[DIR] $dirName")
-    
-    # Process all files first (for cleaner organization)
-    $files = Get-ChildItem -Path $Path -File | Sort-Object Name
-    foreach ($file in $files) {
-        $size = Get-FormattedSize -SizeInBytes $file.Length
-        $extension = if ($file.Extension) { $file.Extension.ToLower() } else { "no-extension" }
-        $Writer.WriteLine("$indent$indentChar[FILE] $($file.Name) | Size: $size | Type: $extension | Modified: $($file.LastWriteTime.ToString('yyyy-MM-dd HH:mm:ss'))")
-    }
-    
-    # Then process all subdirectories
-    $dirs = Get-ChildItem -Path $Path -Directory | Sort-Object Name
-    foreach ($dir in $dirs) {
-        Get-DirectoryStructure -Path $dir.FullName -Level ($Level + 1) -Writer $Writer
-    }
-}
-
-try {
-    # Create or overwrite the output file
-    $writer = New-Object System.IO.StreamWriter $outputFile
-    
-    # Write header information
-    $writer.WriteLine("DIRECTORY STRUCTURE REPORT")
-    $writer.WriteLine("Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')")
-    $writer.WriteLine("Computer: $env:COMPUTERNAME")
-    $writer.WriteLine("Current User: $env:USERNAME")
-    $writer.WriteLine("PowerShell Version: $($PSVersionTable.PSVersion)")
-    $writer.WriteLine("---------------------------------------------")
-    $writer.WriteLine("")
-    
-    # Get and write the full directory structure
-    $currentPath = Get-Location
-    Get-DirectoryStructure -Path $currentPath -Writer $writer
-    
-    # Close the file
-    $writer.Close()
-    
-    Write-Host "Directory structure has been written to: $((Resolve-Path $outputFile).Path)" -ForegroundColor Green
-    Write-Host "This file format is optimized for AI readability." -ForegroundColor Green
-}
-catch {
-    Write-Host "An error occurred: $_" -ForegroundColor Red
-    if ($writer) {
-        $writer.Close()
-    }
-}
-
-============================================================
-
 FILE: .\app\globals.css
-SIZE: 1.67 KB
-LAST MODIFIED: 03/04/2025 21:05:06
+SIZE: 6.09 KB
+LAST MODIFIED: 03/23/2025 15:59:13
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-
-
 @layer base {
   :root {
-
+    /* Base colors */
     --background: 0 0% 100%;
-
     --foreground: 0 0% 3.9%;
-
     --card: 0 0% 100%;
-
     --card-foreground: 0 0% 3.9%;
-
     --popover: 0 0% 100%;
-
     --popover-foreground: 0 0% 3.9%;
-
     --primary: 0 0% 9%;
-
     --primary-foreground: 0 0% 98%;
-
     --secondary: 0 0% 96.1%;
-
     --secondary-foreground: 0 0% 9%;
-
     --muted: 0 0% 96.1%;
-
     --muted-foreground: 0 0% 45.1%;
-
     --accent: 0 0% 96.1%;
-
     --accent-foreground: 0 0% 9%;
-
     --destructive: 0 84.2% 60.2%;
-
     --destructive-foreground: 0 0% 98%;
-
     --border: 0 0% 89.8%;
-
     --input: 0 0% 89.8%;
-
     --ring: 0 0% 3.9%;
 
+    /* Chart colors */
     --chart-1: 12 76% 61%;
-
     --chart-2: 173 58% 39%;
-
     --chart-3: 197 37% 24%;
-
     --chart-4: 43 74% 66%;
-
     --chart-5: 27 87% 67%;
 
-    --radius: 0.5rem
+    /* Animation tokens */
+    --animation-duration-fast: 150ms;
+    --animation-duration-normal: 300ms;
+    --animation-duration-slow: 500ms;
+    --animation-easing-linear: linear;
+    --animation-easing-in: cubic-bezier(0.4, 0, 1, 1);
+    --animation-easing-out: cubic-bezier(0, 0, 0.2, 1);
+    --animation-easing-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Spacing and layout tokens */
+    --layout-gutter: 1rem;
+    --layout-margin: 2rem;
+    
+    /* Border radius */
+    --radius: 0.5rem;
   }
+
   .dark {
-
     --background: 0 0% 3.9%;
-
     --foreground: 0 0% 98%;
-
     --card: 0 0% 3.9%;
-
     --card-foreground: 0 0% 98%;
-
     --popover: 0 0% 3.9%;
-
     --popover-foreground: 0 0% 98%;
-
     --primary: 0 0% 98%;
-
     --primary-foreground: 0 0% 9%;
-
     --secondary: 0 0% 14.9%;
-
     --secondary-foreground: 0 0% 98%;
-
     --muted: 0 0% 14.9%;
-
     --muted-foreground: 0 0% 63.9%;
-
     --accent: 0 0% 14.9%;
-
     --accent-foreground: 0 0% 98%;
-
     --destructive: 0 62.8% 30.6%;
-
     --destructive-foreground: 0 0% 98%;
-
     --border: 0 0% 14.9%;
-
     --input: 0 0% 14.9%;
-
     --ring: 0 0% 83.1%;
 
+    /* Chart colors for dark mode */
     --chart-1: 220 70% 50%;
-
     --chart-2: 160 60% 45%;
-
     --chart-3: 30 80% 55%;
-
     --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
 
-    --chart-5: 340 75% 55%
+  /* Accent colors - default (grayscale) */
+  [data-accent="default"] {
+    --accent-hue: 220;
+    --accent-saturation: 0%;
+    --accent-color: hsl(0 0% 50%);
+    --accent-foreground: hsl(0 0% 95%);
+    --accent-muted: hsl(0 0% 30%);
+    
+    /* Update chart colors for grayscale accent */
+    --chart-1: 0 0% 50%;
+    --chart-2: 0 0% 45%;
+    --chart-3: 0 0% 40%;
+    --chart-4: 0 0% 35%;
+    --chart-5: 0 0% 30%;
+  }
+
+  /* Blue accent */
+  [data-accent="blue"] {
+    --accent-hue: 220;
+    --accent-saturation: 70%;
+    --accent-color: hsl(var(--accent-hue) var(--accent-saturation) 50%);
+    --accent-foreground: hsl(var(--accent-hue) var(--accent-saturation) 95%);
+    --accent-muted: hsl(var(--accent-hue) var(--accent-saturation) 30%);
+    
+    /* Update chart colors for blue accent */
+    --chart-1: var(--accent-hue) var(--accent-saturation) 50%;
+    --chart-2: calc(var(--accent-hue) + 30) var(--accent-saturation) 45%;
+    --chart-3: calc(var(--accent-hue) + 60) var(--accent-saturation) 40%;
+    --chart-4: calc(var(--accent-hue) + 90) var(--accent-saturation) 45%;
+    --chart-5: calc(var(--accent-hue) + 120) var(--accent-saturation) 50%;
+  }
+
+  /* Green accent */
+  [data-accent="green"] {
+    --accent-hue: 160;
+    --accent-saturation: 60%;
+    --accent-color: hsl(var(--accent-hue) var(--accent-saturation) 45%);
+    --accent-foreground: hsl(var(--accent-hue) var(--accent-saturation) 95%);
+    --accent-muted: hsl(var(--accent-hue) var(--accent-saturation) 25%);
+    
+    /* Update chart colors for green accent */
+    --chart-1: var(--accent-hue) var(--accent-saturation) 45%;
+    --chart-2: calc(var(--accent-hue) + 30) var(--accent-saturation) 40%;
+    --chart-3: calc(var(--accent-hue) + 60) var(--accent-saturation) 35%;
+    --chart-4: calc(var(--accent-hue) + 90) var(--accent-saturation) 40%;
+    --chart-5: calc(var(--accent-hue) + 120) var(--accent-saturation) 45%;
+  }
+
+  /* Purple accent */
+  [data-accent="purple"] {
+    --accent-hue: 270;
+    --accent-saturation: 60%;
+    --accent-color: hsl(var(--accent-hue) var(--accent-saturation) 50%);
+    --accent-foreground: hsl(var(--accent-hue) var(--accent-saturation) 95%);
+    --accent-muted: hsl(var(--accent-hue) var(--accent-saturation) 30%);
+    
+    /* Update chart colors for purple accent */
+    --chart-1: var(--accent-hue) var(--accent-saturation) 50%;
+    --chart-2: calc(var(--accent-hue) + 30) var(--accent-saturation) 45%;
+    --chart-3: calc(var(--accent-hue) + 60) var(--accent-saturation) 40%;
+    --chart-4: calc(var(--accent-hue) + 90) var(--accent-saturation) 45%;
+    --chart-5: calc(var(--accent-hue) + 120) var(--accent-saturation) 50%;
+  }
+
+  /* Orange accent */
+  [data-accent="orange"] {
+    --accent-hue: 30;
+    --accent-saturation: 80%;
+    --accent-color: hsl(var(--accent-hue) var(--accent-saturation) 50%);
+    --accent-foreground: hsl(var(--accent-hue) var(--accent-saturation) 95%);
+    --accent-muted: hsl(var(--accent-hue) var(--accent-saturation) 30%);
+    
+    /* Update chart colors for orange accent */
+    --chart-1: var(--accent-hue) var(--accent-saturation) 50%;
+    --chart-2: calc(var(--accent-hue) + 30) var(--accent-saturation) 40%;
+    --chart-3: calc(var(--accent-hue) + 60) var(--accent-saturation) 35%;
+    --chart-4: calc(var(--accent-hue) + 90) var(--accent-saturation) 40%;
+    --chart-5: calc(var(--accent-hue) + 120) var(--accent-saturation) 45%;
   }
 }
-
-
 
 @layer base {
   * {
@@ -336,16 +188,46 @@ LAST MODIFIED: 03/04/2025 21:05:06
   }
 }
 
+/* Animation keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideOut {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(10px); opacity: 0; }
+}
+
+@keyframes zoomIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes zoomOut {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(0.95); opacity: 0; }
+}
 
 ============================================================
 
 FILE: .\app\layout.tsx
 SIZE: 0.58 KB
-LAST MODIFIED: 03/05/2025 16:27:42
+LAST MODIFIED: 03/23/2025 12:54:11
 
 import type { Metadata } from "next";
 import "./globals.css";
-import { ThemeProvider } from "@/providers/ThemeProvider";
+import { ThemeProvider } from "@/providers/ThemeContext";
 
 export const metadata: Metadata = {
   title: "Catch Phrase Admin",
@@ -725,21 +607,28 @@ export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent }
 ============================================================
 
 FILE: .\components\ui\chart.tsx
-SIZE: 2.92 KB
-LAST MODIFIED: 03/07/2025 09:03:03
+SIZE: 6.91 KB
+LAST MODIFIED: 03/23/2025 16:11:35
 
 // components/ui/chart.tsx
-
 "use client"
 
 import * as React from "react"
-import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts"
+import { Line, LineChart, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts"
+import { useTheme } from "@/providers/ThemeContext"
 
 export type ChartConfig = {
   [key: string]: {
     label: string
-    color: string
+    color?: string
   }
+}
+
+interface ChartContainerProps {
+  config: ChartConfig
+  children: React.ReactNode
+  className?: string
+  [key: string]: any
 }
 
 export function ChartContainer({
@@ -747,11 +636,61 @@ export function ChartContainer({
   children,
   className,
   ...props
-}: React.PropsWithChildren & {
-  config: ChartConfig
-  className?: string
-  [key: string]: any
-}) {
+}: ChartContainerProps) {
+  const { accent } = useTheme();
+  
+  // Get colors based on current accent
+  const getChartColors = () => {
+    const colorKeys = Object.keys(config);
+    
+    // Generate accent-specific colors
+    let colors: Record<string, string> = {};
+    
+    switch (accent) {
+      case 'blue':
+        colors = colorKeys.reduce((obj, key, index) => ({
+          ...obj,
+          [key]: `hsl(${220 + (index * 30)}, 70%, ${50 - (index * 5)}%)`
+        }), {});
+        break;
+      case 'green':
+        colors = colorKeys.reduce((obj, key, index) => ({
+          ...obj,
+          [key]: `hsl(${160 + (index * 30)}, 60%, ${45 - (index * 5)}%)`
+        }), {});
+        break;
+      case 'purple':
+        colors = colorKeys.reduce((obj, key, index) => ({
+          ...obj,
+          [key]: `hsl(${270 + (index * 30)}, 60%, ${50 - (index * 5)}%)`
+        }), {});
+        break;
+      case 'orange':
+        colors = colorKeys.reduce((obj, key, index) => ({
+          ...obj,
+          [key]: `hsl(${30 + (index * 30)}, 80%, ${50 - (index * 5)}%)`
+        }), {});
+        break;
+      default: // grayscale
+        colors = colorKeys.reduce((obj, key, index) => ({
+          ...obj,
+          [key]: `hsl(0, 0%, ${50 - (index * 5)}%)`
+        }), {});
+        break;
+    }
+    
+    // Override with manual colors if specified in config
+    colorKeys.forEach(key => {
+      if (config[key].color) {
+        colors[key] = config[key].color!;
+      }
+    });
+    
+    return colors;
+  };
+
+  const chartColors = getChartColors();
+
   const createCSSVariable = (obj: Record<string, string>) => {
     return Object.entries(obj).reduce((vars, [key, value]) => {
       return {
@@ -761,14 +700,7 @@ export function ChartContainer({
     }, {})
   }
 
-  const colors = Object.entries(config).reduce((colors, [key, item]) => {
-    return {
-      ...colors,
-      [key]: item.color,
-    }
-  }, {})
-
-  const cssVars = createCSSVariable(colors)
+  const cssVars = createCSSVariable(chartColors)
 
   return (
     <div style={cssVars} className={className} {...props}>
@@ -777,19 +709,23 @@ export function ChartContainer({
   )
 }
 
+interface ChartTooltipContentProps {
+  active?: boolean
+  payload?: any[]
+  label?: string
+  config?: ChartConfig
+  indicator?: "circle" | "line"
+}
+
 export function ChartTooltipContent({
   active,
   payload,
   label,
   config,
   indicator = "circle",
-}: {
-  active?: boolean
-  payload?: any[]
-  label?: string
-  config?: ChartConfig
-  indicator?: "circle" | "line"
-}) {
+}: ChartTooltipContentProps) {
+  const { accent } = useTheme();
+  
   const TypeIndicator = ({ name }: { name: string }) =>
     indicator === "circle" ? (
       <circle
@@ -812,8 +748,24 @@ export function ChartTooltipContent({
 
   if (!active || !payload) return null
 
+  // Get accent-specific background
+  const getTooltipBackground = () => {
+    switch (accent) {
+      case 'blue':
+        return 'bg-blue-950/90 border-blue-700';
+      case 'green':
+        return 'bg-emerald-950/90 border-emerald-700';
+      case 'purple':
+        return 'bg-purple-950/90 border-purple-700';
+      case 'orange':
+        return 'bg-orange-950/90 border-orange-700';
+      default: // grayscale
+        return 'bg-gray-950/90 border-gray-700';
+    }
+  };
+
   return (
-    <div className="rounded-lg border bg-background p-2 shadow-sm">
+    <div className={`rounded-lg border ${getTooltipBackground()} p-2 shadow-sm`}>
       <div className="grid grid-cols-2 gap-2">
         <div className="flex flex-col">
           <span className="text-[0.70rem] uppercase text-muted-foreground">
@@ -854,6 +806,87 @@ export function ChartTooltip({
   [key: string]: any
 }) {
   return <Tooltip {...props} content={content} />
+}
+
+export function SimpleAreaChart({
+  data,
+  dataKey,
+  height = 200,
+  className,
+}: {
+  data: any[]
+  dataKey: string
+  height?: number
+  className?: string
+}) {
+  const { accent } = useTheme();
+  
+  // Get accent-specific color
+  const getStrokeColor = () => {
+    switch (accent) {
+      case 'blue': return "#3B82F6";
+      case 'green': return "#10B981";
+      case 'purple': return "#8B5CF6";
+      case 'orange': return "#F97316";
+      default: return "#6B7280"; // grayscale
+    }
+  };
+  
+  return (
+    <div className={className}>
+      <ResponsiveContainer width="100%" height={height}>
+        <LineChart data={data}>
+          <Line
+            type="monotone"
+            dataKey={dataKey}
+            stroke={getStrokeColor()}
+            strokeWidth={2}
+            dot={false}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+export function SimpleBarChart({
+  data,
+  dataKey,
+  height = 200,
+  className,
+}: {
+  data: any[]
+  dataKey: string
+  categoryKey?: string
+  height?: number
+  className?: string
+}) {
+  const { accent } = useTheme();
+  
+  // Get accent-specific fill color
+  const getFillColor = () => {
+    switch (accent) {
+      case 'blue': return "#3B82F6";
+      case 'green': return "#10B981";
+      case 'purple': return "#8B5CF6";
+      case 'orange': return "#F97316";
+      default: return "#6B7280"; // grayscale
+    }
+  };
+  
+  return (
+    <div className={className}>
+      <ResponsiveContainer width="100%" height={height}>
+        <BarChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+          <XAxis dataKey="name" />
+          <YAxis />
+          <Tooltip />
+          <Bar dataKey={dataKey} fill={getFillColor()} radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
 }
 
 ============================================================
@@ -1056,11 +1089,12 @@ export function DialogDemo() {
 ============================================================
 
 FILE: .\components\ui\difficulty-indicator.tsx
-SIZE: 0.86 KB
-LAST MODIFIED: 03/22/2025 16:32:24
+SIZE: 2 KB
+LAST MODIFIED: 03/23/2025 16:06:36
 
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/providers/ThemeContext';
 
 interface DifficultyIndicatorProps extends React.HTMLAttributes<HTMLDivElement> {
   difficulty: number;
@@ -1068,19 +1102,66 @@ interface DifficultyIndicatorProps extends React.HTMLAttributes<HTMLDivElement> 
 
 const DifficultyIndicator = React.forwardRef<HTMLDivElement, DifficultyIndicatorProps>(
   ({ difficulty, className, ...props }, ref) => {
-    // Determine the width based on difficulty
-    const width = 
-      difficulty === 1 ? 'w-1/3' : 
-      difficulty === 2 ? 'w-2/3' : 
-      difficulty === 3 ? 'w-full' : 'w-0';
+    const { accent } = useTheme();
+    
+    // Get accent-specific background colors
+    const getAccentBackground = () => {
+      switch (accent) {
+        case 'blue':
+          return 'bg-blue-500';
+        case 'green':
+          return 'bg-emerald-500';
+        case 'purple':
+          return 'bg-purple-500';
+        case 'orange':
+          return 'bg-orange-500';
+        default: // grayscale
+          return 'bg-gray-500';
+      }
+    };
+    
+    // Get intensity-based styles for difficulty
+    const getDifficultyStyle = () => {
+      const baseColor = getAccentBackground();
+      
+      switch (difficulty) {
+        case 1: 
+          return {
+            width: 'w-1/3',
+            opacity: 'opacity-50'
+          };
+        case 2: 
+          return {
+            width: 'w-2/3',
+            opacity: 'opacity-75'
+          };
+        case 3: 
+          return {
+            width: 'w-full',
+            opacity: 'opacity-100'
+          };
+        default:
+          return {
+            width: 'w-0',
+            opacity: 'opacity-0'
+          };
+      }
+    };
+    
+    const diffStyle = getDifficultyStyle();
     
     return (
       <div 
         ref={ref} 
-        className={cn("w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-600", className)}
+        className={cn("w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700", className)}
         {...props}
       >
-        <div className={cn(`${width} h-2.5 rounded-full bg-gray-400`)}></div>
+        <div className={cn(
+          diffStyle.width,
+          diffStyle.opacity,
+          "h-2.5 rounded-full transition-all duration-300",
+          getAccentBackground()
+        )} />
       </div>
     );
   }
@@ -1460,14 +1541,15 @@ export function Pagination({
 ============================================================
 
 FILE: .\components\ui\pill-tabs.tsx
-SIZE: 1.42 KB
-LAST MODIFIED: 03/17/2025 21:44:17
+SIZE: 6 KB
+LAST MODIFIED: 03/23/2025 16:11:55
 
 'use client';
 
 import * as React from 'react';
 import * as TabsPrimitive from '@radix-ui/react-tabs';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/providers/ThemeContext';
 
 interface PillTabsProps {
   tabs: Array<{
@@ -1480,6 +1562,41 @@ interface PillTabsProps {
 }
 
 export function PillTabs({ tabs, activeTab, onTabChange, className }: PillTabsProps) {
+  const { accent } = useTheme();
+  
+  // Get accent-specific colors
+  const getAccentStyles = () => {
+    switch (accent) {
+      case 'blue':
+        return {
+          active: 'bg-blue-100 text-blue-900 dark:bg-blue-800/30 dark:text-blue-100',
+          inactive: 'text-muted-foreground hover:text-blue-900 dark:hover:text-blue-300'
+        };
+      case 'green':
+        return {
+          active: 'bg-emerald-100 text-emerald-900 dark:bg-emerald-800/30 dark:text-emerald-100',
+          inactive: 'text-muted-foreground hover:text-emerald-900 dark:hover:text-emerald-300'
+        };
+      case 'purple':
+        return {
+          active: 'bg-purple-100 text-purple-900 dark:bg-purple-800/30 dark:text-purple-100',
+          inactive: 'text-muted-foreground hover:text-purple-900 dark:hover:text-purple-300'
+        };
+      case 'orange':
+        return {
+          active: 'bg-orange-100 text-orange-900 dark:bg-orange-800/30 dark:text-orange-100',
+          inactive: 'text-muted-foreground hover:text-orange-900 dark:hover:text-orange-300'
+        };
+      default: // grayscale
+        return {
+          active: 'bg-muted text-foreground',
+          inactive: 'text-muted-foreground hover:text-foreground'
+        };
+    }
+  };
+  
+  const styles = getAccentStyles();
+
   return (
     <div className={cn("relative overflow-auto", className)}>
       <div className="flex items-center">
@@ -1490,8 +1607,8 @@ export function PillTabs({ tabs, activeTab, onTabChange, className }: PillTabsPr
             className={cn(
               "flex h-9 items-center justify-center rounded-full px-4 text-center text-sm font-medium transition-colors",
               activeTab === tab.value
-                ? "bg-muted text-primary"
-                : "text-muted-foreground hover:text-primary"
+                ? styles.active
+                : styles.inactive
             )}
           >
             {tab.label}
@@ -1516,6 +1633,102 @@ export function PillTabsContent({ value, activeTab, children, className }: PillT
     <div className={cn("mt-4", className)}>
       {children}
     </div>
+  );
+}
+
+// Standard tabs component with accent colors
+export function Tabs({ defaultValue, value, onValueChange, className, children, ...props }: TabsPrimitive.TabsProps) {
+  return (
+    <TabsPrimitive.Root
+      defaultValue={defaultValue}
+      value={value}
+      onValueChange={onValueChange}
+      className={cn("w-full", className)}
+      {...props}
+    >
+      {children}
+    </TabsPrimitive.Root>
+  );
+}
+
+export function TabsList({ className, children, ...props }: TabsPrimitive.TabsListProps) {
+  const { accent } = useTheme();
+  
+  // Get accent-specific background
+  const getBackgroundClass = () => {
+    switch (accent) {
+      case 'blue':
+        return 'bg-blue-100/50 dark:bg-blue-900/20';
+      case 'green':
+        return 'bg-emerald-100/50 dark:bg-emerald-900/20';
+      case 'purple':
+        return 'bg-purple-100/50 dark:bg-purple-900/20';
+      case 'orange':
+        return 'bg-orange-100/50 dark:bg-orange-900/20';
+      default: // grayscale
+        return 'bg-muted';
+    }
+  };
+
+  return (
+    <TabsPrimitive.List
+      className={cn(
+        "inline-flex h-10 items-center justify-center rounded-md p-1 text-muted-foreground",
+        getBackgroundClass(),
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </TabsPrimitive.List>
+  );
+}
+
+export function TabsTrigger({ className, children, ...props }: TabsPrimitive.TabsTriggerProps) {
+  const { accent } = useTheme();
+  
+  // Get accent-specific active state
+  const getActiveClass = () => {
+    switch (accent) {
+      case 'blue':
+        return 'data-[state=active]:bg-white data-[state=active]:text-blue-700 dark:data-[state=active]:bg-gray-800 dark:data-[state=active]:text-blue-400';
+      case 'green':
+        return 'data-[state=active]:bg-white data-[state=active]:text-emerald-700 dark:data-[state=active]:bg-gray-800 dark:data-[state=active]:text-emerald-400';
+      case 'purple':
+        return 'data-[state=active]:bg-white data-[state=active]:text-purple-700 dark:data-[state=active]:bg-gray-800 dark:data-[state=active]:text-purple-400';
+      case 'orange':
+        return 'data-[state=active]:bg-white data-[state=active]:text-orange-700 dark:data-[state=active]:bg-gray-800 dark:data-[state=active]:text-orange-400';
+      default: // grayscale
+        return 'data-[state=active]:bg-background data-[state=active]:text-foreground';
+    }
+  };
+
+  return (
+    <TabsPrimitive.Trigger
+      className={cn(
+        "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+        getActiveClass(),
+        "data-[state=active]:shadow-sm",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </TabsPrimitive.Trigger>
+  );
+}
+
+export function TabsContent({ className, children, ...props }: TabsPrimitive.TabsContentProps) {
+  return (
+    <TabsPrimitive.Content
+      className={cn(
+        "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        className
+      )}
+      {...props}
+    >
+      {children}
+    </TabsPrimitive.Content>
   );
 }
 
@@ -1940,11 +2153,12 @@ export { Tabs, TabsList, TabsTrigger, TabsContent }
 ============================================================
 
 FILE: .\components\ui\tags.tsx
-SIZE: 1.03 KB
-LAST MODIFIED: 03/11/2025 21:48:59
+SIZE: 1.97 KB
+LAST MODIFIED: 03/23/2025 16:06:56
 
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { useTheme } from '@/providers/ThemeContext';
 
 interface TagDisplayProps {
   tags: string;
@@ -1957,11 +2171,32 @@ const TagDisplay: React.FC<TagDisplayProps> = ({
   onClick,
   className
 }) => {
+  const { accent } = useTheme();
+  
+  // Skip rendering if no tags
   if (!tags) return null;
   
   const tagArray = tags.split(',').map(t => t.trim()).filter(Boolean);
   
   if (tagArray.length === 0) return null;
+  
+  // Get accent-specific tag colors
+  const getTagColors = () => {
+    switch (accent) {
+      case 'blue':
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800';
+      case 'green':
+        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800';
+      case 'purple':
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800';
+      case 'orange':
+        return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-800';
+      default: // grayscale
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600';
+    }
+  };
+  
+  const tagColors = getTagColors();
   
   return (
     <div className={cn("flex flex-wrap gap-1", className)}>
@@ -1970,8 +2205,9 @@ const TagDisplay: React.FC<TagDisplayProps> = ({
           key={`${tag}-${idx}`}
           onClick={() => onClick?.(tag)}
           className={cn(
-            "px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
-            onClick ? "hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer" : "cursor-default",
+            "px-2 py-0.5 text-xs rounded-full",
+            tagColors,
+            onClick ? "cursor-pointer" : "cursor-default",
             "transition-colors duration-150",
             className
           )}
@@ -1989,7 +2225,7 @@ export default TagDisplay;
 
 FILE: .\components\ui\toast.tsx
 SIZE: 4.88 KB
-LAST MODIFIED: 02/09/2025 10:39:17
+LAST MODIFIED: 03/22/2025 23:31:45
 
 import * as React from "react";
 import * as ToastPrimitives from "@radix-ui/react-toast";
@@ -2178,6 +2414,230 @@ import {
     return <button onClick={showToast}>Show Toast</button>;
   }
   */
+
+============================================================
+
+FILE: .\components\ui\theme\AccentDemo.tsx
+SIZE: 3.37 KB
+LAST MODIFIED: 03/23/2025 16:13:08
+
+// components/ui/theme/AccentDemo.tsx
+'use client';
+
+import React from 'react';
+import { useTheme } from '@/providers/ThemeContext';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+
+export function AccentDemo() {
+  const { accent } = useTheme();
+  
+  const accentLabels = {
+    'default': 'Grayscale',
+    'blue': 'Blue',
+    'green': 'Green',
+    'purple': 'Purple',
+    'orange': 'Orange'
+  };
+  
+  return (
+    <Card className="mt-4">
+      <CardHeader>
+        <CardTitle>Accent Color Demo - {accentLabels[accent]}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div 
+            className="h-16 rounded flex items-center justify-center text-white font-medium"
+            style={{ backgroundColor: 'var(--accent-color)' }}
+          >
+            Accent Color
+          </div>
+          <div 
+            className="h-16 rounded flex items-center justify-center text-accent-foreground font-medium"
+            style={{ backgroundColor: 'var(--accent-muted)' }}
+          >
+            Accent Muted
+          </div>
+          <div 
+            className="h-16 rounded bg-background flex items-center justify-center border"
+            style={{ color: 'var(--accent-color)' }}
+          >
+            Text in Accent
+          </div>
+          <div 
+            className="h-16 rounded flex items-center justify-center text-white font-medium"
+            style={{ 
+              background: 'linear-gradient(to right, var(--accent-muted), var(--accent-color))' 
+            }}
+          >
+            Accent Gradient
+          </div>
+        </div>
+        
+        <div className="mt-4">
+          <h3 className="font-medium mb-2">Chart Colors:</h3>
+          <div className="grid grid-cols-5 gap-2 h-8">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div 
+                key={i}
+                className="rounded"
+                style={{ backgroundColor: `hsl(var(--chart-${i}))` }}
+              />
+            ))}
+          </div>
+        </div>
+        
+        <button 
+          className="px-4 py-2 rounded text-white"
+          style={{ backgroundColor: 'var(--accent-color)' }}
+        >
+          Accent Button
+        </button>
+        
+        <div className="grid grid-cols-5 gap-4 mt-4">
+          <Card className={cn("p-4 text-center border-2", accent === 'default' ? 'border-gray-500' : '')}>
+            <div className="font-medium">Default</div>
+          </Card>
+          <Card className={cn("p-4 text-center border-2", accent === 'blue' ? 'border-blue-500' : '')}>
+            <div className="font-medium">Blue</div>
+          </Card>
+          <Card className={cn("p-4 text-center border-2", accent === 'green' ? 'border-green-500' : '')}>
+            <div className="font-medium">Green</div>
+          </Card>
+          <Card className={cn("p-4 text-center border-2", accent === 'purple' ? 'border-purple-500' : '')}>
+            <div className="font-medium">Purple</div>
+          </Card>
+          <Card className={cn("p-4 text-center border-2", accent === 'orange' ? 'border-orange-500' : '')}>
+            <div className="font-medium">Orange</div>
+          </Card>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+export default AccentDemo;
+
+============================================================
+
+FILE: .\components\ui\theme\ThemeSwitcher.tsx
+SIZE: 3.72 KB
+LAST MODIFIED: 03/23/2025 16:00:08
+
+// components/ui/theme/ThemeSwitcher.tsx
+'use client';
+
+import React from 'react';
+import { Button } from '@/components/ui/button';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger, 
+  DropdownMenuSeparator 
+} from '@/components/ui/dropdown-menu';
+import { Moon, Sun, Monitor, Palette } from 'lucide-react';
+import { useTheme } from '@/providers/ThemeContext';
+
+interface ThemeSwitcherProps {
+  showAccentColors?: boolean;
+}
+
+export function ThemeSwitcher({ showAccentColors = false }: ThemeSwitcherProps) {
+  const { theme, setTheme, accent, setAccent } = useTheme();
+  
+  console.log('Current theme state:', { theme, accent });
+  
+  const handleThemeChange = (newTheme: string) => {
+    console.log('Setting theme to:', newTheme);
+    setTheme(newTheme);
+  };
+  
+  // Fix the type to match the ColorAccent type
+  const handleAccentChange = (newAccent: 'default' | 'blue' | 'green' | 'purple' | 'orange') => {
+    console.log('Setting accent to:', newAccent);
+    setAccent(newAccent);
+  };
+  
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="icon" className="h-9 w-9 rounded-md">
+          {theme === 'dark' ? (
+            <Moon className="h-4 w-4" />
+          ) : theme === 'light' ? (
+            <Sun className="h-4 w-4" />
+          ) : (
+            <Monitor className="h-4 w-4" />
+          )}
+          <span className="sr-only">Toggle theme</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={() => handleThemeChange('light')}>
+          <Sun className="mr-2 h-4 w-4" />
+          <span>Light</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleThemeChange('dark')}>
+          <Moon className="mr-2 h-4 w-4" />
+          <span>Dark</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleThemeChange('system')}>
+          <Monitor className="mr-2 h-4 w-4" />
+          <span>System</span>
+        </DropdownMenuItem>
+        
+        {showAccentColors && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem disabled>
+              <Palette className="mr-2 h-4 w-4" />
+              <span>Accent Colors</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => handleAccentChange('default')}
+              className="pl-8"
+            >
+              <div className="mr-2 h-4 w-4 rounded-full bg-gray-500" />
+              <span>Grayscale (Default)</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => handleAccentChange('blue')}
+              className="pl-8"
+            >
+              <div className="mr-2 h-4 w-4 rounded-full bg-blue-500" />
+              <span>Blue</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => handleAccentChange('green')}
+              className="pl-8"
+            >
+              <div className="mr-2 h-4 w-4 rounded-full bg-green-500" />
+              <span>Green</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => handleAccentChange('purple')}
+              className="pl-8"
+            >
+              <div className="mr-2 h-4 w-4 rounded-full bg-purple-500" />
+              <span>Purple</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => handleAccentChange('orange')}
+              className="pl-8"
+            >
+              <div className="mr-2 h-4 w-4 rounded-full bg-orange-500" />
+              <span>Orange</span>
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+export default ThemeSwitcher;
 
 ============================================================
 
@@ -2585,49 +3045,39 @@ export function ReviewerProfileDropdown({
 ============================================================
 
 FILE: .\features\dashboard\Dashboard.tsx
-SIZE: 19.33 KB
-LAST MODIFIED: 03/22/2025 23:04:24
+SIZE: 5.64 KB
+LAST MODIFIED: 03/23/2025 16:15:54
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/services/supabase';
-import { useTheme } from 'next-themes';
-import './styles/dashboard.css';
-
-// Import chart components
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/features/charts';
-import WordCreatorModal from '@/features/phrases/WordCreatorModal';
-import ReviewModal from '@/features/phrases/ReviewModal';
 
 // Components
-import { PhrasesTable } from '@/features/phrases/phrasesTable';
 import { DashboardHeader } from '@/features/dashboard/components/DashboardHeader';
-import ExportModal from '@/features/dashboard/components/ExportModal';
-import FilterModal from '@/features/filters/FilterModal';
-import { FilterProvider } from '@/features/phrases/stores/filterContext';
 import { StatsCards } from '@/features/dashboard/components/StatsCards';
+import { Toaster } from '@/components/ui/toaster';
+import { ToastProvider } from '@/providers/ToastProvider';
+import { PillTabs, PillTabsContent } from '@/components/ui/pill-tabs';
+import FilterModal from '@/features/filters/FilterModal';
+import ExportModal from '@/features/dashboard/components/ExportModal';
+import WordCreatorModal from '@/features/phrases/WordCreatorModal';
+import ReviewModal from '@/features/phrases/ReviewModal';
 import AnalyticsSection from '@/features/dashboard/components/AnalyticsSection';
-
-
-// UI Components
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { PillTabs, PillTabsContent } from '@/components/ui/pill-tabs'; 
+import { PhrasesSection } from './components/PhrasesSection';
+import { AccentDemo } from '@/components/ui/theme/AccentDemo';
 
 // Hooks
-import { useStats } from '@/features/data/hooks/useStats';
-import { usePhrases } from '@/features/data/hooks/usePhrases';
-import { usePhraseMetadata } from '@/features/data/hooks/usePhraseMetadata';
-import { useReviewers } from '@/features/data/hooks/useReviewers';
-import { useDeletePhrase } from '@/features/phrases/hooks/useDeletePhrase';
+import { useTheme } from 'next-themes';
 import { useDashboardState } from '@/features/dashboard/hooks/useDashboardState';
+import { usePhraseMetadata } from '@/features/data/hooks/usePhraseMetadata';
+import { useExport, type ExportOptions } from '@/features/dashboard/hooks/useExport';
+import { useToast } from '@/hooks/useToast';
 
 // Types
-import type { Reviewer, Phrase } from '@/types/types';
+import type { Reviewer } from '@/types/types';
 
-const Dashboard = () => {
+const Dashboard: React.FC = () => {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   
@@ -2649,511 +3099,261 @@ const Dashboard = () => {
     setNewIds,
     currentReviewer,
     setCurrentReviewer, 
-    isExporting,
-    setIsExporting,
+    isExporting: dashboardExporting,
+    setIsExporting: setDashboardExporting,
+    handleLoginSuccess,
+    handleLogout,
+    handleWordAdded
   } = useDashboardState();
   
-  // Initialize the delete phrase mutation
-  const deletePhraseMutation = useDeletePhrase();
-  
-  // Add handlers for edit and delete
-  const handleEdit = (id: number) => {
-    setSelectedPhraseId(id);
-    setShowReviewModal(true);
-  };
-
-  const handleDelete = (id: number) => {
-    if (window.confirm('Are you sure you want to delete this phrase?')) {
-      deletePhraseMutation.mutate(id, {
-        onSuccess: () => {
-          // Refresh the phrases list after deletion
-          fetchPhrases();
-        }
-      });
-    }
-  };
-  
-  // ======= DASHBOARD UI STATE =======
-  const [subcategories, setSubcategories] = useState<string[]>([]);
-  const [phrasesOverTime, setPhrasesOverTime] = useState<any[]>([]);
-
-  // ======= DATA HOOKS =======
-  const { stats, loading: statsLoading } = useStats();
-  const { reviewers } = useReviewers();
-  const {
-    phrases,
-    loading: phrasesLoading,
-    error,
-    pagination,
-    sortConfig,
-    filters,
-    handleSort,
-    handlePageChange,
-    handleRowsPerPageChange,
-    handleFilterChange,
-    editPhrase,
-    deletePhrase,
-    resetFilters,
-    fetchPhrases,
-  } = usePhrases();
+  // Get metadata for filters
   const { categories, difficulties, partsOfSpeech } = usePhraseMetadata();
 
-  // Find reviewer index for the avatar
-  const reviewerIndex = currentReviewer 
-    ? reviewers?.findIndex(r => r.id === currentReviewer.id) ?? 0
-    : 0;
-
-  // ======= TABLE STATE =======
-  const [tableState, setTableState] = useState<TableState>({
-    sortConfig: {
-      key: '',
-      direction: 'asc'
-    },
-    pagination: {
-      currentPage: 1,
-      rowsPerPage: 10,  // Set default to 10
-      totalItems: 0,
-      totalPages: 1
-    },
-    filters: {
-      searchTerm: '',
-      category: '',
-      difficulty: '',
-      subcategory: '',
-      part_of_speech: ''
-    }
-  });
-  
-  // ======= CHART DATA =======
-  // Data for the radial chart
-  const wordsAddedData = [
-    { name: "Words Added", value: 45, fill: "hsl(var(--primary))" },
-    { name: "Goal", value: 100, fill: "hsl(var(--muted))" },
-  ];
-
-  // Chart configuration
-  const chartConfig = {
-    phrases: { label: 'Phrases', color: 'var(--chart-1)' },
-    reviews: { label: 'Reviews', color: 'var(--chart-2)' },
-    additions: { label: 'Additions', color: 'var(--chart-3)' },
-    edits: { label: 'Edits', color: 'var(--chart-4)' }
-  };
-
-  // ======= AUTH HANDLERS =======
   /**
-   * Handle successful login
+   * Handle adding words action
    */
-  const handleLoginSuccess = (reviewer: Reviewer) => {
-    setCurrentReviewer(reviewer);
-    localStorage.setItem('currentReviewer', JSON.stringify(reviewer));
-    console.log('Reviewer logged in:', reviewer.name);
-  };
-  
-  /**
-   * Handle logout
-   */
-  const handleLogout = () => {
-    setCurrentReviewer(null);
-    localStorage.removeItem('currentReviewer');
-  };
-
-  // Add this function since it's used in the component
-  const handleWordAdded = (id: number) => {
-    // Track newly added phrase ID
-    setNewIds(prev => [...prev, id]);
-    // Refresh data after a word is added
-    fetchPhrases();
-  };
-
   const handleAddWordsClick = () => {
     setShowWordCreatorModal(true);
   };
   
+  /**
+   * Handle review words action
+   */
   const handleReviewWordsClick = () => {
     setShowReviewModal(true);
   };
 
-  // ======= EFFECTS =======
+  // Use the export hook for handling exports
+  const { 
+    exportPhrases, 
+    downloadExport, 
+    isExporting 
+  } = useExport();
   
-  // Load reviewer from localStorage on initial render
-  useEffect(() => {
-    const savedReviewer = localStorage.getItem('currentReviewer');
-    if (savedReviewer) {
-      try {
-        setCurrentReviewer(JSON.parse(savedReviewer));
-      } catch (e) {
-        console.error("Error parsing saved reviewer:", e);
-        localStorage.removeItem('currentReviewer');
-      }
-    }
-  }, []);
-
-  // Hide any debug JSON output on load
-  useEffect(() => {
-    const preElements = document.querySelectorAll('pre');
-    preElements.forEach(el => {
-      if (
-        el.textContent &&
-        el.textContent.includes('"dataLength":') &&
-        el.textContent.includes('"totalItems":')
-      ) {
-        el.style.display = 'none';
-      }
-    });
-  }, []);
-
-  // Sync Table State with hook state
-  useEffect(() => {
-    if (phrases && pagination) {
-      const totalItems = pagination.totalItems || phrases.length || 0;
-      const rowsPerPage = pagination.rowsPerPage || 10; // Get rowsPerPage from pagination
-      const totalPages = Math.ceil(totalItems / rowsPerPage);
-      
-      setTableState(prev => ({
-        ...prev,
-        sortConfig,
-        pagination: {
-          ...pagination,
-          rowsPerPage,
-          totalItems,
-          totalPages,
-          currentPage: Math.min(pagination.currentPage, totalPages || 1)
-        },
-        filters,
-      }));
-    }
-  }, [phrases, pagination, sortConfig, filters]);
-
-
-
-  // Fetch subcategories when the category filter changes
-  useEffect(() => {
-    const fetchSubcategories = async () => {
-      if (!filters.category) {
-        setSubcategories([]);
-        return;
-      }
-      try {
-        const { data: categoryData } = await supabase
-          .from('categories')
-          .select('id')
-          .eq('name', filters.category)
-          .single();
-        if (categoryData) {
-          const { data: subcategoryData } = await supabase
-            .from('subcategories')
-            .select('name')
-            .eq('category_id', categoryData.id)
-            .order('name');
-          if (subcategoryData) {
-            setSubcategories(subcategoryData.map(sub => sub.name));
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching subcategories:', err);
-      }
-    };
-    fetchSubcategories();
-  }, [filters.category]);
-
-  // Fetch phrases over time
-  useEffect(() => {
-    fetchPhrasesOverTime();
-  }, []);
-
-  // ======= DATA FUNCTIONS =======
-  /**
-   * Fetch phrases over time data for chart
-   */
-  const fetchPhrasesOverTime = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('phrases')
-        .select('created_at')
-        .order('created_at');
-      if (error) {
-        console.error('Error fetching phrase timestamps:', error);
-        setPhrasesOverTime(getErrorStateData());
-        return;
-      }
-      if (data && data.length > 0) {
-        const monthlyData = processTimestampData(data);
-        setPhrasesOverTime(monthlyData);
-      } else {
-        setPhrasesOverTime(getErrorStateData());
-      }
-    } catch (err) {
-      console.error('Error fetching phrase timestamps:', err);
-      setPhrasesOverTime(getErrorStateData());
-    }
-  };
-
-  /**
-   * Process timestamp data for charts
-   */
-  const processTimestampData = (data: any[]) => {
-    const monthCounts: Record<string, any> = {};
-    data.forEach(item => {
-      if (!item.created_at) return;
-      const date = new Date(item.created_at);
-      const month = date.toLocaleString('default', { month: 'short' });
-      const year = date.getFullYear();
-      const key = `${month} ${year}`;
-      if (!monthCounts[key]) {
-        monthCounts[key] = { month, year, count: 0, fullDate: date };
-      }
-      monthCounts[key].count++;
-    });
-    return Object.values(monthCounts)
-      .sort((a, b) => a.fullDate - b.fullDate)
-      .map(item => ({ month: item.month, year: item.year, phrases: item.count }))
-      .slice(-6);
-  };
-
-  /**
-   * Get fallback data for charts when error occurs
-   */
-  const getErrorStateData = () => {
-    return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map(month => ({
-      month,
-      year: new Date().getFullYear(),
-      phrases: null
-    }));
-  };
-  /**
-   * Handle table state changes
-   */
-  const handleTableStateChange = (updates: Partial<TableState>) => {
-    // Update local state first
-    setTableState(prev => {
-      const newState = { ...prev };
-      
-      if (updates.filters) {
-        newState.filters = { ...prev.filters, ...updates.filters };
-      }
-      
-      if (updates.sortConfig) {
-        newState.sortConfig = { ...prev.sortConfig, ...updates.sortConfig };
-      }
-      
-      if (updates.pagination) {
-        // Make sure all pagination properties are properly set
-        newState.pagination = { ...prev.pagination, ...updates.pagination };
-      }
-      
-      return newState;
-    });
-    
-    // Then immediately propagate changes to the hooks
-    if (updates.filters) {
-      // Apply each filter individually to ensure all are updated
-      Object.entries(updates.filters).forEach(([key, value]) => {
-        if (value !== undefined) { // Only update if value is provided
-          handleFilterChange(key, value || '');
-        }
-      });
-    }
-    
-    if (updates.sortConfig && updates.sortConfig.key) {
-      handleSort(updates.sortConfig.key as keyof Phrase);
-    }
-    
-    if (updates.pagination) {
-      // Note: Order matters here! First update rows per page, then page number
-      if (updates.pagination.rowsPerPage) {
-        handleRowsPerPageChange(updates.pagination.rowsPerPage);
-      }
-      
-      if (updates.pagination.currentPage) {
-        handlePageChange(updates.pagination.currentPage);
-      }
-    }
-  };
-
-  /**
-   * Generate monthly activity data for charts
-   */
-  const generateMonthlyActivityData = () => {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-    return months.map(month => ({
-      name: month,
-      reviews: Math.floor(Math.random() * 100) + 50,
-      additions: Math.floor(Math.random() * 40) + 10,
-      edits: Math.floor(Math.random() * 30) + 5,
-    }));
-  };
-
-  const monthlyActivityData = generateMonthlyActivityData();
-
-  /**
-   * Generate category data for charts
-   */
-  const generateCategoryData = () => {
-    if (categories && categories.length > 0) {
-      return [
-        { name: 'Animals & Plants', value: 30 },
-        { name: 'Art & Design', value: 22 },
-        { name: 'Education & Learning', value: 13 },
-        { name: 'Celebrations & Traditions', value: 16 },
-        { name: 'Business & Careers', value: 19 },
-      ];
-    }
-    return [
-      { name: 'Animals & Plants', value: 30 },
-      { name: 'Art & Design', value: 22 },
-      { name: 'Education & Learning', value: 13 },
-      { name: 'Celebrations & Traditions', value: 16 },
-      { name: 'Business & Careers', value: 19 },
-    ];
-  };
-
-  const categoryData = generateCategoryData();
-
   /**
    * Handle exporting data
    */
-  const handleExport = async (options: any) => {
-    try {
-      setIsExporting(true);
-      const { data: phrases, error: phrasesError } = await supabase
-        .from('phrases')
-        .select(`
-          id,
-          phrase,
-          part_of_speech,
-          hint,
-          category_id,
-          subcategory_id,
-          difficulty,
-          categories:category_id(name),
-          subcategories:subcategory_id(name)
-        `);
-      if (phrasesError) throw phrasesError;
-      const { data: phraseTags, error: tagsError } = await supabase
-        .from('phrase_tags')
-        .select(`
-          phrase_id,
-          tags:tag_id(tag)
-        `);
-      if (tagsError) throw tagsError;
-      
-      // Process data
-      const tagsByPhraseId: Record<string, string[]> = {};
-      phraseTags.forEach((item: any) => {
-        if (!tagsByPhraseId[item.phrase_id]) {
-          tagsByPhraseId[item.phrase_id] = [];
-        }
-        tagsByPhraseId[item.phrase_id].push(item.tags.tag);
-      });
-      
-      const categorizedPhrases: Record<string, any[]> = {};
-      phrases.forEach((phrase: any) => {
-        const categoryName = phrase.categories ? phrase.categories.name : 'Uncategorized';
-        if (!categorizedPhrases[categoryName]) {
-          categorizedPhrases[categoryName] = [];
-        }
-        categorizedPhrases[categoryName].push({
-          text: phrase.phrase,
-          pos: phrase.part_of_speech,
-          hint: phrase.hint || '',
-          difficulty: phrase.difficulty || 1,
-          subcategory: phrase.subcategories ? phrase.subcategories.name : null,
-          tags: tagsByPhraseId[phrase.id] || [],
-        });
-      });
-      
-      const esp32Data: Record<string, any[]> = {};
-      Object.keys(categorizedPhrases).forEach(cat => {
-        if (options.optimizeForESP32) {
-          esp32Data[cat] = categorizedPhrases[cat].map(p => ({
-            t: p.text,
-            h: p.hint || '',
-            d: p.difficulty || 1
-          }));
-        } else {
-          esp32Data[cat] = categorizedPhrases[cat];
-        }
-      });
-      
-      const headerContent = options.exportHeader ? generateArduinoHeader(esp32Data) : '';
-      setIsExporting(false);
-      return { jsonData: esp32Data, headerContent };
-    } catch (error) {
-      console.error('Export error:', error);
-      setIsExporting(false);
-      return null;
+  const handleExport = async (options: ExportOptions) => {
+    const exportData = await exportPhrases(options);
+    
+    if (exportData) {
+      downloadExport(exportData, options);
+      return exportData;
     }
+    
+    return null;
   };
 
-  /**
-   * Generate Arduino header file
-   */
-  const generateArduinoHeader = (data: Record<string, any[]>) => {
-    let headerContent = `// Auto-generated phrases header file
-#ifndef PHRASES_H
-#define PHRASES_H
-
-#include <Arduino.h>
-
-struct Phrase {
-  const char* text;
-  const char* hint;
-  uint8_t difficulty;
-};
-`;
-    Object.keys(data).forEach(category => {
-      const categoryVar = category.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-      const phrases = data[category];
-      headerContent += `// ${category} phrases
-constexpr Phrase ${categoryVar}_phrases[] PROGMEM = {
-`;
-      phrases.forEach(phrase => {
-        const text = phrase.t || phrase.text;
-        const hint = phrase.h || phrase.hint || '';
-        const difficulty = phrase.d || phrase.difficulty || 1;
-        headerContent += `  {"${escapeString(text)}", "${escapeString(hint)}", ${difficulty}},
-`;
-      });
-      headerContent += `};
-
-constexpr size_t ${categoryVar}_count = ${phrases.length};
-
-`;
-    });
-    headerContent += `// Category index
-struct PhraseCategory {
-  const char* name;
-  const Phrase* phrases;
-  size_t count;
-};
-
-constexpr PhraseCategory phrase_categories[] PROGMEM = {
-`;
-    Object.keys(data).forEach(category => {
-      const categoryVar = category.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-      headerContent += `  {"${escapeString(category)}", ${categoryVar}_phrases, ${categoryVar}_count},
-`;
-    });
-    headerContent += `};
-
-constexpr size_t category_count = ${Object.keys(data).length};
-
-#endif // PHRASES_H
-`;
-    return headerContent;
-  };
-
-  /**
-   * Escape strings for C++ code
-   */
-  const escapeString = (str: string) => {
-    if (!str) return "";
-    return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
-  };
-
-  // ======= RENDER =======
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <ToastProvider>
+      <div className="container mx-auto py-6 space-y-6">
+        {/* Header Component */}
+      <DashboardHeader
+        theme={theme}
+        setTheme={setTheme}
+        onExportClick={() => setShowExportModal(true)}
+        currentReviewer={currentReviewer}
+        onLoginSuccess={handleLoginSuccess}
+        onLogout={handleLogout}
+        onAddWordsClick={handleAddWordsClick}
+        onReviewWordsClick={handleReviewWordsClick}
+      />
+
+      {/* Stats Cards */}
+      <StatsCards />
+
+      <div className="mb-6">
+        {/* Modals */}
+        {currentReviewer && (
+          <>
+            {/* Word Creator Modal */}
+            <WordCreatorModal
+              isOpen={showWordCreatorModal}
+              onClose={() => setShowWordCreatorModal(false)}
+              reviewer={currentReviewer}
+              onWordAdded={handleWordAdded}
+            />
+
+            {/* Review Modal */}
+            <ReviewModal
+              isOpen={showReviewModal}
+              onClose={() => {
+                setShowReviewModal(false);
+                setSelectedPhraseId(null);
+              }}
+              reviewer={currentReviewer}
+              selectedPhraseId={selectedPhraseId}
+            />
+          </>
+        )}
+
+        {/* Main Tabs */}
+        <PillTabs
+          tabs={[
+            { value: 'phrases', label: 'Phrases' },
+            { value: 'analytics', label: 'Analytics' }
+          ]}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          className="py-3 border-dashed border-y"
+        />
+
+        {/* Phrases Tab */}
+        <PillTabsContent value="phrases" activeTab={activeTab}>
+          <PhrasesSection 
+            newIds={newIds}
+            onEdit={(id: number) => {
+              setSelectedPhraseId(id);
+              setShowReviewModal(true);
+            }}
+          />
+        </PillTabsContent>
+
+        {/* Analytics Tab */}
+        <PillTabsContent value="analytics" activeTab={activeTab}>
+          <AnalyticsSection />
+        </PillTabsContent>
+      </div>
+
+      {/* Additional Modals */}
+      <FilterModal
+        isOpen={showFilterModal}
+        onClose={() => setShowFilterModal(false)}
+        filters={{
+          searchTerm: '',
+          category: '',
+          difficulty: '',
+          subcategory: '',
+          part_of_speech: ''
+        }}
+        onChange={() => {}}
+        onReset={() => {}}
+        categories={categories}
+        difficulties={difficulties}
+        partsOfSpeech={partsOfSpeech}
+        subcategories={[]}
+      />
+
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        onExport={handleExport}
+        isLoading={isExporting}
+      />
+      
+      </div>
+    </ToastProvider>
+  );
+};
+
+export default Dashboard;
+
+
+============================================================
+
+FILE: .\features\dashboard\Dashboard.tsx.bak
+SIZE: 5.58 KB
+LAST MODIFIED: 03/22/2025 23:54:27
+
+'use client';
+
+import React from 'react';
+import { useRouter } from 'next/navigation';
+
+// Components
+import { DashboardHeader } from '@/features/dashboard/components/DashboardHeader';
+import { StatsCards } from '@/features/dashboard/components/StatsCards';
+import { Toaster } from '@/components/ui/toaster';
+import { ToastProvider } from '@/providers/ToastProvider';
+import { PillTabs, PillTabsContent } from '@/components/ui/pill-tabs';
+import FilterModal from '@/features/filters/FilterModal';
+import ExportModal from '@/features/dashboard/components/ExportModal';
+import WordCreatorModal from '@/features/phrases/WordCreatorModal';
+import ReviewModal from '@/features/phrases/ReviewModal';
+import AnalyticsSection from '@/features/dashboard/components/AnalyticsSection';
+import { PhrasesSection } from './components/PhrasesSection';
+
+// Hooks
+import { useTheme } from 'next-themes';
+import { useDashboardState } from '@/features/dashboard/hooks/useDashboardState';
+import { usePhraseMetadata } from '@/features/data/hooks/usePhraseMetadata';
+import { useExport, type ExportOptions } from '@/features/dashboard/hooks/useExport';
+import { useToast } from '@/hooks/useToast';
+
+// Types
+import type { Reviewer } from '@/types/types';
+
+const Dashboard: React.FC = () => {
+  const router = useRouter();
+  const { theme, setTheme } = useTheme();
+  
+  // Use dashboard state hook for centralized state management
+  const {
+    activeTab, 
+    setActiveTab,
+    showWordCreatorModal, 
+    setShowWordCreatorModal,
+    showReviewModal, 
+    setShowReviewModal,
+    showFilterModal, 
+    setShowFilterModal,
+    showExportModal, 
+    setShowExportModal,
+    selectedPhraseId,
+    setSelectedPhraseId,
+    newIds, 
+    setNewIds,
+    currentReviewer,
+    setCurrentReviewer, 
+    isExporting: dashboardExporting,
+    setIsExporting: setDashboardExporting,
+    handleLoginSuccess,
+    handleLogout,
+    handleWordAdded
+  } = useDashboardState();
+  
+  // Get metadata for filters
+  const { categories, difficulties, partsOfSpeech } = usePhraseMetadata();
+
+  /**
+   * Handle adding words action
+   */
+  const handleAddWordsClick = () => {
+    setShowWordCreatorModal(true);
+  };
+  
+  /**
+   * Handle review words action
+   */
+  const handleReviewWordsClick = () => {
+    setShowReviewModal(true);
+  };
+
+  // Use the export hook for handling exports
+  const { 
+    exportPhrases, 
+    downloadExport, 
+    isExporting 
+  } = useExport();
+  
+  /**
+   * Handle exporting data
+   */
+  const handleExport = async (options: ExportOptions) => {
+    const exportData = await exportPhrases(options);
+    
+    if (exportData) {
+      downloadExport(exportData, options);
+      return exportData;
+    }
+    
+    return null;
+  };
+
+  return (
+    <ToastProvider>
+      <div className="container mx-auto py-6 space-y-6">
+        {/* Header Component */}
       <DashboardHeader
         theme={theme}
         setTheme={setTheme}
@@ -3165,77 +3365,79 @@ constexpr size_t category_count = ${Object.keys(data).length};
         onReviewWordsClick={handleReviewWordsClick}
       />
     
-    {/* Add the StatsCards component here */}
-    <StatsCards />
+      {/* Stats Cards */}
+      <StatsCards />
 
       <div className="mb-6">
-        {/* Word Creator Modal */}
-{currentReviewer && (
-  <WordCreatorModal
-    isOpen={showWordCreatorModal}
-    onClose={() => setShowWordCreatorModal(false)}
-    reviewer={currentReviewer}
-    onWordAdded={handleWordAdded}
-  />
-)}
+        {/* Modals */}
+        {currentReviewer && (
+          <>
+            {/* Word Creator Modal */}
+            <WordCreatorModal
+              isOpen={showWordCreatorModal}
+              onClose={() => setShowWordCreatorModal(false)}
+              reviewer={currentReviewer}
+              onWordAdded={handleWordAdded}
+            />
 
-{/* Review Modal */}
-{currentReviewer && (
-  <ReviewModal
-  isOpen={showReviewModal}
-  onClose={() => {
-    setShowReviewModal(false);
-    setSelectedPhraseId(null);
-  }}
-  reviewer={currentReviewer}
-  selectedPhraseId={selectedPhraseId}
-/>
-)}
-  <PillTabs
-    tabs={[
-      { value: 'phrases', label: 'Phrases' },
-      { value: 'analytics', label: 'Analytics' }
-    ]}
-    activeTab={activeTab}
-    onTabChange={setActiveTab}
-    className="py-3 border-dashed border-y"
-  />
+            {/* Review Modal */}
+            <ReviewModal
+              isOpen={showReviewModal}
+              onClose={() => {
+                setShowReviewModal(false);
+                setSelectedPhraseId(null);
+              }}
+              reviewer={currentReviewer}
+              selectedPhraseId={selectedPhraseId}
+            />
+          </>
+        )}
 
-{/* Phrases Tab */}
-<PillTabsContent value="phrases" activeTab={activeTab}>
-  <div className="flex flex-col space-y-4">
-    {/* Wrap your existing PhrasesTable with FilterProvider */}
-    <FilterProvider>
-      <PhrasesTable
-        phrases={phrases}
-        loading={phrasesLoading}
-        tableState={tableState}
-        onTableStateChange={handleTableStateChange}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-        newIds={newIds}
-      />
-    </FilterProvider>
-  </div>
-</PillTabsContent>
+        {/* Main Tabs */}
+        <PillTabs
+          tabs={[
+            { value: 'phrases', label: 'Phrases' },
+            { value: 'analytics', label: 'Analytics' }
+          ]}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          className="py-3 border-dashed border-y"
+        />
+
+        {/* Phrases Tab */}
+        <PillTabsContent value="phrases" activeTab={activeTab}>
+          <PhrasesSection 
+            newIds={newIds}
+            onEdit={(id: number) => {
+              setSelectedPhraseId(id);
+              setShowReviewModal(true);
+            }}
+          />
+        </PillTabsContent>
 
         {/* Analytics Tab */}
         <PillTabsContent value="analytics" activeTab={activeTab}>
           <AnalyticsSection />
         </PillTabsContent>
-          </div>
+      </div>
 
-      {/* Modals */}
+      {/* Additional Modals */}
       <FilterModal
         isOpen={showFilterModal}
         onClose={() => setShowFilterModal(false)}
-        filters={filters}
-        onChange={handleFilterChange}
-        onReset={resetFilters}
+        filters={{
+          searchTerm: '',
+          category: '',
+          difficulty: '',
+          subcategory: '',
+          part_of_speech: ''
+        }}
+        onChange={() => {}}
+        onReset={() => {}}
         categories={categories}
         difficulties={difficulties}
         partsOfSpeech={partsOfSpeech}
-        subcategories={subcategories}
+        subcategories={[]}
       />
 
       <ExportModal
@@ -3244,7 +3446,9 @@ constexpr size_t category_count = ${Object.keys(data).length};
         onExport={handleExport}
         isLoading={isExporting}
       />
-    </div>
+      
+      </div>
+    </ToastProvider>
   );
 };
 
@@ -3253,10 +3457,11 @@ export default Dashboard;
 ============================================================
 
 FILE: .\features\dashboard\types.ts
-SIZE: 1.02 KB
-LAST MODIFIED: 03/22/2025 22:45:54
+SIZE: 1.07 KB
+LAST MODIFIED: 03/23/2025 00:00:23
 
 // features/dashboard/types.ts
+import type { Reviewer } from '@/types/types';
 export interface DashboardStateHook {
   // Tab and Modal States
   activeTab: string;
@@ -3294,17 +3499,19 @@ export interface DashboardStateHook {
 ============================================================
 
 FILE: .\features\dashboard\components\AnalyticsSection.tsx
-SIZE: 12.23 KB
-LAST MODIFIED: 03/21/2025 23:53:07
+SIZE: 13.83 KB
+LAST MODIFIED: 03/23/2025 16:13:35
 
 // features/dashboard/components/AnalyticsSection/AnalyticsSection.tsx
 import React, { useState, useEffect } from 'react';
+import { useTheme } from '@/providers/ThemeContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import {
   PieChart, Pie, Cell, BarChart, Bar, 
   ResponsiveContainer, Tooltip, Legend, XAxis, YAxis, CartesianGrid
 } from 'recharts';
 import { supabase } from '@/lib/services/supabase';
+import { cn } from '@/lib/utils';
 
 export const AnalyticsSection = () => {
   const [categoryData, setCategoryData] = useState([]);
@@ -3312,6 +3519,7 @@ export const AnalyticsSection = () => {
   const [phrasesAdded, setPhrasesAdded] = useState(0);
   const [reviewsCompleted, setReviewsCompleted] = useState(0);
   const [loading, setLoading] = useState(true);
+  const { accent } = useTheme();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -3395,8 +3603,35 @@ export const AnalyticsSection = () => {
     fetchData();
   }, []);
 
-  // Grayscale colors for the visualizations
-  const COLORS = ['#555555', '#777777', '#999999', '#BBBBBB', '#DDDDDD'];
+  // Get colors based on the current accent
+  const getChartColors = () => {
+    switch (accent) {
+      case 'blue':
+        return ['#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE', '#DBEAFE'];
+      case 'green':
+        return ['#10B981', '#34D399', '#6EE7B7', '#A7F3D0', '#D1FAE5'];
+      case 'purple':
+        return ['#8B5CF6', '#A78BFA', '#C4B5FD', '#DDD6FE', '#EDE9FE'];
+      case 'orange':
+        return ['#F97316', '#FB923C', '#FDBA74', '#FED7AA', '#FFEDD5'];
+      default: // grayscale
+        return ['#4B5563', '#6B7280', '#9CA3AF', '#D1D5DB', '#E5E7EB'];
+    }
+  };
+
+  // Generate accent-specific chart colors
+  const COLORS = getChartColors();
+
+  // Get the appropriate border color for cards
+  const getCardBorderClass = () => {
+    switch (accent) {
+      case 'blue': return 'border-blue-500/30';
+      case 'green': return 'border-emerald-500/30';
+      case 'purple': return 'border-purple-500/30';
+      case 'orange': return 'border-orange-500/30';
+      default: return 'border-gray-500/30';
+    }
+  };
 
   // If loading, show skeleton state
   if (loading) {
@@ -3436,16 +3671,31 @@ export const AnalyticsSection = () => {
     const xp = x0 + length * sin;
     const yp = y0 - length * cos;
 
+    // Use the first color from the COLORS array
+    const needleColor = COLORS[0];
+
     return [
-      <circle cx={x0} cy={y0} r={r + 2} fill={color} stroke="none" key="needle-center" />,
-      <path d={`M${xba} ${yba}L${xbb} ${ybb}L${xp} ${yp}Z`} fill={color} key="needle-path" />
+      <circle cx={x0} cy={y0} r={r + 2} fill={needleColor} stroke="none" key="needle-center" />,
+      <path d={`M${xba} ${yba}L${xbb} ${ybb}L${xp} ${yp}Z`} fill={needleColor} key="needle-path" />
     ];
   };
+
+  // Get accent-specific empty gauge color
+  const getEmptyGaugeColor = () => {
+    return accent === 'default' ? '#E5E7EB' : '#E5E7EB';
+  };
+
+  // Get accent-specific filled gauge color
+  const getFilledGaugeColor = () => {
+    return COLORS[0];
+  };
+
+  const cardBorderClass = getCardBorderClass();
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {/* Category Bar Chart - horizontal layout for better category name display */}
-      <Card className="border rounded-md">
+      <Card className={cn("border rounded-md border-2", cardBorderClass)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg">Category Distribution</CardTitle>
           <CardDescription>Top categories by phrase count</CardDescription>
@@ -3470,7 +3720,7 @@ export const AnalyticsSection = () => {
                   formatter={(value) => [`${value} phrases`, 'Count']}
                   contentStyle={{ backgroundColor: '#333', border: '1px solid #444' }}
                 />
-                <Bar dataKey="value" fill="#555555">
+                <Bar dataKey="value" fill={COLORS[0]}>
                   {categoryData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
@@ -3482,7 +3732,7 @@ export const AnalyticsSection = () => {
       </Card>
 
       {/* Difficulty Pie Chart */}
-      <Card className="border rounded-md">
+      <Card className={cn("border rounded-md border-2", cardBorderClass)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg">Difficulty Distribution</CardTitle>
           <CardDescription>Breakdown by difficulty level</CardDescription>
@@ -3518,7 +3768,7 @@ export const AnalyticsSection = () => {
       </Card>
 
       {/* Monthly Phrases Goal Gauge */}
-      <Card className="border rounded-md">
+      <Card className={cn("border rounded-md border-2", cardBorderClass)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg">Words Added This Month</CardTitle>
           <CardDescription>Progress towards the goal of 100 words</CardDescription>
@@ -3531,8 +3781,8 @@ export const AnalyticsSection = () => {
                   startAngle={180}
                   endAngle={0}
                   data={[
-                    { name: 'Empty', value: 100 - phrasesPercentage, fill: '#E5E7EB' },
-                    { name: 'Progress', value: phrasesPercentage, fill: '#777777' }
+                    { name: 'Empty', value: 100 - phrasesPercentage, fill: getEmptyGaugeColor() },
+                    { name: 'Progress', value: phrasesPercentage, fill: getFilledGaugeColor() }
                   ]}
                   cx="50%"
                   cy="80%"
@@ -3544,7 +3794,7 @@ export const AnalyticsSection = () => {
                   stroke="none"
                 >
                 </Pie>
-                {renderNeedle(phrasesPercentage, null, '50%', '80%', 70, 90, '#333333')}
+                {renderNeedle(phrasesPercentage, null, '50%', '80%', 70, 90, COLORS[0])}
                 <text
                   x="50%"
                   y="50%"
@@ -3572,7 +3822,7 @@ export const AnalyticsSection = () => {
       </Card>
 
       {/* Monthly Reviews Goal Gauge */}
-      <Card className="border rounded-md">
+      <Card className={cn("border rounded-md border-2", cardBorderClass)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg">Reviews Completed This Month</CardTitle>
           <CardDescription>Progress towards 100 reviews this month</CardDescription>
@@ -3585,8 +3835,8 @@ export const AnalyticsSection = () => {
                   startAngle={180}
                   endAngle={0}
                   data={[
-                    { name: 'Empty', value: 100 - reviewsPercentage, fill: '#E5E7EB' },
-                    { name: 'Progress', value: reviewsPercentage, fill: '#777777' }
+                    { name: 'Empty', value: 100 - reviewsPercentage, fill: getEmptyGaugeColor() },
+                    { name: 'Progress', value: reviewsPercentage, fill: getFilledGaugeColor() }
                   ]}
                   cx="50%"
                   cy="80%"
@@ -3598,7 +3848,7 @@ export const AnalyticsSection = () => {
                   stroke="none"
                 >
                 </Pie>
-                {renderNeedle(reviewsPercentage, null, '50%', '80%', 70, 90, '#333333')}
+                {renderNeedle(reviewsPercentage, null, '50%', '80%', 70, 90, COLORS[0])}
                 <text
                   x="50%"
                   y="50%"
@@ -3633,6 +3883,71 @@ export default AnalyticsSection;
 ============================================================
 
 FILE: .\features\dashboard\components\DashboardHeader.tsx
+SIZE: 1.71 KB
+LAST MODIFIED: 03/23/2025 12:55:45
+
+'use client';
+
+import React from 'react';
+import { Button } from "@/components/ui/button";
+import { ThemeSwitcher } from "@/components/ui/theme/ThemeSwitcher";
+import { ReviewerLoginButton } from '@/features/auth/ReviewerLoginButton';
+import { ReviewerProfileDropdown } from '@/features/auth/ReviewerProfileDropdown';
+import { Reviewer } from '@/types/types'; // Make sure to import the Reviewer type
+
+// Define the props interface
+interface DashboardHeaderProps {
+  onExportClick: () => void;
+  currentReviewer: Reviewer | null;
+  onLoginSuccess: (reviewer: Reviewer) => void;
+  onLogout: () => void;
+  onAddWordsClick: () => void;
+  onReviewWordsClick: () => void;
+}
+
+export function DashboardHeader({ 
+  onExportClick,
+  currentReviewer,
+  onLoginSuccess,
+  onLogout,
+  onAddWordsClick,
+  onReviewWordsClick
+}: DashboardHeaderProps) {
+  return (
+    <div className="flex justify-between items-center">
+      <div>
+        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+        <p className="text-muted-foreground">Manage your catch phrases</p>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <ThemeSwitcher showAccentColors={true} />
+
+        {currentReviewer ? (
+          <ReviewerProfileDropdown 
+            reviewer={currentReviewer} 
+            reviewerIndex={0} 
+            onLogout={onLogout}
+            onExportClick={onExportClick}
+            onAddWordsClick={onAddWordsClick}
+            onReviewWordsClick={onReviewWordsClick}
+          />
+        ) : (
+          <ReviewerLoginButton 
+            variant="secondary"
+            className="text-black bg-white hover:bg-gray-100 rounded-md border-0"
+            onLoginSuccess={onLoginSuccess}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+============================================================
+
+FILE: .\features\dashboard\components\DashboardHeader.tsx.bak
 SIZE: 2.06 KB
 LAST MODIFIED: 03/22/2025 22:58:57
 
@@ -3891,21 +4206,27 @@ export const ImportSection: React.FC<ImportSectionProps> = ({ onSuccess }) => {
 ============================================================
 
 FILE: .\features\dashboard\components\PhrasesSection.tsx
-SIZE: 2.41 KB
-LAST MODIFIED: 03/21/2025 10:04:10
+SIZE: 2.86 KB
+LAST MODIFIED: 03/22/2025 23:59:24
 
-// features/dashboard/components/PhrasesSection.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { PhrasesTable } from '@/features/phrases/phrasesTable';
 import { FilterProvider } from '@/features/phrases/stores/filterContext';
 import { useDeletePhrase } from '@/features/phrases/hooks/useDeletePhrase';
 import { usePhrases } from '@/features/data/hooks/usePhrases';
+import { useToast } from '@/hooks/useToast';
 
 interface PhrasesSectionProps {
   newIds: number[];
+  onEdit: (id: number) => void;
 }
 
-export const PhrasesSection: React.FC<PhrasesSectionProps> = ({ newIds }) => {
+export const PhrasesSection: React.FC<PhrasesSectionProps> = ({ 
+  newIds,
+  onEdit
+}) => {
+  const { toast } = useToast();
+  
   const {
     phrases,
     loading: phrasesLoading,
@@ -3922,15 +4243,27 @@ export const PhrasesSection: React.FC<PhrasesSectionProps> = ({ newIds }) => {
   // Initialize the delete phrase mutation
   const deletePhraseMutation = useDeletePhrase();
   
-  // Add handlers for edit and delete
-  const handleEdit = (id: number) => {
-    console.log('Editing phrase with ID:', id);
-  };
-
+  // Watch for errors from the delete mutation
+  useEffect(() => {
+    if (deletePhraseMutation.error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete phrase",
+        variant: "destructive"
+      });
+    }
+  }, [deletePhraseMutation.error, toast]);
+  
+  // Handle delete phrase
   const handleDelete = (id: number) => {
     if (window.confirm('Are you sure you want to delete this phrase?')) {
       deletePhraseMutation.mutate(id, {
         onSuccess: () => {
+          toast({
+            title: "Success",
+            description: "Phrase deleted successfully",
+            variant: "success"
+          });
           fetchPhrases();
         }
       });
@@ -3977,7 +4310,7 @@ export const PhrasesSection: React.FC<PhrasesSectionProps> = ({ newIds }) => {
           loading={phrasesLoading}
           tableState={tableState}
           onTableStateChange={handleTableStateChange}
-          onEdit={handleEdit}
+          onEdit={onEdit}
           onDelete={handleDelete}
           newIds={newIds}
         />
@@ -3986,17 +4319,21 @@ export const PhrasesSection: React.FC<PhrasesSectionProps> = ({ newIds }) => {
   );
 };
 
+export default PhrasesSection;
+
 ============================================================
 
 FILE: .\features\dashboard\components\StatsCards.tsx
-SIZE: 6.34 KB
-LAST MODIFIED: 03/21/2025 23:46:46
+SIZE: 7.93 KB
+LAST MODIFIED: 03/23/2025 16:16:28
 
 // features/dashboard/components/StatsCards.tsx
 import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { useDashboardState } from '../hooks/useDashboardState';
+import { useTheme } from '@/providers/ThemeContext';
 import { TrendingUp, TrendingDown, Minus, Award, Users, BookOpen, Clock } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 // Type for each stat card
 type StatCardProps = {
@@ -4023,7 +4360,26 @@ const StatCard: React.FC<StatCardProps> = ({
   loading = false,
   sparklineData = [],
 }) => {
+  const { accent } = useTheme();
+  
+  // Get accent-specific border style
+  const getBorderStyle = () => {
+    switch (accent) {
+      case 'blue':
+        return 'border-blue-500/30';
+      case 'green':
+        return 'border-emerald-500/30';
+      case 'purple':
+        return 'border-purple-500/30';
+      case 'orange':
+        return 'border-orange-500/30';
+      default: // grayscale
+        return 'border-gray-500/30';
+    }
+  };
+
   // Determine color and icon based on trend direction
+  // These always stay the same regardless of accent
   const getTrendColor = () => {
     if (trendDirection === 'up') return 'text-green-500';
     if (trendDirection === 'down') return 'text-red-500';
@@ -4036,6 +4392,22 @@ const StatCard: React.FC<StatCardProps> = ({
     return <Minus className="w-4 h-4 ml-1" />;
   };
 
+  // Get accent-specific icon background
+  const getIconBackground = () => {
+    switch (accent) {
+      case 'blue':
+        return 'bg-blue-950 text-blue-400';
+      case 'green':
+        return 'bg-emerald-950 text-emerald-400';
+      case 'purple':
+        return 'bg-purple-950 text-purple-400';
+      case 'orange':
+        return 'bg-orange-950 text-orange-400';
+      default: // grayscale
+        return 'bg-gray-900 text-gray-400';
+    }
+  };
+
   // Render sparkline if data is provided
   const renderSparkline = () => {
     if (!sparklineData.length) return null;
@@ -4043,6 +4415,22 @@ const StatCard: React.FC<StatCardProps> = ({
     const max = Math.max(...sparklineData);
     const min = Math.min(...sparklineData);
     const range = max - min || 1;
+
+    // Get accent-specific sparkline color
+    const getSparklineColor = () => {
+      // For trend directions, use fixed colors
+      if (trendDirection === 'up') return '#10B981'; // Green
+      if (trendDirection === 'down') return '#EF4444'; // Red
+      
+      // For neutral trend, use accent color
+      switch (accent) {
+        case 'blue': return '#3B82F6';
+        case 'green': return '#10B981';
+        case 'purple': return '#8B5CF6';
+        case 'orange': return '#F97316';
+        default: return '#6B7280'; // grayscale
+      }
+    };
     
     return (
       <div className="h-8 mt-2">
@@ -4051,7 +4439,6 @@ const StatCard: React.FC<StatCardProps> = ({
             const height = ((value - min) / range) * 40 + 10;
             const x = index;
             const y = 50 - height;
-            const color = trendDirection === 'up' ? '#10B981' : trendDirection === 'down' ? '#EF4444' : '#3B82F6';
             
             return (
               <rect 
@@ -4060,7 +4447,7 @@ const StatCard: React.FC<StatCardProps> = ({
                 y={y} 
                 width="0.8" 
                 height={height}
-                fill={color}
+                fill={getSparklineColor()}
                 rx="1"
               />
             );
@@ -4071,7 +4458,10 @@ const StatCard: React.FC<StatCardProps> = ({
   };
 
   return (
-    <Card className="p-6  text-white shadow-lg">
+    <Card className={cn(
+      "p-6 text-white shadow border-2",
+      getBorderStyle()
+    )}>
       <div className="flex justify-between items-start">
         <div className="space-y-2">
           <h3 className="text-gray-400 text-sm uppercase font-medium">{title}</h3>
@@ -4084,7 +4474,11 @@ const StatCard: React.FC<StatCardProps> = ({
             )}
           </div>
         </div>
-        {icon && <div className="rounded-full p-2 bg-gray-800">{icon}</div>}
+        {icon && (
+          <div className={cn("rounded-full p-2", getIconBackground())}>
+            {icon}
+          </div>
+        )}
       </div>
       
       <p className="text-gray-400 text-sm mt-1">{description}</p>
@@ -4108,6 +4502,7 @@ export const StatsCards: React.FC = () => {
     topReviewer: { name: '', count: 0, streak: 0 }
   });
   const [loading, setLoading] = useState(true);
+  const { accent } = useTheme();
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -4146,7 +4541,7 @@ export const StatsCards: React.FC = () => {
         trend={stats.newPhrases.trend}
         trendDirection={stats.newPhrases.trend > 0 ? 'up' : stats.newPhrases.trend < 0 ? 'down' : 'neutral'}
         timeframe={`Last ${dateRange} days`}
-        icon={<BookOpen className="text-blue-500 w-5 h-5" />}
+        icon={<BookOpen className="w-5 h-5" />}
         loading={loading}
         sparklineData={stats.newPhrases.sparkline}
       />
@@ -4158,7 +4553,7 @@ export const StatsCards: React.FC = () => {
         trend={stats.reviewedPhrases.trend}
         trendDirection={stats.reviewedPhrases.trend > 0 ? 'up' : stats.reviewedPhrases.trend < 0 ? 'down' : 'neutral'}
         timeframe={`Last ${dateRange} days`}
-        icon={<Clock className="text-green-500 w-5 h-5" />}
+        icon={<Clock className="w-5 h-5" />}
         loading={loading}
         sparklineData={stats.reviewedPhrases.sparkline}
       />
@@ -4170,7 +4565,7 @@ export const StatsCards: React.FC = () => {
         trend={stats.activeReviewers.trend}
         trendDirection={stats.activeReviewers.trend > 0 ? 'up' : stats.activeReviewers.trend < 0 ? 'down' : 'neutral'}
         timeframe={`Last ${dateRange} days`}
-        icon={<Users className="text-purple-500 w-5 h-5" />}
+        icon={<Users className="w-5 h-5" />}
         loading={loading}
       />
       
@@ -4179,7 +4574,7 @@ export const StatsCards: React.FC = () => {
         value={stats.topReviewer.name || 'N/A'}
         description={`${stats.topReviewer.count} reviews (${stats.topReviewer.streak} day streak)`}
         timeframe={`Last ${dateRange} days`}
-        icon={<Award className="text-yellow-500 w-5 h-5" />}
+        icon={<Award className="w-5 h-5" />}
         loading={loading}
       />
     </div>
@@ -4191,15 +4586,18 @@ export default StatsCards;
 ============================================================
 
 FILE: .\features\dashboard\hooks\useDashboardState.ts
-SIZE: 2.75 KB
-LAST MODIFIED: 03/22/2025 23:07:41
+SIZE: 3.55 KB
+LAST MODIFIED: 03/22/2025 23:49:38
 
 // features/dashboard/hooks/useDashboardState.ts
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/services/supabase';
 import type { Reviewer } from '@/types/types';
+import { useToast } from '@/hooks/useToast';
 
 export const useDashboardState = () => {
+  const { toast } = useToast();
+  
   // Tab and Modal States
   const [activeTab, setActiveTab] = useState<string>('phrases');
   const [showWordCreatorModal, setShowWordCreatorModal] = useState<boolean>(false);
@@ -4220,17 +4618,26 @@ export const useDashboardState = () => {
 
   // Initialize current reviewer from localStorage
   useEffect(() => {
-    const savedReviewer = localStorage.getItem('currentReviewer');
-    if (savedReviewer) {
-      try {
-        setCurrentReviewer(JSON.parse(savedReviewer));
-      } catch (e) {
-        console.error("Error parsing saved reviewer:", e);
-        localStorage.removeItem('currentReviewer');
+    const initializeReviewer = () => {
+      const savedReviewer = localStorage.getItem('currentReviewer');
+      if (savedReviewer) {
+        try {
+          setCurrentReviewer(JSON.parse(savedReviewer));
+        } catch (e) {
+          console.error("Error parsing saved reviewer:", e);
+          localStorage.removeItem('currentReviewer');
+          toast({
+            title: "Error",
+            description: "Your login session was corrupted and has been reset",
+            variant: "destructive"
+          });
+        }
       }
-    }
+      
+      setIsLoading(false);
+    };
     
-    setIsLoading(false);
+    initializeReviewer();
   }, []);
 
   // Function to update date range
@@ -4242,17 +4649,38 @@ export const useDashboardState = () => {
   const handleLoginSuccess = useCallback((reviewer: Reviewer) => {
     setCurrentReviewer(reviewer);
     localStorage.setItem('currentReviewer', JSON.stringify(reviewer));
-  }, []);
+    
+    toast({
+      title: "Welcome back!",
+      description: `You're now logged in as ${reviewer.name}`,
+      variant: "success",
+    });
+  }, [toast]);
   
   const handleLogout = useCallback(() => {
     setCurrentReviewer(null);
     localStorage.removeItem('currentReviewer');
-  }, []);
+    
+    toast({
+      title: "Logged out",
+      description: "You've been logged out successfully",
+      variant: "info",
+    });
+  }, [toast]);
 
   // Word Creator handlers
-  const handleWordAdded = useCallback((id: number) => {
-    setNewIds(prev => [...prev, id]);
-  }, []);
+  const handleWordAdded = useCallback((id?: number) => {
+    // Only add to newIds if an id is provided
+    if (id !== undefined) {
+      setNewIds(prev => [...prev, id]);
+    }
+    
+    toast({
+      title: "Success",
+      description: "New phrase added successfully",
+      variant: "success",
+    });
+  }, [toast]);
 
   return {
     // Tab and Modal States
@@ -4290,7 +4718,224 @@ export const useDashboardState = () => {
   };
 };
 
-export default useDashboardState;
+============================================================
+
+FILE: .\features\dashboard\hooks\useExport.ts
+SIZE: 5.82 KB
+LAST MODIFIED: 03/22/2025 23:26:11
+
+// features/dashboard/hooks/useExport.ts
+import { useState } from 'react';
+import { supabase } from '@/lib/services/supabase';
+import { saveAs } from 'file-saver';
+
+export interface ExportOptions {
+  exportJson: boolean;
+  exportHeader: boolean;
+  optimizeForESP32: boolean;
+}
+
+export interface ExportResult {
+  jsonData: any;
+  headerContent: string;
+}
+
+export const useExport = () => {
+  const [isExporting, setIsExporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Export phrases data according to options
+   */
+  const exportPhrases = async (options: ExportOptions): Promise<ExportResult | null> => {
+    setIsExporting(true);
+    setError(null);
+    
+    try {
+      // Fetch phrases with all related data
+      const { data: phrases, error: phrasesError } = await supabase
+        .from('phrases')
+        .select(`
+          id,
+          phrase,
+          part_of_speech,
+          hint,
+          category_id,
+          subcategory_id,
+          difficulty,
+          categories:category_id(name),
+          subcategories:subcategory_id(name)
+        `);
+      
+      if (phrasesError) throw phrasesError;
+      
+      // Fetch phrase tags
+      const { data: phraseTags, error: tagsError } = await supabase
+        .from('phrase_tags')
+        .select(`
+          phrase_id,
+          tags:tag_id(tag)
+        `);
+        
+      if (tagsError) throw tagsError;
+      
+      // Process data
+      const tagsByPhraseId: Record<string, string[]> = {};
+      phraseTags.forEach((item: any) => {
+        if (!tagsByPhraseId[item.phrase_id]) {
+          tagsByPhraseId[item.phrase_id] = [];
+        }
+        tagsByPhraseId[item.phrase_id].push(item.tags.tag);
+      });
+      
+      const categorizedPhrases: Record<string, any[]> = {};
+      phrases.forEach((phrase: any) => {
+        const categoryName = phrase.categories ? phrase.categories.name : 'Uncategorized';
+        if (!categorizedPhrases[categoryName]) {
+          categorizedPhrases[categoryName] = [];
+        }
+        
+        categorizedPhrases[categoryName].push({
+          text: phrase.phrase,
+          pos: phrase.part_of_speech,
+          hint: phrase.hint || '',
+          difficulty: phrase.difficulty || 1,
+          subcategory: phrase.subcategories ? phrase.subcategories.name : null,
+          tags: tagsByPhraseId[phrase.id] || [],
+        });
+      });
+      
+      // Format data according to export options
+      const esp32Data: Record<string, any[]> = {};
+      Object.keys(categorizedPhrases).forEach(cat => {
+        if (options.optimizeForESP32) {
+          esp32Data[cat] = categorizedPhrases[cat].map(p => ({
+            t: p.text,
+            h: p.hint || '',
+            d: p.difficulty || 1
+          }));
+        } else {
+          esp32Data[cat] = categorizedPhrases[cat];
+        }
+      });
+      
+      // Generate Arduino header if requested
+      const headerContent = options.exportHeader ? generateArduinoHeader(esp32Data) : '';
+      
+      return { jsonData: esp32Data, headerContent };
+    } catch (err) {
+      console.error('Export error:', err);
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      return null;
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  /**
+   * Download export files based on options
+   */
+  const downloadExport = (data: ExportResult, options: ExportOptions) => {
+    try {
+      // Download files based on options
+      if (options.exportJson) {
+        const jsonBlob = new Blob(
+          [JSON.stringify(data.jsonData, null, 2)], 
+          { type: 'application/json' }
+        );
+        saveAs(jsonBlob, 'phrases_esp32.json');
+      }
+      
+      if (options.exportHeader) {
+        const headerBlob = new Blob(
+          [data.headerContent], 
+          { type: 'text/plain' }
+        );
+        saveAs(headerBlob, 'phrases.h');
+      }
+      
+      return true;
+    } catch (err) {
+      console.error('Download error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to download files');
+      return false;
+    }
+  };
+
+  /**
+   * Generate Arduino header file
+   */
+  const generateArduinoHeader = (data: Record<string, any[]>): string => {
+    let headerContent = `// Auto-generated phrases header file
+#ifndef PHRASES_H
+#define PHRASES_H
+
+#include <Arduino.h>
+
+struct Phrase {
+  const char* text;
+  const char* hint;
+  uint8_t difficulty;
+};
+`;
+    Object.keys(data).forEach(category => {
+      const categoryVar = category.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+      const phrases = data[category];
+      headerContent += `// ${category} phrases
+constexpr Phrase ${categoryVar}_phrases[] PROGMEM = {
+`;
+      phrases.forEach(phrase => {
+        const text = phrase.t || phrase.text;
+        const hint = phrase.h || phrase.hint || '';
+        const difficulty = phrase.d || phrase.difficulty || 1;
+        headerContent += `  {"${escapeString(text)}", "${escapeString(hint)}", ${difficulty}},
+`;
+      });
+      headerContent += `};
+
+constexpr size_t ${categoryVar}_count = ${phrases.length};
+
+`;
+    });
+    headerContent += `// Category index
+struct PhraseCategory {
+  const char* name;
+  const Phrase* phrases;
+  size_t count;
+};
+
+constexpr PhraseCategory phrase_categories[] PROGMEM = {
+`;
+    Object.keys(data).forEach(category => {
+      const categoryVar = category.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+      headerContent += `  {"${escapeString(category)}", ${categoryVar}_phrases, ${categoryVar}_count},
+`;
+    });
+    headerContent += `};
+
+constexpr size_t category_count = ${Object.keys(data).length};
+
+#endif // PHRASES_H
+`;
+    return headerContent;
+  };
+
+  /**
+   * Escape strings for C++ code
+   */
+  const escapeString = (str: string): string => {
+    if (!str) return "";
+    return str.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+  };
+
+  return {
+    exportPhrases,
+    downloadExport,
+    isExporting,
+    error,
+    setError
+  };
+};
 
 ============================================================
 
@@ -5877,8 +6522,8 @@ export default ReviewModal;
 ============================================================
 
 FILE: .\features\phrases\WordCreatorModal.tsx
-SIZE: 19.2 KB
-LAST MODIFIED: 03/22/2025 22:17:43
+SIZE: 19.46 KB
+LAST MODIFIED: 03/22/2025 23:48:27
 
 'use client';
 
@@ -5890,13 +6535,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/services/supabase';
 import { generateTags, generateHint, generatePhrases, suggestCategory } from '@/lib/services/claudeService';
-
+import type { Reviewer } from '@/types/types';
 
 interface WordCreatorModalProps {
   isOpen: boolean;
   onClose: () => void;
   reviewer: Reviewer;
-  onWordAdded?: () => void;
+  onWordAdded?: (id?: number) => void;
 }
 
 interface NewWord {
@@ -6240,7 +6885,13 @@ const WordCreatorModal: React.FC<WordCreatorModalProps> = ({
         setWordGenerated(false);
         
         if (onWordAdded) {
-          onWordAdded();
+          // Pass the ID if available
+          if (phraseData && phraseData.id) {
+            onWordAdded(phraseData.id);
+          } else {
+            // Or call without an ID if not available
+            onWordAdded();
+          }
         }
       }, 1500);
       
@@ -6515,8 +7166,8 @@ export const useDeletePhrase = () => {
 ============================================================
 
 FILE: .\features\phrases\phrasesTable\index.tsx
-SIZE: 17.01 KB
-LAST MODIFIED: 03/22/2025 22:43:03
+SIZE: 20.73 KB
+LAST MODIFIED: 03/23/2025 16:05:44
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -6545,6 +7196,7 @@ import {
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/services/supabase';
+import { useTheme } from '@/providers/ThemeContext';
 
 interface PhrasesTableProps {
   phrases: any[];
@@ -6571,12 +7223,56 @@ export function PhrasesTable({
   const [searchValue, setSearchValue] = useState(tableState.filters.search || '');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const { accent } = useTheme();
+
+  // Get accent-specific color values for various parts of the UI
+  const getAccentColors = () => {
+    switch (accent) {
+      case 'blue':
+        return {
+          highlight: 'bg-blue-500/10 border-blue-500/30',
+          button: 'bg-blue-500 hover:bg-blue-600',
+          outline: 'border-blue-500/50 text-blue-500',
+          text: 'text-blue-500'
+        };
+      case 'green':
+        return {
+          highlight: 'bg-emerald-500/10 border-emerald-500/30',
+          button: 'bg-emerald-500 hover:bg-emerald-600',
+          outline: 'border-emerald-500/50 text-emerald-500',
+          text: 'text-emerald-500'
+        };
+      case 'purple':
+        return {
+          highlight: 'bg-purple-500/10 border-purple-500/30',
+          button: 'bg-purple-500 hover:bg-purple-600',
+          outline: 'border-purple-500/50 text-purple-500',
+          text: 'text-purple-500'
+        };
+      case 'orange':
+        return {
+          highlight: 'bg-orange-500/10 border-orange-500/30',
+          button: 'bg-orange-500 hover:bg-orange-600',
+          outline: 'border-orange-500/50 text-orange-500',
+          text: 'text-orange-500'
+        };
+      default: // grayscale
+        return {
+          highlight: 'bg-gray-500/10 border-gray-500/30',
+          button: 'bg-gray-500 hover:bg-gray-600',
+          outline: 'border-gray-500/50 text-gray-500',
+          text: 'text-gray-500'
+        };
+    }
+  };
+
+  const accentColors = getAccentColors();
 
   // Columns configuration for dropdown
   const columns = [
     { key: 'phrase', label: 'Phrase' },
     { key: 'category', label: 'Category' },
-    { key: 'hint', label: 'Hint' }, // Moved hint to be after category
+    { key: 'hint', label: 'Hint' }, 
     { key: 'tags', label: 'Tags' },
     { key: 'difficulty', label: 'Difficulty' },
     { key: 'reviewed', label: 'Reviewed' }
@@ -6736,11 +7432,15 @@ export function PhrasesTable({
     }
   };
 
-
-
   // Determine which data to show
   const displayData = searchValue && searchResults.length > 0 ? searchResults : phrases;
 
+  // Create flash animation class with accent color
+  const getNewRowClass = (id: number) => {
+    if (!newIds.includes(id)) return '';
+    
+    return cn("transition-colors", accentColors.highlight);
+  };
 
   return (
     <div className="space-y-2">
@@ -6749,20 +7449,20 @@ export function PhrasesTable({
         <div className="flex items-center gap-4">
           {/* Rows per page dropdown */}
           <Select
-  value={tableState.pagination.rowsPerPage.toString()}
-  onValueChange={handleRowsPerPageChange}
->
-  <SelectTrigger className="w-[120px]">
-    <SelectValue placeholder={`${tableState.pagination.rowsPerPage} per page`} />
-  </SelectTrigger>
-  <SelectContent>
-    {[10, 25, 50, 100].map(value => (  // Removed 20 from here
-      <SelectItem key={value} value={value.toString()}>
-        {value} per page
-      </SelectItem>
-    ))}
-  </SelectContent>
-</Select>
+            value={tableState.pagination.rowsPerPage.toString()}
+            onValueChange={handleRowsPerPageChange}
+          >
+            <SelectTrigger className={cn("w-[120px] border", accentColors.outline)}>
+              <SelectValue placeholder={`${tableState.pagination.rowsPerPage} per page`} />
+            </SelectTrigger>
+            <SelectContent>
+              {[10, 25, 50, 100].map(value => (
+                <SelectItem key={value} value={value.toString()}>
+                  {value} per page
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           
           {/* Page info */}
           <span className="text-sm text-muted-foreground">
@@ -6784,7 +7484,7 @@ export function PhrasesTable({
               onChange={handleSearchChange}
               onKeyDown={handleKeyDown}
               onBlur={performGlobalSearch}
-              className="pl-10 pr-10"
+              className={cn("pl-10 pr-10 border", accentColors.outline)}
             />
             {searchValue && (
               <button
@@ -6799,8 +7499,8 @@ export function PhrasesTable({
           {/* Column visibility */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9">
-                <Columns className="mr-2 h-4 w-4" />
+              <Button variant="outline" size="sm" className={cn("h-9 border", accentColors.outline)}>
+                <Columns className={cn("mr-2 h-4 w-4", accentColors.text)} />
                 Columns
               </Button>
             </DropdownMenuTrigger>
@@ -6825,35 +7525,38 @@ export function PhrasesTable({
           
           {/* Pagination buttons */}
           <Button
-  variant="outline"
-  size="sm"
-  onClick={() => handlePageChange(tableState.pagination.currentPage - 1)}
-  disabled={tableState.pagination.currentPage <= 1}
->
-  <ChevronLeft className="h-4 w-4" />
-</Button>
-<Button
-  variant="outline"
-  size="sm"
-  onClick={() => handlePageChange(tableState.pagination.currentPage + 1)}
-  disabled={tableState.pagination.currentPage >= tableState.pagination.totalPages}
->
-  <ChevronRight className="h-4 w-4" />
-</Button>
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(tableState.pagination.currentPage - 1)}
+            disabled={tableState.pagination.currentPage <= 1}
+            className={cn("border", accentColors.outline)}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePageChange(tableState.pagination.currentPage + 1)}
+            disabled={tableState.pagination.currentPage >= tableState.pagination.totalPages}
+            className={cn("border", accentColors.outline)}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
       {/* Main table */}
-      <div className="rounded-md border">
+      <div className={cn("rounded-md p-1 border", accentColors.outline)}>
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-card">
             <TableRow>
               {/* Checkbox column */}
               <TableHead className="w-12">
                 <Checkbox
                   checked={selectedRows.length > 0 && selectedRows.length === displayData.length}
                   indeterminate={selectedRows.length > 0 && selectedRows.length < displayData.length ? true : undefined}
-  onCheckedChange={toggleSelectAll}
+                  onCheckedChange={toggleSelectAll}
+                  className={accentColors.text}
                 />
               </TableHead>
               
@@ -6861,6 +7564,11 @@ export function PhrasesTable({
               {!hiddenColumns.includes('phrase') && (
                 <TableHead onClick={() => handleSort('phrase')} className="cursor-pointer">
                   Phrase
+                  {tableState.sortConfig.key === 'phrase' && (
+                    <span className={cn("ml-1", accentColors.text)}>
+                      {tableState.sortConfig.direction === 'asc' ? 'â†‘' : 'â†“'}
+                    </span>
+                  )}
                 </TableHead>
               )}
               
@@ -6868,6 +7576,11 @@ export function PhrasesTable({
               {!hiddenColumns.includes('category') && (
                 <TableHead onClick={() => handleSort('category')} className="cursor-pointer">
                   Category
+                  {tableState.sortConfig.key === 'category' && (
+                    <span className={cn("ml-1", accentColors.text)}>
+                      {tableState.sortConfig.direction === 'asc' ? 'â†‘' : 'â†“'}
+                    </span>
+                  )}
                 </TableHead>
               )}
               
@@ -6875,6 +7588,11 @@ export function PhrasesTable({
               {!hiddenColumns.includes('hint') && (
                 <TableHead onClick={() => handleSort('hint')} className="cursor-pointer">
                   Hint
+                  {tableState.sortConfig.key === 'hint' && (
+                    <span className={cn("ml-1", accentColors.text)}>
+                      {tableState.sortConfig.direction === 'asc' ? 'â†‘' : 'â†“'}
+                    </span>
+                  )}
                 </TableHead>
               )}
               
@@ -6882,6 +7600,11 @@ export function PhrasesTable({
               {!hiddenColumns.includes('tags') && (
                 <TableHead onClick={() => handleSort('tags')} className="cursor-pointer">
                   Tags
+                  {tableState.sortConfig.key === 'tags' && (
+                    <span className={cn("ml-1", accentColors.text)}>
+                      {tableState.sortConfig.direction === 'asc' ? 'â†‘' : 'â†“'}
+                    </span>
+                  )}
                 </TableHead>
               )}
               
@@ -6889,6 +7612,11 @@ export function PhrasesTable({
               {!hiddenColumns.includes('difficulty') && (
                 <TableHead onClick={() => handleSort('difficulty')} className="cursor-pointer">
                   Difficulty
+                  {tableState.sortConfig.key === 'difficulty' && (
+                    <span className={cn("ml-1", accentColors.text)}>
+                      {tableState.sortConfig.direction === 'asc' ? 'â†‘' : 'â†“'}
+                    </span>
+                  )}
                 </TableHead>
               )}
               
@@ -6931,8 +7659,8 @@ export function PhrasesTable({
                 <TableRow 
                   key={phrase.id}
                   className={cn(
-                    selectedRows.includes(phrase.id) && "bg-muted",
-                    newIds.includes(phrase.id) && "animate-flash"
+                    selectedRows.includes(phrase.id) && accentColors.highlight,
+                    getNewRowClass(phrase.id)
                   )}
                 >
                   {/* Checkbox */}
@@ -6940,6 +7668,7 @@ export function PhrasesTable({
                     <Checkbox
                       checked={selectedRows.includes(phrase.id)}
                       onCheckedChange={() => toggleRowSelection(phrase.id)}
+                      className={accentColors.text}
                     />
                   </TableCell>
                   
@@ -6977,7 +7706,7 @@ export function PhrasesTable({
                     <TableCell>
                       <div className="flex justify-center">
                         {phrase.reviewed ? (
-                          <Check className="h-5 w-5 text-green-500" />
+                          <Check className={cn("h-5 w-5", accentColors.text)} />
                         ) : (
                           <Check className="h-5 w-5 text-gray-300" />
                         )}
@@ -6998,7 +7727,7 @@ export function PhrasesTable({
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem onClick={() => onEdit?.(phrase.id)}>
-                            <Pencil className="h-4 w-4 mr-2" />
+                            <Pencil className={cn("h-4 w-4 mr-2", accentColors.text)} />
                             Edit
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
@@ -7106,6 +7835,233 @@ export function useFilter() {
 
 ============================================================
 
+FILE: .\hooks\useToast.ts
+SIZE: 3.93 KB
+LAST MODIFIED: 03/22/2025 23:37:09
+
+// hooks/useToast.ts
+import * as React from "react"
+import { ToastActionElement, ToastProps } from "@/components/ui/toast"
+
+const TOAST_LIMIT = 5
+const TOAST_REMOVE_DELAY = 5000
+
+type ToasterToast = ToastProps & {
+  id: string
+  title?: React.ReactNode
+  description?: React.ReactNode
+  action?: ToastActionElement
+}
+
+const actionTypes = {
+  ADD_TOAST: "ADD_TOAST",
+  UPDATE_TOAST: "UPDATE_TOAST",
+  DISMISS_TOAST: "DISMISS_TOAST",
+  REMOVE_TOAST: "REMOVE_TOAST",
+} as const
+
+let count = 0
+
+function genId() {
+  count = (count + 1) % Number.MAX_SAFE_INTEGER
+  return count.toString()
+}
+
+type ActionType = typeof actionTypes
+
+type Action =
+  | {
+      type: ActionType["ADD_TOAST"]
+      toast: ToasterToast
+    }
+  | {
+      type: ActionType["UPDATE_TOAST"]
+      toast: Partial<ToasterToast> & { id: string }
+    }
+  | {
+      type: ActionType["DISMISS_TOAST"]
+      toastId?: string
+    }
+  | {
+      type: ActionType["REMOVE_TOAST"]
+      toastId?: string
+    }
+
+interface State {
+  toasts: ToasterToast[]
+}
+
+const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+
+const addToRemoveQueue = (toastId: string) => {
+  if (toastTimeouts.has(toastId)) {
+    return
+  }
+
+  const timeout = setTimeout(() => {
+    toastTimeouts.delete(toastId)
+    dispatch({
+      type: actionTypes.REMOVE_TOAST,
+      toastId: toastId,
+    })
+  }, TOAST_REMOVE_DELAY)
+
+  toastTimeouts.set(toastId, timeout)
+}
+
+const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case actionTypes.ADD_TOAST:
+      return {
+        ...state,
+        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
+      }
+
+    case actionTypes.UPDATE_TOAST:
+      return {
+        ...state,
+        toasts: state.toasts.map((t) =>
+          t.id === action.toast.id ? { ...t, ...action.toast } : t
+        ),
+      }
+
+    case actionTypes.DISMISS_TOAST: {
+      const { toastId } = action
+
+      if (toastId) {
+        addToRemoveQueue(toastId)
+      } else {
+        state.toasts.forEach((toast) => {
+          addToRemoveQueue(toast.id)
+        })
+      }
+
+      return {
+        ...state,
+        toasts: state.toasts.map((t) =>
+          t.id === toastId || toastId === undefined
+            ? {
+                ...t,
+                open: false,
+              }
+            : t
+        ),
+      }
+    }
+    case actionTypes.REMOVE_TOAST:
+      if (action.toastId === undefined) {
+        return {
+          ...state,
+          toasts: [],
+        }
+      }
+      return {
+        ...state,
+        toasts: state.toasts.filter((t) => t.id !== action.toastId),
+      }
+  }
+}
+
+const listeners: Array<(state: State) => void> = []
+
+let memoryState: State = { toasts: [] }
+
+function dispatch(action: Action) {
+  memoryState = reducer(memoryState, action)
+  listeners.forEach((listener) => {
+    listener(memoryState)
+  })
+}
+
+type Toast = Omit<ToasterToast, "id">
+
+function toast(props: Toast) {
+  const id = genId()
+
+  const update = (props: ToasterToast) =>
+    dispatch({
+      type: actionTypes.UPDATE_TOAST,
+      toast: { ...props, id },
+    })
+  const dismiss = () => dispatch({ type: actionTypes.DISMISS_TOAST, toastId: id })
+
+  dispatch({
+    type: actionTypes.ADD_TOAST,
+    toast: {
+      ...props,
+      id,
+      open: true,
+      onOpenChange: (open) => {
+        if (!open) dismiss()
+      },
+    },
+  })
+
+  return {
+    id: id,
+    dismiss,
+    update,
+  }
+}
+
+function useToast() {
+  const [state, setState] = React.useState<State>(memoryState)
+
+  React.useEffect(() => {
+    listeners.push(setState)
+    return () => {
+      const index = listeners.indexOf(setState)
+      if (index > -1) {
+        listeners.splice(index, 1)
+      }
+    }
+  }, [state])
+
+  return {
+    ...state,
+    toast,
+    dismiss: (toastId?: string) => dispatch({ type: actionTypes.DISMISS_TOAST, toastId }),
+  }
+}
+
+export { useToast, toast }
+
+============================================================
+
+FILE: .\lib\theme-utils.ts
+SIZE: 0.79 KB
+LAST MODIFIED: 03/23/2025 12:55:34
+
+// lib/theme-utils.ts
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
+type ThemeVariants<T> = Record<string, T>;
+
+export function themeCn<T>(variants: ThemeVariants<T>, variant: string): T {
+  return variants[variant] || variants.default;
+}
+
+export function getThemeValue(obj: any, path: string, fallback?: any): any {
+  return path.split('.').reduce((o, p) => (o ? o[p] : undefined), obj) || fallback;
+}
+
+export function getCssVar(name: string, fallback?: string): string {
+  if (typeof window === 'undefined') return fallback || '';
+  
+  const style = getComputedStyle(document.documentElement);
+  const value = style.getPropertyValue(name).trim();
+  
+  return value || fallback || '';
+}
+
+
+============================================================
+
 FILE: .\lib\utils.ts
 SIZE: 0.16 KB
 LAST MODIFIED: 03/04/2025 21:05:08
@@ -7122,7 +8078,7 @@ export function cn(...inputs: ClassValue[]) {
 
 FILE: .\lib\services\claudeService.ts
 SIZE: 5.79 KB
-LAST MODIFIED: 03/04/2025 11:02:57
+LAST MODIFIED: 03/23/2025 00:01:04
 
 'use client';
 
@@ -7336,6 +8292,95 @@ export const checkAuth = async () => {
 
 ============================================================
 
+FILE: .\providers\ThemeContext.tsx
+SIZE: 2.44 KB
+LAST MODIFIED: 03/23/2025 15:59:21
+
+// providers/ThemeContext.tsx
+'use client';
+
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { ThemeProvider as NextThemesProvider, useTheme as useNextTheme } from 'next-themes';
+
+export type ThemeMode = 'light' | 'dark' | 'system';
+export type ColorAccent = 'default' | 'blue' | 'green' | 'purple' | 'orange';
+
+interface ThemeContextType {
+  accent: ColorAccent;
+  setAccent: (accent: ColorAccent) => void;
+}
+
+const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
+
+export function ThemeProvider({ children, ...props }) {
+  // Get the initial accent value from localStorage if available
+  const [accent, setAccentState] = useState<ColorAccent>('default');
+  const [mounted, setMounted] = useState(false);
+  
+  // Set up accent color with localStorage persistence
+  const setAccent = (newAccent: ColorAccent) => {
+    setAccentState(newAccent);
+    // Save to localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('theme-accent', newAccent);
+    }
+  };
+  
+  // Initialize from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedAccent = localStorage.getItem('theme-accent');
+      if (savedAccent && ['default', 'blue', 'green', 'purple', 'orange'].includes(savedAccent)) {
+        setAccentState(savedAccent as ColorAccent);
+      }
+      
+      // Apply the accent to the HTML element
+      document.documentElement.setAttribute('data-accent', accent);
+    }
+    setMounted(true);
+  }, [accent]);
+  
+  // Prevent hydration mismatch
+  if (!mounted) {
+    return <>{children}</>;
+  }
+  
+  return (
+    <NextThemesProvider attribute="class" defaultTheme="dark" enableSystem {...props}>
+      <ThemeContext.Provider 
+        value={{
+          accent,
+          setAccent,
+        }}
+      >
+        {children}
+      </ThemeContext.Provider>
+    </NextThemesProvider>
+  );
+}
+
+export function useTheme() {
+  const context = useContext(ThemeContext);
+  const { theme, setTheme, resolvedTheme, systemTheme } = useNextTheme();
+  
+  if (context === undefined) {
+    throw new Error('useTheme must be used within a ThemeProvider');
+  }
+  
+  return {
+    ...context,
+    theme: theme as ThemeMode,
+    setTheme,
+    resolvedTheme: resolvedTheme as ThemeMode,
+    systemTheme: systemTheme as ThemeMode,
+    toggleTheme: () => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark'),
+    isLight: resolvedTheme === 'light',
+    isDark: resolvedTheme === 'dark',
+  };
+}
+
+============================================================
+
 FILE: .\providers\ThemeProvider.tsx
 SIZE: 0.77 KB
 LAST MODIFIED: 03/06/2025 21:02:46
@@ -7366,6 +8411,61 @@ export function useTheme() {
     systemTheme,
     toggleTheme: () => setTheme(theme === "dark" ? "light" : "dark")
   }
+}
+
+============================================================
+
+FILE: .\providers\ToastProvider.tsx
+SIZE: 1.33 KB
+LAST MODIFIED: 03/22/2025 23:33:46
+
+'use client';
+
+import React, { useState, useCallback } from 'react';
+import { ToastActionElement, ToastProps } from '@/components/ui/toast';
+import { Toaster } from '@/components/ui/toaster';
+
+export type ToasterToast = ToastProps & {
+  id: string;
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+  action?: ToastActionElement;
+};
+
+const TOAST_LIMIT = 5;
+
+type ToastContextType = {
+  toasts: ToasterToast[];
+  toast: (props: Omit<ToasterToast, "id">) => void;
+  dismiss: (toastId: string) => void;
+};
+
+// Create a context with a no-op default
+export const ToastContext = React.createContext<ToastContextType>({
+  toasts: [],
+  toast: () => {},
+  dismiss: () => {},
+});
+
+export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const [toasts, setToasts] = useState<ToasterToast[]>([]);
+
+  const toast = useCallback((props: Omit<ToasterToast, "id">) => {
+    const id = Math.random().toString(36).substring(2, 9);
+    setToasts((prev) => [{ ...props, id }, ...prev].slice(0, TOAST_LIMIT));
+    return id;
+  }, []);
+
+  const dismiss = useCallback((toastId: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== toastId));
+  }, []);
+
+  return (
+    <ToastContext.Provider value={{ toasts, toast, dismiss }}>
+      {children}
+      <Toaster />
+    </ToastContext.Provider>
+  );
 }
 
 ============================================================
@@ -7673,6 +8773,632 @@ function groupByDay(data: any[]): Record<string, number> {
   
   return result;
 }
+
+============================================================
+
+FILE: .\styles\theme.ts
+SIZE: 0.74 KB
+LAST MODIFIED: 03/23/2025 12:51:46
+
+// styles/theme.ts
+import { themes } from './themes';
+import * as tokens from './tokens';
+
+// Re-export everything
+export { themes, tokens };
+export * from './themes';
+export * from './tokens';
+
+// Utility functions for theme
+export function getThemeValue(themeName: 'light' | 'dark' | string, path: string) {
+  const theme = themes[themeName] || themes.light;
+  return path.split('.').reduce((obj, key) => obj?.[key], theme);
+}
+
+export function getCssVar(name: string, fallback?: string) {
+  if (typeof window === 'undefined') return fallback;
+  const variable = getComputedStyle(document.documentElement)
+    .getPropertyValue(name)
+    .trim();
+  return variable || fallback;
+}
+
+export default {
+  themes,
+  tokens,
+  getThemeValue,
+  getCssVar,
+};
+
+
+============================================================
+
+FILE: .\styles\themes\dark.ts
+SIZE: 0.83 KB
+LAST MODIFIED: 03/23/2025 12:51:27
+
+// styles/themes/dark.ts
+export const darkTheme = {
+  colors: {
+    background: '0 0% 3.9%',
+    foreground: '0 0% 98%',
+    card: '0 0% 3.9%',
+    cardForeground: '0 0% 98%',
+    popover: '0 0% 3.9%',
+    popoverForeground: '0 0% 98%',
+    primary: '0 0% 98%',
+    primaryForeground: '0 0% 9%',
+    secondary: '0 0% 14.9%',
+    secondaryForeground: '0 0% 98%',
+    muted: '0 0% 14.9%',
+    mutedForeground: '0 0% 63.9%',
+    accent: '0 0% 14.9%',
+    accentForeground: '0 0% 98%',
+    destructive: '0 62.8% 30.6%',
+    destructiveForeground: '0 0% 98%',
+    border: '0 0% 14.9%',
+    input: '0 0% 14.9%',
+    ring: '0 0% 83.1%',
+    
+    // Chart colors
+    chart1: '220 70% 50%',
+    chart2: '160 60% 45%',
+    chart3: '30 80% 55%',
+    chart4: '280 65% 60%',
+    chart5: '340 75% 55%'
+  },
+  radius: '0.5rem'
+};
+
+export default darkTheme;
+
+
+============================================================
+
+FILE: .\styles\themes\index.ts
+SIZE: 0.32 KB
+LAST MODIFIED: 03/23/2025 12:51:28
+
+// styles/themes/index.ts
+export { default as lightTheme } from './light';
+export { default as darkTheme } from './dark';
+
+// Export theme object for easy consumption
+import lightTheme from './light';
+import darkTheme from './dark';
+
+export const themes = {
+  light: lightTheme,
+  dark: darkTheme,
+};
+
+export default themes;
+
+
+============================================================
+
+FILE: .\styles\themes\light.ts
+SIZE: 0.83 KB
+LAST MODIFIED: 03/23/2025 12:51:28
+
+// styles/themes/light.ts
+export const lightTheme = {
+  colors: {
+    background: '0 0% 100%',
+    foreground: '0 0% 3.9%',
+    card: '0 0% 100%',
+    cardForeground: '0 0% 3.9%',
+    popover: '0 0% 100%',
+    popoverForeground: '0 0% 3.9%',
+    primary: '0 0% 9%',
+    primaryForeground: '0 0% 98%',
+    secondary: '0 0% 96.1%',
+    secondaryForeground: '0 0% 9%',
+    muted: '0 0% 96.1%',
+    mutedForeground: '0 0% 45.1%',
+    accent: '0 0% 96.1%',
+    accentForeground: '0 0% 9%',
+    destructive: '0 84.2% 60.2%',
+    destructiveForeground: '0 0% 98%',
+    border: '0 0% 89.8%',
+    input: '0 0% 89.8%',
+    ring: '0 0% 3.9%',
+    
+    // Chart colors
+    chart1: '12 76% 61%',
+    chart2: '173 58% 39%',
+    chart3: '197 37% 24%',
+    chart4: '43 74% 66%',
+    chart5: '27 87% 67%'
+  },
+  radius: '0.5rem'
+};
+
+export default lightTheme;
+
+
+============================================================
+
+FILE: .\styles\tokens\animations.ts
+SIZE: 1.57 KB
+LAST MODIFIED: 03/23/2025 12:50:31
+
+// styles/tokens/animations.ts
+export const animations = {
+  // Durations
+  duration: {
+    fast: '150ms',
+    normal: '300ms',
+    slow: '500ms',
+    slower: '700ms',
+  },
+  
+  // Easing functions
+  easing: {
+    // Common easing curves
+    linear: 'linear',
+    in: 'cubic-bezier(0.4, 0, 1, 1)',
+    out: 'cubic-bezier(0, 0, 0.2, 1)',
+    inOut: 'cubic-bezier(0.4, 0, 0.2, 1)',
+    
+    // Material-inspired easings
+    standard: 'cubic-bezier(0.4, 0.0, 0.2, 1)', // Standard material easing
+    accelerate: 'cubic-bezier(0.4, 0.0, 1.0, 1.0)', // For elements exiting screen
+    decelerate: 'cubic-bezier(0.0, 0.0, 0.2, 1.0)', // For elements entering screen
+    sharp: 'cubic-bezier(0.4, 0.0, 0.6, 1.0)', // For elements changing state
+  },
+  
+  // Animation keyframes (reference to CSS keyframes)
+  keyframes: {
+    fadeIn: 'fadeIn',
+    fadeOut: 'fadeOut',
+    slideIn: 'slideIn',
+    slideOut: 'slideOut',
+    zoomIn: 'zoomIn',
+    zoomOut: 'zoomOut',
+  },
+  
+  // Prebuilt animations
+  animation: {
+    fadeIn: 'fadeIn var(--animation-duration-normal) var(--animation-easing-out) forwards',
+    fadeOut: 'fadeOut var(--animation-duration-normal) var(--animation-easing-in) forwards',
+    slideIn: 'slideIn var(--animation-duration-normal) var(--animation-easing-out) forwards',
+    slideOut: 'slideOut var(--animation-duration-normal) var(--animation-easing-in) forwards',
+    zoomIn: 'zoomIn var(--animation-duration-normal) var(--animation-easing-out) forwards',
+    zoomOut: 'zoomOut var(--animation-duration-normal) var(--animation-easing-in) forwards',
+  },
+}
+
+export default animations;
+
+
+============================================================
+
+FILE: .\styles\tokens\colors.ts
+SIZE: 2.59 KB
+LAST MODIFIED: 03/23/2025 16:00:37
+
+// styles/tokens/colors.ts
+export const colors = {
+  // Primary colors
+  primary: {
+    50: 'hsl(var(--primary-50))',
+    100: 'hsl(var(--primary-100))',
+    200: 'hsl(var(--primary-200))',
+    300: 'hsl(var(--primary-300))',
+    400: 'hsl(var(--primary-400))',
+    500: 'hsl(var(--primary-500))',
+    600: 'hsl(var(--primary-600))',
+    700: 'hsl(var(--primary-700))',
+    800: 'hsl(var(--primary-800))',
+    900: 'hsl(var(--primary-900))',
+    950: 'hsl(var(--primary-950))',
+  },
+  
+  // Gray scale
+  gray: {
+    50: 'hsl(var(--gray-50))',
+    100: 'hsl(var(--gray-100))',
+    200: 'hsl(var(--gray-200))',
+    300: 'hsl(var(--gray-300))',
+    400: 'hsl(var(--gray-400))',
+    500: 'hsl(var(--gray-500))',
+    600: 'hsl(var(--gray-600))',
+    700: 'hsl(var(--gray-700))',
+    800: 'hsl(var(--gray-800))',
+    900: 'hsl(var(--gray-900))',
+    950: 'hsl(var(--gray-950))',
+  },
+  
+  // Semantic colors
+  background: 'hsl(var(--background))',
+  foreground: 'hsl(var(--foreground))',
+  card: 'hsl(var(--card))',
+  cardForeground: 'hsl(var(--card-foreground))',
+  popover: 'hsl(var(--popover))',
+  popoverForeground: 'hsl(var(--popover-foreground))',
+  
+  // UI component colors
+  primary: 'hsl(var(--primary))',
+  primaryForeground: 'hsl(var(--primary-foreground))',
+  secondary: 'hsl(var(--secondary))',
+  secondaryForeground: 'hsl(var(--secondary-foreground))',
+  muted: 'hsl(var(--muted))',
+  mutedForeground: 'hsl(var(--muted-foreground))',
+  accent: 'hsl(var(--accent))',
+  accentForeground: 'hsl(var(--accent-foreground))',
+  destructive: 'hsl(var(--destructive))',
+  destructiveForeground: 'hsl(var(--destructive-foreground))',
+  
+  // Border and other UI elements
+  border: 'hsl(var(--border))',
+  input: 'hsl(var(--input))',
+  ring: 'hsl(var(--ring))',
+  
+  // Chart colors
+  chart: {
+    1: 'hsl(var(--chart-1))',
+    2: 'hsl(var(--chart-2))',
+    3: 'hsl(var(--chart-3))',
+    4: 'hsl(var(--chart-4))',
+    5: 'hsl(var(--chart-5))',
+  },
+  
+  // Theme accent colors
+  accents: {
+    default: {
+      color: 'var(--accent-color)',
+      foreground: 'var(--accent-foreground)',
+      muted: 'var(--accent-muted)',
+    },
+    blue: {
+      color: 'hsl(220 70% 50%)',
+      foreground: 'hsl(220 70% 95%)',
+      muted: 'hsl(220 70% 30%)',
+    },
+    green: {
+      color: 'hsl(160 60% 45%)',
+      foreground: 'hsl(160 60% 95%)',
+      muted: 'hsl(160 60% 25%)',
+    },
+    purple: {
+      color: 'hsl(270 60% 50%)',
+      foreground: 'hsl(270 60% 95%)',
+      muted: 'hsl(270 60% 30%)',
+    },
+    orange: {
+      color: 'hsl(30 80% 50%)',
+      foreground: 'hsl(30 80% 95%)',
+      muted: 'hsl(30 80% 30%)',
+    },
+  },
+}
+
+export default colors;
+
+============================================================
+
+FILE: .\styles\tokens\globals.css
+SIZE: 3.22 KB
+LAST MODIFIED: 03/23/2025 12:52:34
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Base colors */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --primary: 0 0% 9%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 0 0% 3.9%;
+
+    /* Chart colors */
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+
+    /* Animation tokens */
+    --animation-duration-fast: 150ms;
+    --animation-duration-normal: 300ms;
+    --animation-duration-slow: 500ms;
+    --animation-easing-linear: linear;
+    --animation-easing-in: cubic-bezier(0.4, 0, 1, 1);
+    --animation-easing-out: cubic-bezier(0, 0, 0.2, 1);
+    --animation-easing-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* Spacing and layout tokens */
+    --layout-gutter: 1rem;
+    --layout-margin: 2rem;
+    
+    /* Border radius */
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+
+    /* Chart colors for dark mode */
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+
+  /* Accent colors - default (blue) */
+  [data-accent="default"] {
+    --accent-hue: 220;
+    --accent-saturation: 70%;
+  }
+
+  /* Green accent */
+  [data-accent="green"] {
+    --accent-hue: 160;
+    --accent-saturation: 60%;
+  }
+
+  /* Purple accent */
+  [data-accent="purple"] {
+    --accent-hue: 270;
+    --accent-saturation: 60%;
+  }
+
+  /* Orange accent */
+  [data-accent="orange"] {
+    --accent-hue: 30;
+    --accent-saturation: 80%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Animation keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes slideIn {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes slideOut {
+  from { transform: translateY(0); opacity: 1; }
+  to { transform: translateY(10px); opacity: 0; }
+}
+
+@keyframes zoomIn {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+@keyframes zoomOut {
+  from { transform: scale(1); opacity: 1; }
+  to { transform: scale(0.95); opacity: 0; }
+}
+
+
+============================================================
+
+FILE: .\styles\tokens\index.ts
+SIZE: 0.41 KB
+LAST MODIFIED: 03/23/2025 12:50:31
+
+// styles/tokens/index.ts
+export { default as colors } from './colors';
+export { default as typography } from './typography';
+export { default as spacing } from './spacing';
+export { default as shadows } from './shadows';
+export { default as animations } from './animations';
+
+// Centralizing export of all tokens
+const tokens = {
+  colors,
+  typography,
+  spacing,
+  shadows,
+  animations,
+};
+
+export default tokens;
+
+
+============================================================
+
+FILE: .\styles\tokens\shadows.ts
+SIZE: 1.01 KB
+LAST MODIFIED: 03/23/2025 12:50:31
+
+// styles/tokens/shadows.ts
+export const shadows = {
+  sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+  DEFAULT: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+  md: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+  lg: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+  xl: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+  '2xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)',
+  inner: 'inset 0 2px 4px 0 rgb(0 0 0 / 0.05)',
+  none: 'none',
+  
+  // Dark mode shadow variants
+  dark: {
+    sm: '0 1px 2px 0 rgb(0 0 0 / 0.4)',
+    DEFAULT: '0 1px 3px 0 rgb(0 0 0 / 0.4), 0 1px 2px -1px rgb(0 0 0 / 0.4)',
+    md: '0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4)',
+    lg: '0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.4)',
+    xl: '0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.4)',
+    '2xl': '0 25px 50px -12px rgb(0 0 0 / 0.8)',
+    inner: 'inset 0 2px 4px 0 rgb(0 0 0 / 0.2)',
+  },
+}
+
+export default shadows;
+
+
+============================================================
+
+FILE: .\styles\tokens\spacing.ts
+SIZE: 1.26 KB
+LAST MODIFIED: 03/23/2025 12:50:31
+
+// styles/tokens/spacing.ts
+export const spacing = {
+  // Core spacing values
+  0: '0',
+  px: '1px',
+  0.5: '0.125rem', // 2px
+  1: '0.25rem',    // 4px
+  1.5: '0.375rem', // 6px
+  2: '0.5rem',     // 8px
+  2.5: '0.625rem', // 10px
+  3: '0.75rem',    // 12px
+  3.5: '0.875rem', // 14px
+  4: '1rem',       // 16px
+  5: '1.25rem',    // 20px
+  6: '1.5rem',     // 24px
+  7: '1.75rem',    // 28px
+  8: '2rem',       // 32px
+  9: '2.25rem',    // 36px
+  10: '2.5rem',    // 40px
+  11: '2.75rem',   // 44px
+  12: '3rem',      // 48px
+  14: '3.5rem',    // 56px
+  16: '4rem',      // 64px
+  20: '5rem',      // 80px
+  24: '6rem',      // 96px
+  28: '7rem',      // 112px
+  32: '8rem',      // 128px
+  36: '9rem',      // 144px
+  40: '10rem',     // 160px
+  44: '11rem',     // 176px
+  48: '12rem',     // 192px
+  52: '13rem',     // 208px
+  56: '14rem',     // 224px
+  60: '15rem',     // 240px
+  64: '16rem',     // 256px
+  72: '18rem',     // 288px
+  80: '20rem',     // 320px
+  96: '24rem',     // 384px
+  
+  // Semantic spacing
+  container: {
+    sm: '640px',
+    md: '768px',
+    lg: '1024px',
+    xl: '1280px',
+    '2xl': '1536px',
+  },
+  
+  // Layout spacing
+  layout: {
+    gutter: 'var(--layout-gutter, 1rem)',
+    margin: 'var(--layout-margin, 2rem)',
+  }
+}
+
+export default spacing;
+
+
+============================================================
+
+FILE: .\styles\tokens\typography.ts
+SIZE: 0.84 KB
+LAST MODIFIED: 03/23/2025 12:50:31
+
+// styles/tokens/typography.ts
+export const typography = {
+  fontFamily: {
+    sans: 'var(--font-sans)',
+    mono: 'var(--font-mono)',
+  },
+  fontSize: {
+    xs: '0.75rem',    // 12px
+    sm: '0.875rem',   // 14px
+    base: '1rem',     // 16px
+    lg: '1.125rem',   // 18px
+    xl: '1.25rem',    // 20px
+    '2xl': '1.5rem',  // 24px
+    '3xl': '1.875rem', // 30px
+    '4xl': '2.25rem',  // 36px
+    '5xl': '3rem',     // 48px
+  },
+  fontWeight: {
+    light: '300',
+    normal: '400',
+    medium: '500',
+    semibold: '600',
+    bold: '700',
+  },
+  lineHeight: {
+    none: '1',
+    tight: '1.25',
+    snug: '1.375',
+    normal: '1.5',
+    relaxed: '1.625',
+    loose: '2',
+  },
+  letterSpacing: {
+    tighter: '-0.05em',
+    tight: '-0.025em',
+    normal: '0',
+    wide: '0.025em',
+    wider: '0.05em',
+    widest: '0.1em',
+  },
+}
+
+export default typography;
+
 
 ============================================================
 

@@ -1,11 +1,13 @@
 // features/dashboard/components/AnalyticsSection/AnalyticsSection.tsx
 import React, { useState, useEffect } from 'react';
+import { useTheme } from '@/providers/ThemeContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import {
   PieChart, Pie, Cell, BarChart, Bar, 
   ResponsiveContainer, Tooltip, Legend, XAxis, YAxis, CartesianGrid
 } from 'recharts';
 import { supabase } from '@/lib/services/supabase';
+import { cn } from '@/lib/utils';
 
 export const AnalyticsSection = () => {
   const [categoryData, setCategoryData] = useState([]);
@@ -13,6 +15,7 @@ export const AnalyticsSection = () => {
   const [phrasesAdded, setPhrasesAdded] = useState(0);
   const [reviewsCompleted, setReviewsCompleted] = useState(0);
   const [loading, setLoading] = useState(true);
+  const { accent } = useTheme();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -96,8 +99,35 @@ export const AnalyticsSection = () => {
     fetchData();
   }, []);
 
-  // Grayscale colors for the visualizations
-  const COLORS = ['#555555', '#777777', '#999999', '#BBBBBB', '#DDDDDD'];
+  // Get colors based on the current accent
+  const getChartColors = () => {
+    switch (accent) {
+      case 'blue':
+        return ['#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE', '#DBEAFE'];
+      case 'green':
+        return ['#10B981', '#34D399', '#6EE7B7', '#A7F3D0', '#D1FAE5'];
+      case 'purple':
+        return ['#8B5CF6', '#A78BFA', '#C4B5FD', '#DDD6FE', '#EDE9FE'];
+      case 'orange':
+        return ['#F97316', '#FB923C', '#FDBA74', '#FED7AA', '#FFEDD5'];
+      default: // grayscale
+        return ['#4B5563', '#6B7280', '#9CA3AF', '#D1D5DB', '#E5E7EB'];
+    }
+  };
+
+  // Generate accent-specific chart colors
+  const COLORS = getChartColors();
+
+  // Get the appropriate border color for cards
+  const getCardBorderClass = () => {
+    switch (accent) {
+      case 'blue': return 'border-blue-500/30';
+      case 'green': return 'border-emerald-500/30';
+      case 'purple': return 'border-purple-500/30';
+      case 'orange': return 'border-orange-500/30';
+      default: return 'border-gray-500/30';
+    }
+  };
 
   // If loading, show skeleton state
   if (loading) {
@@ -137,16 +167,31 @@ export const AnalyticsSection = () => {
     const xp = x0 + length * sin;
     const yp = y0 - length * cos;
 
+    // Use the first color from the COLORS array
+    const needleColor = COLORS[0];
+
     return [
-      <circle cx={x0} cy={y0} r={r + 2} fill={color} stroke="none" key="needle-center" />,
-      <path d={`M${xba} ${yba}L${xbb} ${ybb}L${xp} ${yp}Z`} fill={color} key="needle-path" />
+      <circle cx={x0} cy={y0} r={r + 2} fill={needleColor} stroke="none" key="needle-center" />,
+      <path d={`M${xba} ${yba}L${xbb} ${ybb}L${xp} ${yp}Z`} fill={needleColor} key="needle-path" />
     ];
   };
+
+  // Get accent-specific empty gauge color
+  const getEmptyGaugeColor = () => {
+    return accent === 'default' ? '#E5E7EB' : '#E5E7EB';
+  };
+
+  // Get accent-specific filled gauge color
+  const getFilledGaugeColor = () => {
+    return COLORS[0];
+  };
+
+  const cardBorderClass = getCardBorderClass();
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {/* Category Bar Chart - horizontal layout for better category name display */}
-      <Card className="border rounded-md">
+      <Card className={cn("border rounded-md border-2", cardBorderClass)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg">Category Distribution</CardTitle>
           <CardDescription>Top categories by phrase count</CardDescription>
@@ -171,7 +216,7 @@ export const AnalyticsSection = () => {
                   formatter={(value) => [`${value} phrases`, 'Count']}
                   contentStyle={{ backgroundColor: '#333', border: '1px solid #444' }}
                 />
-                <Bar dataKey="value" fill="#555555">
+                <Bar dataKey="value" fill={COLORS[0]}>
                   {categoryData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
@@ -183,7 +228,7 @@ export const AnalyticsSection = () => {
       </Card>
 
       {/* Difficulty Pie Chart */}
-      <Card className="border rounded-md">
+      <Card className={cn("border rounded-md border-2", cardBorderClass)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg">Difficulty Distribution</CardTitle>
           <CardDescription>Breakdown by difficulty level</CardDescription>
@@ -219,7 +264,7 @@ export const AnalyticsSection = () => {
       </Card>
 
       {/* Monthly Phrases Goal Gauge */}
-      <Card className="border rounded-md">
+      <Card className={cn("border rounded-md border-2", cardBorderClass)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg">Words Added This Month</CardTitle>
           <CardDescription>Progress towards the goal of 100 words</CardDescription>
@@ -232,8 +277,8 @@ export const AnalyticsSection = () => {
                   startAngle={180}
                   endAngle={0}
                   data={[
-                    { name: 'Empty', value: 100 - phrasesPercentage, fill: '#E5E7EB' },
-                    { name: 'Progress', value: phrasesPercentage, fill: '#777777' }
+                    { name: 'Empty', value: 100 - phrasesPercentage, fill: getEmptyGaugeColor() },
+                    { name: 'Progress', value: phrasesPercentage, fill: getFilledGaugeColor() }
                   ]}
                   cx="50%"
                   cy="80%"
@@ -245,7 +290,7 @@ export const AnalyticsSection = () => {
                   stroke="none"
                 >
                 </Pie>
-                {renderNeedle(phrasesPercentage, null, '50%', '80%', 70, 90, '#333333')}
+                {renderNeedle(phrasesPercentage, null, '50%', '80%', 70, 90, COLORS[0])}
                 <text
                   x="50%"
                   y="50%"
@@ -273,7 +318,7 @@ export const AnalyticsSection = () => {
       </Card>
 
       {/* Monthly Reviews Goal Gauge */}
-      <Card className="border rounded-md">
+      <Card className={cn("border rounded-md border-2", cardBorderClass)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-lg">Reviews Completed This Month</CardTitle>
           <CardDescription>Progress towards 100 reviews this month</CardDescription>
@@ -286,8 +331,8 @@ export const AnalyticsSection = () => {
                   startAngle={180}
                   endAngle={0}
                   data={[
-                    { name: 'Empty', value: 100 - reviewsPercentage, fill: '#E5E7EB' },
-                    { name: 'Progress', value: reviewsPercentage, fill: '#777777' }
+                    { name: 'Empty', value: 100 - reviewsPercentage, fill: getEmptyGaugeColor() },
+                    { name: 'Progress', value: reviewsPercentage, fill: getFilledGaugeColor() }
                   ]}
                   cx="50%"
                   cy="80%"
@@ -299,7 +344,7 @@ export const AnalyticsSection = () => {
                   stroke="none"
                 >
                 </Pie>
-                {renderNeedle(reviewsPercentage, null, '50%', '80%', 70, 90, '#333333')}
+                {renderNeedle(reviewsPercentage, null, '50%', '80%', 70, 90, COLORS[0])}
                 <text
                   x="50%"
                   y="50%"

@@ -2,7 +2,9 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { useDashboardState } from '../hooks/useDashboardState';
+import { useTheme } from '@/providers/ThemeContext';
 import { TrendingUp, TrendingDown, Minus, Award, Users, BookOpen, Clock } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 // Type for each stat card
 type StatCardProps = {
@@ -29,7 +31,26 @@ const StatCard: React.FC<StatCardProps> = ({
   loading = false,
   sparklineData = [],
 }) => {
+  const { accent } = useTheme();
+  
+  // Get accent-specific border style
+  const getBorderStyle = () => {
+    switch (accent) {
+      case 'blue':
+        return 'border-blue-500/30';
+      case 'green':
+        return 'border-emerald-500/30';
+      case 'purple':
+        return 'border-purple-500/30';
+      case 'orange':
+        return 'border-orange-500/30';
+      default: // grayscale
+        return 'border-gray-500/30';
+    }
+  };
+
   // Determine color and icon based on trend direction
+  // These always stay the same regardless of accent
   const getTrendColor = () => {
     if (trendDirection === 'up') return 'text-green-500';
     if (trendDirection === 'down') return 'text-red-500';
@@ -42,6 +63,22 @@ const StatCard: React.FC<StatCardProps> = ({
     return <Minus className="w-4 h-4 ml-1" />;
   };
 
+  // Get accent-specific icon background
+  const getIconBackground = () => {
+    switch (accent) {
+      case 'blue':
+        return 'bg-blue-950 text-blue-400';
+      case 'green':
+        return 'bg-emerald-950 text-emerald-400';
+      case 'purple':
+        return 'bg-purple-950 text-purple-400';
+      case 'orange':
+        return 'bg-orange-950 text-orange-400';
+      default: // grayscale
+        return 'bg-gray-900 text-gray-400';
+    }
+  };
+
   // Render sparkline if data is provided
   const renderSparkline = () => {
     if (!sparklineData.length) return null;
@@ -49,6 +86,22 @@ const StatCard: React.FC<StatCardProps> = ({
     const max = Math.max(...sparklineData);
     const min = Math.min(...sparklineData);
     const range = max - min || 1;
+
+    // Get accent-specific sparkline color
+    const getSparklineColor = () => {
+      // For trend directions, use fixed colors
+      if (trendDirection === 'up') return '#10B981'; // Green
+      if (trendDirection === 'down') return '#EF4444'; // Red
+      
+      // For neutral trend, use accent color
+      switch (accent) {
+        case 'blue': return '#3B82F6';
+        case 'green': return '#10B981';
+        case 'purple': return '#8B5CF6';
+        case 'orange': return '#F97316';
+        default: return '#6B7280'; // grayscale
+      }
+    };
     
     return (
       <div className="h-8 mt-2">
@@ -57,7 +110,6 @@ const StatCard: React.FC<StatCardProps> = ({
             const height = ((value - min) / range) * 40 + 10;
             const x = index;
             const y = 50 - height;
-            const color = trendDirection === 'up' ? '#10B981' : trendDirection === 'down' ? '#EF4444' : '#3B82F6';
             
             return (
               <rect 
@@ -66,7 +118,7 @@ const StatCard: React.FC<StatCardProps> = ({
                 y={y} 
                 width="0.8" 
                 height={height}
-                fill={color}
+                fill={getSparklineColor()}
                 rx="1"
               />
             );
@@ -77,7 +129,10 @@ const StatCard: React.FC<StatCardProps> = ({
   };
 
   return (
-    <Card className="p-6  text-white shadow-lg">
+    <Card className={cn(
+      "p-6 text-white shadow border-2",
+      getBorderStyle()
+    )}>
       <div className="flex justify-between items-start">
         <div className="space-y-2">
           <h3 className="text-gray-400 text-sm uppercase font-medium">{title}</h3>
@@ -90,7 +145,11 @@ const StatCard: React.FC<StatCardProps> = ({
             )}
           </div>
         </div>
-        {icon && <div className="rounded-full p-2 bg-gray-800">{icon}</div>}
+        {icon && (
+          <div className={cn("rounded-full p-2", getIconBackground())}>
+            {icon}
+          </div>
+        )}
       </div>
       
       <p className="text-gray-400 text-sm mt-1">{description}</p>
@@ -114,6 +173,7 @@ export const StatsCards: React.FC = () => {
     topReviewer: { name: '', count: 0, streak: 0 }
   });
   const [loading, setLoading] = useState(true);
+  const { accent } = useTheme();
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -152,7 +212,7 @@ export const StatsCards: React.FC = () => {
         trend={stats.newPhrases.trend}
         trendDirection={stats.newPhrases.trend > 0 ? 'up' : stats.newPhrases.trend < 0 ? 'down' : 'neutral'}
         timeframe={`Last ${dateRange} days`}
-        icon={<BookOpen className="text-blue-500 w-5 h-5" />}
+        icon={<BookOpen className="w-5 h-5" />}
         loading={loading}
         sparklineData={stats.newPhrases.sparkline}
       />
@@ -164,7 +224,7 @@ export const StatsCards: React.FC = () => {
         trend={stats.reviewedPhrases.trend}
         trendDirection={stats.reviewedPhrases.trend > 0 ? 'up' : stats.reviewedPhrases.trend < 0 ? 'down' : 'neutral'}
         timeframe={`Last ${dateRange} days`}
-        icon={<Clock className="text-green-500 w-5 h-5" />}
+        icon={<Clock className="w-5 h-5" />}
         loading={loading}
         sparklineData={stats.reviewedPhrases.sparkline}
       />
@@ -176,7 +236,7 @@ export const StatsCards: React.FC = () => {
         trend={stats.activeReviewers.trend}
         trendDirection={stats.activeReviewers.trend > 0 ? 'up' : stats.activeReviewers.trend < 0 ? 'down' : 'neutral'}
         timeframe={`Last ${dateRange} days`}
-        icon={<Users className="text-purple-500 w-5 h-5" />}
+        icon={<Users className="w-5 h-5" />}
         loading={loading}
       />
       
@@ -185,7 +245,7 @@ export const StatsCards: React.FC = () => {
         value={stats.topReviewer.name || 'N/A'}
         description={`${stats.topReviewer.count} reviews (${stats.topReviewer.streak} day streak)`}
         timeframe={`Last ${dateRange} days`}
-        icon={<Award className="text-yellow-500 w-5 h-5" />}
+        icon={<Award className="w-5 h-5" />}
         loading={loading}
       />
     </div>

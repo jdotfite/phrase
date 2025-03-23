@@ -1,14 +1,16 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { ThemeSwitcher } from "@/components/ui/theme/ThemeSwitcher";
+import { Moon, Sun } from "lucide-react";
 import { ReviewerLoginButton } from '@/features/auth/ReviewerLoginButton';
 import { ReviewerProfileDropdown } from '@/features/auth/ReviewerProfileDropdown';
 import { Reviewer } from '@/types/types'; // Make sure to import the Reviewer type
 
 // Define the props interface
 interface DashboardHeaderProps {
+  theme?: string;
+  setTheme: (theme: string) => void;
   onExportClick: () => void;
   currentReviewer: Reviewer | null;
   onLoginSuccess: (reviewer: Reviewer) => void;
@@ -18,6 +20,8 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({ 
+  theme, 
+  setTheme, 
   onExportClick,
   currentReviewer,
   onLoginSuccess,
@@ -33,7 +37,14 @@ export function DashboardHeader({
       </div>
 
       <div className="flex items-center gap-3">
-        <ThemeSwitcher showAccentColors={true} />
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="h-9 w-9 rounded-md"
+        >
+          {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+        </Button>
 
         {currentReviewer ? (
           <ReviewerProfileDropdown 
