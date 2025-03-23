@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { ReviewerLoginModal } from './ReviewerLoginModal';
-import type { Reviewer } from '@/types/types';
+
 
 interface ReviewerLoginButtonProps {
   onLoginSuccess?: (reviewer: Reviewer) => void;

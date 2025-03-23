@@ -5,14 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Moon, Sun } from "lucide-react";
 import { ReviewerLoginButton } from '@/features/auth/ReviewerLoginButton';
 import { ReviewerProfileDropdown } from '@/features/auth/ReviewerProfileDropdown';
-import type { Reviewer } from '@/types/types';
+import { Reviewer } from '@/types/types'; // Make sure to import the Reviewer type
 
+// Define the props interface
 interface DashboardHeaderProps {
-  theme: string;
+  theme?: string;
   setTheme: (theme: string) => void;
   onExportClick: () => void;
   currentReviewer: Reviewer | null;
-  onLoginSuccess?: (reviewer: Reviewer) => void;
+  onLoginSuccess: (reviewer: Reviewer) => void;
   onLogout: () => void;
   onAddWordsClick: () => void;
   onReviewWordsClick: () => void;

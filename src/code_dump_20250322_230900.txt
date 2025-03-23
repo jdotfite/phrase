@@ -1,5 +1,5 @@
 ﻿PROJECT ANALYSIS
-Generated: 03/22/2025 16:15:52
+Generated: 03/22/2025 23:09:00
 Directory: C:\_websites\phrase\src
 
 ===========================================
@@ -414,13 +414,6 @@ export default function AdminPage() {
 
 ============================================================
 
-FILE: .\app\api\phrases.ts
-SIZE: 0 KB
-LAST MODIFIED: 03/20/2025 22:22:15
-
-
-============================================================
-
 FILE: .\app\api\claude\route.ts
 SIZE: 1.41 KB
 LAST MODIFIED: 03/01/2025 15:23:07
@@ -467,100 +460,6 @@ export async function POST(req: Request) {
 
     const data = await claudeResponse.json();
     return NextResponse.json(data);
-  } catch (error) {
-    console.error('API route error:', error);
-    return NextResponse.json(
-      { error: 'Failed to process request' },
-      { status: 500 }
-    );
-  }
-}
-
-============================================================
-
-FILE: .\app\api\claude\suggest-category\route.ts
-SIZE: 2.76 KB
-LAST MODIFIED: 03/04/2025 10:15:32
-
-import { NextResponse } from 'next/server';
-
-const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY;
-const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages';
-
-export async function POST(req: Request) {
-  if (!CLAUDE_API_KEY) {
-    console.error('Claude API key is not configured');
-    return NextResponse.json(
-      { error: 'Claude API key is not configured' },
-      { status: 500 }
-    );
-  }
-
-  try {
-    const { phrase, categories } = await req.json();
-    
-    if (!phrase || !Array.isArray(categories) || categories.length === 0) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
-
-    const messages = [
-      {
-        role: 'user',
-        content: `Choose the most appropriate category for this word or phrase: "${phrase}"
-                  
-                  Available categories:
-                  ${categories.map((cat: string) => `- ${cat}`).join('\n')}
-                  
-                  Rules:
-                  1. Choose exactly ONE category from the list provided
-                  2. Consider the meaning, theme, and subject matter
-                  3. For ambiguous terms, choose the most likely category
-                  4. DO NOT suggest new categories or modify existing ones
-                  
-                  Return ONLY the exact category name, nothing else.
-                  Example: "Sports & Fitness"`
-      }
-    ];
-
-    const claudeResponse = await fetch(CLAUDE_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': CLAUDE_API_KEY,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-3-7-sonnet-20250219',
-        max_tokens: 50,
-        messages: messages
-      })
-    });
-
-    if (!claudeResponse.ok) {
-      const errorText = await claudeResponse.text();
-      console.error('Claude API error:', errorText);
-      return NextResponse.json(
-        { error: `Claude API error: ${claudeResponse.statusText}` },
-        { status: claudeResponse.status }
-      );
-    }
-
-    const data = await claudeResponse.json();
-    const suggestedCategory = data.content[0].text.trim();
-    
-    // Verify the category is in our list
-    if (!categories.includes(suggestedCategory)) {
-      console.error(`Claude suggested an invalid category: "${suggestedCategory}"`);
-      return NextResponse.json(
-        { error: 'Invalid category suggestion' },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ category: suggestedCategory });
   } catch (error) {
     console.error('API route error:', error);
     return NextResponse.json(
@@ -1156,6 +1055,43 @@ export function DialogDemo() {
 
 ============================================================
 
+FILE: .\components\ui\difficulty-indicator.tsx
+SIZE: 0.86 KB
+LAST MODIFIED: 03/22/2025 16:32:24
+
+import React from 'react';
+import { cn } from '@/lib/utils';
+
+interface DifficultyIndicatorProps extends React.HTMLAttributes<HTMLDivElement> {
+  difficulty: number;
+}
+
+const DifficultyIndicator = React.forwardRef<HTMLDivElement, DifficultyIndicatorProps>(
+  ({ difficulty, className, ...props }, ref) => {
+    // Determine the width based on difficulty
+    const width = 
+      difficulty === 1 ? 'w-1/3' : 
+      difficulty === 2 ? 'w-2/3' : 
+      difficulty === 3 ? 'w-full' : 'w-0';
+    
+    return (
+      <div 
+        ref={ref} 
+        className={cn("w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-600", className)}
+        {...props}
+      >
+        <div className={cn(`${width} h-2.5 rounded-full bg-gray-400`)}></div>
+      </div>
+    );
+  }
+);
+
+DifficultyIndicator.displayName = "DifficultyIndicator";
+
+export { DifficultyIndicator };
+
+============================================================
+
 FILE: .\components\ui\dropdown-menu.tsx
 SIZE: 7.37 KB
 LAST MODIFIED: 03/07/2025 08:43:08
@@ -1425,195 +1361,6 @@ Label.displayName = LabelPrimitive.Root.displayName
 
 export { Label }
 
-
-============================================================
-
-FILE: .\components\ui\modal.tsx
-SIZE: 3.93 KB
-LAST MODIFIED: 02/09/2025 10:34:53
-
-import * as React from "react";
-import { X } from "lucide-react";
-import { Button } from "./button";
-import { cn } from "@/lib/utils";
-
-interface ModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title?: React.ReactNode;
-  children: React.ReactNode;
-  footer?: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
-  className?: string;
-  showClose?: boolean;
-  closeOnOverlayClick?: boolean;
-}
-
-const sizeClasses = {
-  sm: 'max-w-sm',
-  md: 'max-w-md',
-  lg: 'max-w-lg',
-  xl: 'max-w-xl',
-  full: 'max-w-full mx-4'
-};
-
-export const Modal: React.FC<ModalProps> = ({
-  isOpen,
-  onClose,
-  title,
-  children,
-  footer,
-  size = 'md',
-  className,
-  showClose = true,
-  closeOnOverlayClick = true,
-}) => {
-  // Handle ESC key
-  React.useEffect(() => {
-    const handleEsc = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    };
-    if (isOpen) {
-      document.addEventListener('keydown', handleEsc);
-    }
-    return () => {
-      document.removeEventListener('keydown', handleEsc);
-    };
-  }, [isOpen, onClose]);
-
-  // Prevent body scroll when modal is open
-  React.useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isOpen]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50"
-      onClick={closeOnOverlayClick ? onClose : undefined}
-    >
-      <div
-        className={cn(
-          "relative bg-gray-800 rounded-lg shadow-xl w-full",
-          sizeClasses[size],
-          className
-        )}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        {(title || showClose) && (
-          <div className="flex items-center justify-between p-4 border-b border-gray-700">
-            {title && (
-              <h2 className="text-lg font-semibold text-white">
-                {title}
-              </h2>
-            )}
-            {showClose && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 rounded-full"
-                onClick={onClose}
-                aria-label="Close modal"
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
-        )}
-
-        {/* Content */}
-        <div className="p-4">
-          {children}
-        </div>
-
-        {/* Footer */}
-        {footer && (
-          <div className="flex justify-end gap-2 p-4 border-t border-gray-700">
-            {footer}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// Utility components for Modal
-export const ModalTitle: React.FC<React.HTMLAttributes<HTMLHeadingElement>> = ({
-  children,
-  className,
-  ...props
-}) => (
-  <h2
-    className={cn(
-      "text-lg font-semibold leading-none tracking-tight",
-      className
-    )}
-    {...props}
-  >
-    {children}
-  </h2>
-);
-
-export const ModalDescription: React.FC<React.HTMLAttributes<HTMLParagraphElement>> = ({
-  children,
-  className,
-  ...props
-}) => (
-  <p
-    className={cn("text-sm text-gray-400", className)}
-    {...props}
-  >
-    {children}
-  </p>
-);
-
-export const ModalFooter: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({
-  children,
-  className,
-  ...props
-}) => (
-  <div
-    className={cn(
-      "flex justify-end gap-2",
-      className
-    )}
-    {...props}
-  >
-    {children}
-  </div>
-);
-
-// Example usage:
-/*
-<Modal
-  isOpen={isOpen}
-  onClose={onClose}
-  title="Modal Title"
-  footer={
-    <>
-      <Button variant="outline" onClick={onClose}>
-        Cancel
-      </Button>
-      <Button onClick={handleConfirm}>
-        Confirm
-      </Button>
-    </>
-  }
->
-  <p>Modal content goes here</p>
-</Modal>
-*/
 
 ============================================================
 
@@ -2530,15 +2277,15 @@ export default function PinPad({ onSubmit, onCancel }: PinPadProps) {
 ============================================================
 
 FILE: .\features\auth\ReviewerLoginButton.tsx
-SIZE: 1.06 KB
-LAST MODIFIED: 03/17/2025 11:15:00
+SIZE: 1.01 KB
+LAST MODIFIED: 03/22/2025 22:17:12
 
 'use client';
 
 import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { ReviewerLoginModal } from './ReviewerLoginModal';
-import type { Reviewer } from '@/types/types';
+
 
 interface ReviewerLoginButtonProps {
   onLoginSuccess?: (reviewer: Reviewer) => void;
@@ -2581,8 +2328,8 @@ export function ReviewerLoginButton({
 ============================================================
 
 FILE: .\features\auth\ReviewerLoginModal.tsx
-SIZE: 5 KB
-LAST MODIFIED: 03/17/2025 21:39:28
+SIZE: 4.96 KB
+LAST MODIFIED: 03/22/2025 22:17:43
 
 'use client';
 
@@ -2597,7 +2344,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/services/supabase';
 import PinPad from './PinPad';
-import type { Reviewer } from '@/types/types';
+
 
 interface ReviewerLoginModalProps {
   open: boolean;
@@ -2745,8 +2492,8 @@ export function ReviewerLoginModal({
 ============================================================
 
 FILE: .\features\auth\ReviewerProfileDropdown.tsx
-SIZE: 3.36 KB
-LAST MODIFIED: 03/21/2025 22:46:54
+SIZE: 3.32 KB
+LAST MODIFIED: 03/22/2025 22:17:23
 
 'use client';
 
@@ -2760,7 +2507,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, LogOut, FileDownIcon, Plus, CheckSquare } from "lucide-react";
-import type { Reviewer } from '@/types/types';
 
 // Avatar icons for reviewers (should match those in ReviewerLoginModal)
 const AVATAR_EMOJIS = ['ðŸ™', 'ðŸˆ', 'ðŸ•', 'ðŸ’', 'ðŸ¢', 'ðŸ£', 'ðŸ¦Š', 'ðŸ¼'];
@@ -2838,157 +2584,9 @@ export function ReviewerProfileDropdown({
 
 ============================================================
 
-FILE: .\features\auth\types.ts
-SIZE: 0 KB
-LAST MODIFIED: 03/16/2025 19:36:17
-
-
-============================================================
-
-FILE: .\features\charts\ChartContainer.tsx
-SIZE: 0.82 KB
-LAST MODIFIED: 03/16/2025 15:49:31
-
-"use client";
-
-import * as React from "react";
-
-export type ChartConfig = {
-  [key: string]: {
-    label: string;
-    color: string;
-  };
-};
-
-export function ChartContainer({
-  config,
-  children,
-  className,
-  ...props
-}: React.PropsWithChildren & {
-  config: ChartConfig;
-  className?: string;
-  [key: string]: any;
-}) {
-  const createCSSVariable = (obj: Record<string, string>) => {
-    return Object.entries(obj).reduce((vars, [key, value]) => {
-      return {
-        ...vars,
-        [`--color-${key}`]: value,
-      };
-    }, {});
-  };
-
-  const colors = Object.entries(config).reduce((colors, [key, item]) => {
-    return {
-      ...colors,
-      [key]: item.color,
-    };
-  }, {});
-
-  const cssVars = createCSSVariable(colors);
-
-  return (
-    <div style={cssVars} className={className} {...props}>
-      {children}
-    </div>
-  );
-}
-
-============================================================
-
-FILE: .\features\charts\ChartTooltip.tsx
-SIZE: 0.26 KB
-LAST MODIFIED: 03/15/2025 18:35:43
-
-"use client";
-
-import * as React from "react";
-import { Tooltip } from "recharts";
-
-export function ChartTooltip({
-  content,
-  ...props
-}: {
-  content?: React.JSXElementConstructor<any>;
-  [key: string]: any;
-}) {
-  return <Tooltip {...props} content={content} />;
-}
-
-
-============================================================
-
-FILE: .\features\charts\ChartTooltipContent.tsx
-SIZE: 1.5 KB
-LAST MODIFIED: 03/16/2025 15:49:59
-
-"use client";
-
-import * as React from "react";
-
-export function ChartTooltipContent({
-  active,
-  payload,
-  label,
-  config,
-  indicator = "circle",
-}: {
-  active?: boolean;
-  payload?: any[];
-  label?: string;
-  config?: any;
-  indicator?: "circle" | "line";
-}) {
-  const TypeIndicator = ({ name }: { name: string }) =>
-    indicator === "circle" ? (
-      <circle cx="6.5" cy="6.5" r="3.5" fill={`var(--color-${name})`} />
-    ) : (
-      <line x1="1" y1="6.5" x2="9" y2="6.5" stroke={`var(--color-${name})`} strokeWidth={2} strokeLinecap="round" />
-    );
-
-  if (!active || !payload) return null;
-
-  return (
-    <div className="rounded-lg border bg-background p-2 shadow-sm">
-      <div className="grid grid-cols-2 gap-2">
-        <div className="flex flex-col">
-          <span className="text-[0.70rem] uppercase text-muted-foreground">{label}</span>
-        </div>
-        <div className="flex flex-col gap-1">
-          {payload.map(({ value, name }) => (
-            <div key={name} className="flex items-center justify-end gap-1">
-              <span className="text-[0.70rem] text-muted-foreground">{config?.[name]?.label ?? name}</span>
-              <span className="font-bold tabular-nums">{value}</span>
-              {config?.[name] && (
-                <svg width="13" height="13" viewBox="0 0 13 13" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <TypeIndicator name={name} />
-                </svg>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-============================================================
-
-FILE: .\features\charts\index.ts
-SIZE: 0.16 KB
-LAST MODIFIED: 03/15/2025 18:35:43
-
-export { ChartContainer } from './ChartContainer';
-export { ChartTooltip } from './ChartTooltip';
-export { ChartTooltipContent } from './ChartTooltipContent';
-
-
-============================================================
-
 FILE: .\features\dashboard\Dashboard.tsx
-SIZE: 19.45 KB
-LAST MODIFIED: 03/22/2025 15:35:46
+SIZE: 19.33 KB
+LAST MODIFIED: 03/22/2025 23:04:24
 
 'use client';
 
@@ -3024,6 +2622,7 @@ import { usePhrases } from '@/features/data/hooks/usePhrases';
 import { usePhraseMetadata } from '@/features/data/hooks/usePhraseMetadata';
 import { useReviewers } from '@/features/data/hooks/useReviewers';
 import { useDeletePhrase } from '@/features/phrases/hooks/useDeletePhrase';
+import { useDashboardState } from '@/features/dashboard/hooks/useDashboardState';
 
 // Types
 import type { Reviewer, Phrase } from '@/types/types';
@@ -3031,33 +2630,31 @@ import type { Reviewer, Phrase } from '@/types/types';
 const Dashboard = () => {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const [showWordCreatorModal, setShowWordCreatorModal] = useState(false);
-  const [showReviewModal, setShowReviewModal] = useState(false);
-  const [selectedPhraseId, setSelectedPhraseId] = useState<number | null>(null); 
-
-  // Added this state for tracking newly added phrase IDs
-  const [newIds, setNewIds] = useState<number[]>([]);
+  
+  // Use dashboard state hook for centralized state management
+  const {
+    activeTab, 
+    setActiveTab,
+    showWordCreatorModal, 
+    setShowWordCreatorModal,
+    showReviewModal, 
+    setShowReviewModal,
+    showFilterModal, 
+    setShowFilterModal,
+    showExportModal, 
+    setShowExportModal,
+    selectedPhraseId,
+    setSelectedPhraseId,
+    newIds, 
+    setNewIds,
+    currentReviewer,
+    setCurrentReviewer, 
+    isExporting,
+    setIsExporting,
+  } = useDashboardState();
   
   // Initialize the delete phrase mutation
   const deletePhraseMutation = useDeletePhrase();
-  
-  // ======= REVIEWER AUTH STATE =======
-  // State for current logged-in reviewer
-  const [currentReviewer, setCurrentReviewer] = useState<Reviewer | null>(null);
-  const handleAddWordsClick = () => {
-    setShowWordCreatorModal(true);
-  };
-  
-  const handleReviewWordsClick = () => {
-    setShowReviewModal(true);
-  };
-  
-  const handleWordAdded = (id: number) => {
-    // Track newly added phrase ID
-    setNewIds(prev => [...prev, id]);
-    // Refresh data after a word is added
-    fetchPhrases();
-  };
   
   // Add handlers for edit and delete
   const handleEdit = (id: number) => {
@@ -3077,12 +2674,8 @@ const Dashboard = () => {
   };
   
   // ======= DASHBOARD UI STATE =======
-  const [activeTab, setActiveTab] = useState('phrases');
-  const [showFilterModal, setShowFilterModal] = useState(false);
   const [subcategories, setSubcategories] = useState<string[]>([]);
   const [phrasesOverTime, setPhrasesOverTime] = useState<any[]>([]);
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
 
   // ======= DATA HOOKS =======
   const { stats, loading: statsLoading } = useStats();
@@ -3130,8 +2723,6 @@ const Dashboard = () => {
       part_of_speech: ''
     }
   });
-
- 
   
   // ======= CHART DATA =======
   // Data for the radial chart
@@ -3164,6 +2755,22 @@ const Dashboard = () => {
   const handleLogout = () => {
     setCurrentReviewer(null);
     localStorage.removeItem('currentReviewer');
+  };
+
+  // Add this function since it's used in the component
+  const handleWordAdded = (id: number) => {
+    // Track newly added phrase ID
+    setNewIds(prev => [...prev, id]);
+    // Refresh data after a word is added
+    fetchPhrases();
+  };
+
+  const handleAddWordsClick = () => {
+    setShowWordCreatorModal(true);
+  };
+  
+  const handleReviewWordsClick = () => {
+    setShowReviewModal(true);
   };
 
   // ======= EFFECTS =======
@@ -3547,17 +3154,16 @@ constexpr size_t category_count = ${Object.keys(data).length};
   // ======= RENDER =======
   return (
     <div className="container mx-auto py-6 space-y-6">
-    {/* Header with login */}
-    <DashboardHeader
-      theme={theme}
-      setTheme={setTheme}
-      onExportClick={() => setShowExportModal(true)}
-      currentReviewer={currentReviewer}
-      onLoginSuccess={handleLoginSuccess}
-      onLogout={handleLogout}
-      onAddWordsClick={handleAddWordsClick}
-      onReviewWordsClick={handleReviewWordsClick}
-    />
+      <DashboardHeader
+        theme={theme}
+        setTheme={setTheme}
+        onExportClick={() => setShowExportModal(true)}
+        currentReviewer={currentReviewer}
+        onLoginSuccess={handleLoginSuccess}
+        onLogout={handleLogout}
+        onAddWordsClick={handleAddWordsClick}
+        onReviewWordsClick={handleReviewWordsClick}
+      />
     
     {/* Add the StatsCards component here */}
     <StatsCards />
@@ -3647,46 +3253,43 @@ export default Dashboard;
 ============================================================
 
 FILE: .\features\dashboard\types.ts
-SIZE: 1.01 KB
-LAST MODIFIED: 03/21/2025 16:58:56
+SIZE: 1.02 KB
+LAST MODIFIED: 03/22/2025 22:45:54
 
 // features/dashboard/types.ts
-export interface TableState {
-    sortConfig: {
-      key: string;
-      direction: 'asc' | 'desc';
-    };
-    pagination: {
-      currentPage: number;
-      rowsPerPage: number;
-      totalItems: number;
-      totalPages: number;
-    };
-    filters: {
-      searchTerm: string;
-      category: string;
-      difficulty: string;
-      subcategory: string;
-      part_of_speech: string;
-    };
-  }
+export interface DashboardStateHook {
+  // Tab and Modal States
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+  showWordCreatorModal: boolean;
+  setShowWordCreatorModal: (show: boolean) => void;
+  showReviewModal: boolean;
+  setShowReviewModal: (show: boolean) => void;
+  showFilterModal: boolean;
+  setShowFilterModal: (show: boolean) => void;
+  showExportModal: boolean;
+  setShowExportModal: (show: boolean) => void;
   
-  export interface DashboardStateHook {
-    activeTab: string;
-    setActiveTab: (tab: string) => void;
-    showWordCreatorModal: boolean;
-    setShowWordCreatorModal: (show: boolean) => void;
-    showReviewModal: boolean;
-    setShowReviewModal: (show: boolean) => void;
-    showFilterModal: boolean;
-    setShowFilterModal: (show: boolean) => void;
-    showExportModal: boolean;
-    setShowExportModal: (show: boolean) => void;
-    newIds: number[];
-    setNewIds: (ids: number[]) => void;
-    dateRange: number;
-    updateDateRange: (days: number) => void;
-  }
+  // Data States
+  selectedPhraseId: number | null;
+  setSelectedPhraseId: (id: number | null) => void;
+  newIds: number[];
+  setNewIds: (ids: number[]) => void;
+  dateRange: number;
+  updateDateRange: (days: number) => void;
+  currentReviewer: Reviewer | null;
+  isExporting: boolean;
+  setIsExporting: (isExporting: boolean) => void;
+  
+  // Loading States
+  isLoading: boolean;
+  error: string | null;
+  
+  // Handlers
+  handleLoginSuccess: (reviewer: Reviewer) => void;
+  handleLogout: () => void;
+  handleWordAdded: (id: number) => void;
+}
 
 ============================================================
 
@@ -4030,8 +3633,8 @@ export default AnalyticsSection;
 ============================================================
 
 FILE: .\features\dashboard\components\DashboardHeader.tsx
-SIZE: 2 KB
-LAST MODIFIED: 03/21/2025 18:26:13
+SIZE: 2.06 KB
+LAST MODIFIED: 03/22/2025 22:58:57
 
 'use client';
 
@@ -4040,14 +3643,15 @@ import { Button } from "@/components/ui/button";
 import { Moon, Sun } from "lucide-react";
 import { ReviewerLoginButton } from '@/features/auth/ReviewerLoginButton';
 import { ReviewerProfileDropdown } from '@/features/auth/ReviewerProfileDropdown';
-import type { Reviewer } from '@/types/types';
+import { Reviewer } from '@/types/types'; // Make sure to import the Reviewer type
 
+// Define the props interface
 interface DashboardHeaderProps {
-  theme: string;
+  theme?: string;
   setTheme: (theme: string) => void;
   onExportClick: () => void;
   currentReviewer: Reviewer | null;
-  onLoginSuccess?: (reviewer: Reviewer) => void;
+  onLoginSuccess: (reviewer: Reviewer) => void;
   onLogout: () => void;
   onAddWordsClick: () => void;
   onReviewWordsClick: () => void;
@@ -4586,499 +4190,72 @@ export default StatsCards;
 
 ============================================================
 
-FILE: .\features\dashboard\components\AnalyticSection\index.ts
-SIZE: 0.12 KB
-LAST MODIFIED: 03/21/2025 23:44:01
-
-import { AnalyticsSection } from './AnalyticsSection';
-
-export { AnalyticsSection };
-export default AnalyticsSection;
-
-============================================================
-
-FILE: .\features\dashboard\components\charts\CategoryDistributionChart.tsx
-SIZE: 7.04 KB
-LAST MODIFIED: 03/21/2025 09:59:00
-
-// features/dashboard/components/charts/CategoryDistributionChart.jsx
-import React from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { ChartTooltip, ChartTooltipContent } from '@/features/charts';
-import { useCategoryDistribution } from '@/features/dashboard/hooks/useCategoryDistribution';
-
-export const CategoryDistributionChart = () => {
-  const { categoryData } = useCategoryDistribution();
-  
-  // Chart configuration
-  const chartConfig = {
-    value: { label: 'Count', color: 'hsl(var(--primary))' }
-  };
-
-  return (
-    <Card className="border rounded-md">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Category Distribution</CardTitle>
-        <CardDescription>Phrases by category</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[250px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={categoryData}
-                cx="50%"
-                cy="50%"
-                innerRadius={60}
-                outerRadius={90}
-                paddingAngle={2}
-                dataKey="value"
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-              >
-                <Cell fill="hsl(var(--primary))" />
-                <Cell fill="hsl(var(--primary) / 90%)" />
-                <Cell fill="hsl(var(--primary) / 80%)" />
-                <Cell fill="hsl(var(--primary) / 70%)" />
-                <Cell fill="hsl(var(--primary) / 60%)" />
-              </Pie>
-              <ChartTooltip 
-                content={props => 
-                  <ChartTooltipContent 
-                    {...props} 
-                    config={chartConfig}
-                  />
-                }
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-// features/dashboard/components/charts/TopReviewersPerformanceChart.jsx
-import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer } from 'recharts';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { ChartTooltip, ChartTooltipContent } from '@/features/charts';
-
-export const TopReviewersPerformanceChart = () => {
-  // Sample data - could be fetched from a hook
-  const reviewersData = [
-    { name: "Kari", reviews: 120, streak: 14 },
-    { name: "Sarah", reviews: 85, streak: 7 },
-    { name: "Justin", reviews: 65, streak: 5 },
-    { name: "Alex", reviews: 45, streak: 3 },
-    { name: "Morgan", reviews: 30, streak: 2 }
-  ];
-  
-  // Chart configuration
-  const chartConfig = {
-    reviews: { label: 'Reviews', color: 'hsl(var(--primary) / 80%)' },
-    streak: { label: 'Streak', color: 'hsl(var(--primary) / 40%)' }
-  };
-
-  return (
-    <Card className="border rounded-md">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Top Reviewers Performance</CardTitle>
-        <CardDescription>Reviews and streaks by contributor</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[250px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              layout="vertical"
-              data={reviewersData}
-              margin={{ top: 20, right: 30, left: 60, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--muted-foreground) / 20%)" />
-              <XAxis
-                type="number"
-                tick={{ fill: "hsl(var(--foreground))" }}
-                tickLine={{ stroke: "hsl(var(--muted-foreground) / 40%)" }}
-                axisLine={{ stroke: "hsl(var(--muted-foreground) / 40%)" }}
-              />
-              <YAxis
-                dataKey="name"
-                type="category"
-                tick={{ fill: "hsl(var(--foreground))" }}
-                tickLine={{ stroke: "hsl(var(--muted-foreground) / 40%)" }}
-                axisLine={{ stroke: "hsl(var(--muted-foreground) / 40%)" }}
-              />
-              <ChartTooltip 
-                content={props => 
-                  <ChartTooltipContent 
-                    {...props} 
-                    config={chartConfig}
-                  />
-                }
-              />
-              <Legend />
-              <Bar dataKey="reviews" fill="hsl(var(--primary) / 80%)" />
-              <Bar dataKey="streak" fill="hsl(var(--primary) / 40%)" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-// features/dashboard/components/charts/WordsAddedChart.jsx
-import React from 'react';
-import { RadialBarChart, RadialBar, PolarGrid, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-
-export const WordsAddedChart = () => {
-  // Sample data - could be fetched from a hook
-  const wordsAddedData = [
-    { name: "Words Added", value: 45, fill: "hsl(var(--primary))" },
-    { name: "Goal", value: 100, fill: "hsl(var(--muted))" },
-  ];
-
-  return (
-    <Card className="border rounded-md">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Words Added This Month</CardTitle>
-        <CardDescription>Progress towards the goal of 100 words</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[250px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <RadialBarChart
-              data={wordsAddedData}
-              innerRadius="80%"
-              outerRadius="100%"
-              startAngle={180}
-              endAngle={0}
-            >
-              <PolarGrid stroke="hsl(var(--muted))" />
-              <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} />
-              <RadialBar
-                dataKey="value"
-                cornerRadius={10}
-                background
-                fill="hsl(var(--primary))"
-              />
-              <text
-                x="50%"
-                y="50%"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                className="fill-foreground text-2xl font-bold"
-              >
-                {wordsAddedData[0].value} / 100
-              </text>
-            </RadialBarChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-      <CardFooter>
-        <div className="w-full flex justify-between items-center">
-          <div className="text-sm text-muted-foreground">
-            Goal: <span className="font-bold text-foreground">100 words</span>
-          </div>
-          <div className="text-sm text-muted-foreground">
-            Remaining: <span className="font-bold text-foreground">{100 - wordsAddedData[0].value}</span>
-          </div>
-        </div>
-      </CardFooter>
-    </Card>
-  );
-};
-
-============================================================
-
-FILE: .\features\dashboard\components\charts\PhraseGrowthChart.tsx
-SIZE: 8.55 KB
-LAST MODIFIED: 03/21/2025 09:56:27
-
-// features/dashboard/components/charts/PhraseGrowthChart.jsx
-import React from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
-import { TrendingUp } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/features/charts';
-import { useStats } from '@/features/data/hooks/useStats';
-import { usePhraseGrowth } from '@/features/dashboard/hooks/usePhraseGrowth';
-
-export const PhraseGrowthChart = () => {
-  const { stats } = useStats();
-  const { phrasesOverTime } = usePhraseGrowth();
-  
-  // Chart configuration
-  const chartConfig = {
-    phrases: { label: 'Phrases', color: 'var(--color-phrases)' },
-  };
-
-  return (
-    <Card className="border rounded-md">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Total Phrases</CardTitle>
-        <CardDescription>Growth trend over time</CardDescription>
-      </CardHeader>
-      <CardContent className="pb-0">
-        <div className="h-[120px]">
-          <ChartContainer config={chartConfig}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={phrasesOverTime} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                <CartesianGrid stroke="#3F3F46" strokeDasharray="3 3" opacity={0.3} />
-                <XAxis dataKey="month" tick={{ fill: 'white', fontSize: 10 }} axisLine={{ stroke: '#3F3F46' }} tickLine={{ stroke: '#3F3F46' }} />
-                <YAxis tick={{ fill: 'white', fontSize: 10 }} axisLine={{ stroke: '#3F3F46' }} tickLine={{ stroke: '#3F3F46' }} />
-                <ChartTooltip content={props => <ChartTooltipContent {...props} config={chartConfig} />} />
-                <Line
-                  type="monotone"
-                  dataKey="phrases"
-                  stroke="var(--color-phrases)"
-                  strokeWidth={2}
-                  dot={{ fill: 'var(--color-phrases)', r: 4 }}
-                  activeDot={{ r: 6, fill: 'var(--color-phrases)' }}
-                  isAnimationActive={false}
-                />
-                {phrasesOverTime[0]?.phrases === null && (
-                  <text
-                    x="50%"
-                    y="50%"
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fill="#FF6B6B"
-                    fontSize="14px"
-                    fontWeight="bold"
-                  >
-                    No Data Available
-                  </text>
-                )}
-              </LineChart>
-            </ResponsiveContainer>
-          </ChartContainer>
-        </div>
-      </CardContent>
-      <CardFooter>
-        <div className="flex w-full items-start gap-2 text-sm">
-          <div className="grid gap-0">
-            <div className="flex items-center gap-1 font-medium text-lg">
-              {stats?.total || 1392} total phrases <TrendingUp className="h-4 w-4 ml-1 text-green-500" />
-            </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              Last 6 months
-            </div>
-          </div>
-        </div>
-      </CardFooter>
-    </Card>
-  );
-};
-
-// features/dashboard/components/charts/DifficultyDistributionChart.jsx
-import React from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { ChartTooltip, ChartTooltipContent } from '@/features/charts';
-import { useStats } from '@/features/data/hooks/useStats';
-
-export const DifficultyDistributionChart = () => {
-  const { stats } = useStats();
-  
-  // Chart configuration
-  const chartConfig = {
-    easy: { label: 'Easy', color: 'hsl(var(--primary) / 60%)' },
-    medium: { label: 'Medium', color: 'hsl(var(--primary) / 80%)' },
-    hard: { label: 'Hard', color: 'hsl(var(--primary))' }
-  };
-
-  return (
-    <Card className="border rounded-md">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Difficulty Distribution</CardTitle>
-        <CardDescription>Distribution by difficulty level</CardDescription>
-      </CardHeader>
-      <CardContent className="pb-0">
-        <div className="h-[120px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={[
-                  { name: 'Easy', value: stats?.difficultyBreakdown?.easy || 30 },
-                  { name: 'Medium', value: stats?.difficultyBreakdown?.medium || 20 },
-                  { name: 'Hard', value: stats?.difficultyBreakdown?.hard || 10 },
-                ]}
-                cx="50%"
-                cy="50%"
-                innerRadius={25}
-                outerRadius={45}
-                paddingAngle={2}
-                dataKey="value"
-                label={({ name }) => name}
-              >
-                <Cell fill="hsl(var(--primary) / 60%)" />
-                <Cell fill="hsl(var(--primary) / 80%)" />
-                <Cell fill="hsl(var(--primary))" />
-              </Pie>
-              <ChartTooltip content={props => <ChartTooltipContent {...props} config={chartConfig} />} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-      <CardFooter className="pt-3">
-        <div className="flex w-full items-center gap-4 text-sm justify-around">
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full bg-primary/60"></div>
-            <span className="text-xs">Easy</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full bg-primary/80"></div>
-            <span className="text-xs">Medium</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <div className="w-3 h-3 rounded-full bg-primary"></div>
-            <span className="text-xs">Hard</span>
-          </div>
-        </div>
-      </CardFooter>
-    </Card>
-  );
-};
-
-// features/dashboard/components/charts/MonthlyActivityChart.jsx
-import React from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer } from 'recharts';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { ChartTooltip, ChartTooltipContent } from '@/features/charts';
-import { useMonthlyActivity } from '@/features/dashboard/hooks/useMonthlyActivity';
-
-export const MonthlyActivityChart = () => {
-  const { monthlyActivityData } = useMonthlyActivity();
-  
-  // Chart configuration
-  const chartConfig = {
-    reviews: { label: 'Reviews', color: 'hsl(var(--primary) / 80%)' },
-    additions: { label: 'Additions', color: 'hsl(var(--primary) / 60%)' },
-    edits: { label: 'Edits', color: 'hsl(var(--primary) / 40%)' }
-  };
-
-  return (
-    <Card className="border rounded-md">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Monthly Activity</CardTitle>
-        <CardDescription>Reviews, additions and edits over time</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[250px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={monthlyActivityData} margin={{ top: 10, right: 10, left: 0, bottom: 20 }}>
-              <CartesianGrid vertical={false} stroke="hsl(var(--muted-foreground) / 20%)" strokeDasharray="3 3" />
-              <XAxis dataKey="name" tick={{ fill: "hsl(var(--foreground))" }} tickLine={{ stroke: "hsl(var(--muted-foreground) / 40%)" }} axisLine={{ stroke: "hsl(var(--muted-foreground) / 40%)" }} />
-              <YAxis tick={{ fill: "hsl(var(--foreground))" }} tickLine={{ stroke: "hsl(var(--muted-foreground) / 40%)" }} axisLine={{ stroke: "hsl(var(--muted-foreground) / 40%)" }} />
-              <ChartTooltip 
-                content={props => 
-                  <ChartTooltipContent 
-                    {...props} 
-                    config={chartConfig}
-                  />
-                }
-              />
-              <Legend wrapperStyle={{ paddingTop: 20 }} />
-              <Bar dataKey="reviews" fill="hsl(var(--primary) / 80%)" />
-              <Bar dataKey="additions" fill="hsl(var(--primary) / 60%)" />
-              <Bar dataKey="edits" fill="hsl(var(--primary) / 40%)" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-// Add more chart components as needed...
-
-============================================================
-
 FILE: .\features\dashboard\hooks\useDashboardState.ts
-SIZE: 2.89 KB
-LAST MODIFIED: 03/21/2025 23:17:53
+SIZE: 2.75 KB
+LAST MODIFIED: 03/22/2025 23:07:41
 
 // features/dashboard/hooks/useDashboardState.ts
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/services/supabase';
-import { DashboardFilters } from '../types';
+import type { Reviewer } from '@/types/types';
 
 export const useDashboardState = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // Tab and Modal States
   const [activeTab, setActiveTab] = useState<string>('phrases');
   const [showWordCreatorModal, setShowWordCreatorModal] = useState<boolean>(false);
   const [showReviewModal, setShowReviewModal] = useState<boolean>(false);
   const [showFilterModal, setShowFilterModal] = useState<boolean>(false);
   const [showExportModal, setShowExportModal] = useState<boolean>(false);
+  
+  // Data States
+  const [selectedPhraseId, setSelectedPhraseId] = useState<number | null>(null); 
   const [newIds, setNewIds] = useState<number[]>([]);
-  const [dateRange, setDateRange] = useState<number>(30); // Default to 30 days
-  const [filters, setFilters] = useState<DashboardFilters>({
-    categories: [],
-    subcategories: [],
-    difficulty: [],
-    dateRange: { start: null, end: null },
-  });
+  const [dateRange, setDateRange] = useState<number>(30);
+  const [currentReviewer, setCurrentReviewer] = useState<Reviewer | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  
+  // Loading States
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Initialize current reviewer from localStorage
+  useEffect(() => {
+    const savedReviewer = localStorage.getItem('currentReviewer');
+    if (savedReviewer) {
+      try {
+        setCurrentReviewer(JSON.parse(savedReviewer));
+      } catch (e) {
+        console.error("Error parsing saved reviewer:", e);
+        localStorage.removeItem('currentReviewer');
+      }
+    }
+    
+    setIsLoading(false);
+  }, []);
 
   // Function to update date range
   const updateDateRange = useCallback((days: number) => {
     setDateRange(days);
   }, []);
-
-  // Function to update filters
-  const updateFilters = useCallback((newFilters: Partial<DashboardFilters>) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
+  
+  // Login/Logout handlers
+  const handleLoginSuccess = useCallback((reviewer: Reviewer) => {
+    setCurrentReviewer(reviewer);
+    localStorage.setItem('currentReviewer', JSON.stringify(reviewer));
+  }, []);
+  
+  const handleLogout = useCallback(() => {
+    setCurrentReviewer(null);
+    localStorage.removeItem('currentReviewer');
   }, []);
 
-  // Function to reset filters
-  const resetFilters = useCallback(() => {
-    setFilters({
-      categories: [],
-      subcategories: [],
-      difficulty: [],
-      dateRange: { start: null, end: null },
-    });
-  }, []);
-
-  // Load initial metadata (categories, subcategories, etc.)
-  useEffect(() => {
-    const loadMetadata = async () => {
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        // Load categories
-        const { data: categories, error: categoriesError } = await supabase
-          .from('categories')
-          .select('id, name');
-        
-        if (categoriesError) throw categoriesError;
-        
-        // Load subcategories
-        const { data: subcategories, error: subcategoriesError } = await supabase
-          .from('subcategories')
-          .select('id, name, category_id');
-        
-        if (subcategoriesError) throw subcategoriesError;
-        
-        // Initialize any other necessary data
-        
-      } catch (err) {
-        setError('Failed to load dashboard data');
-        console.error('Dashboard data loading error:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadMetadata();
+  // Word Creator handlers
+  const handleWordAdded = useCallback((id: number) => {
+    setNewIds(prev => [...prev, id]);
   }, []);
 
   return {
-    isLoading,
-    error,
+    // Tab and Modal States
     activeTab, 
     setActiveTab,
     showWordCreatorModal, 
@@ -5089,287 +4266,31 @@ export const useDashboardState = () => {
     setShowFilterModal,
     showExportModal, 
     setShowExportModal,
+    
+    // Data States
+    selectedPhraseId,
+    setSelectedPhraseId,
     newIds, 
     setNewIds,
     dateRange,
     updateDateRange,
-    filters,
-    updateFilters,
-    resetFilters
+    currentReviewer,
+    setCurrentReviewer,
+    isExporting,
+    setIsExporting,
+    
+    // Loading States
+    isLoading,
+    error,
+    
+    // Handlers
+    handleLoginSuccess,
+    handleLogout,
+    handleWordAdded
   };
 };
 
 export default useDashboardState;
-
-============================================================
-
-FILE: .\features\dashboard\hooks\usePhraseGrowth.ts
-SIZE: 4.18 KB
-LAST MODIFIED: 03/21/2025 09:57:03
-
-// features/dashboard/hooks/usePhraseGrowth.js
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/services/supabase';
-
-export const usePhraseGrowth = () => {
-  const [phrasesOverTime, setPhrasesOverTime] = useState([]);
-  
-  // Fetch phrases over time
-  useEffect(() => {
-    fetchPhrasesOverTime();
-  }, []);
-  
-  /**
-   * Fetch phrases over time data for chart
-   */
-  const fetchPhrasesOverTime = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('phrases')
-        .select('created_at')
-        .order('created_at');
-      if (error) {
-        console.error('Error fetching phrase timestamps:', error);
-        setPhrasesOverTime(getErrorStateData());
-        return;
-      }
-      if (data && data.length > 0) {
-        const monthlyData = processTimestampData(data);
-        setPhrasesOverTime(monthlyData);
-      } else {
-        setPhrasesOverTime(getErrorStateData());
-      }
-    } catch (err) {
-      console.error('Error fetching phrase timestamps:', err);
-      setPhrasesOverTime(getErrorStateData());
-    }
-  };
-
-  /**
-   * Process timestamp data for charts
-   */
-  const processTimestampData = (data) => {
-    const monthCounts = {};
-    data.forEach(item => {
-      if (!item.created_at) return;
-      const date = new Date(item.created_at);
-      const month = date.toLocaleString('default', { month: 'short' });
-      const year = date.getFullYear();
-      const key = `${month} ${year}`;
-      if (!monthCounts[key]) {
-        monthCounts[key] = { month, year, count: 0, fullDate: date };
-      }
-      monthCounts[key].count++;
-    });
-    return Object.values(monthCounts)
-      .sort((a, b) => a.fullDate - b.fullDate)
-      .map(item => ({ month: item.month, year: item.year, phrases: item.count }))
-      .slice(-6);
-  };
-
-  /**
-   * Get fallback data for charts when error occurs
-   */
-  const getErrorStateData = () => {
-    return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map(month => ({
-      month,
-      year: new Date().getFullYear(),
-      phrases: null
-    }));
-  };
-  
-  return {
-    phrasesOverTime,
-    fetchPhrasesOverTime
-  };
-};
-
-// features/dashboard/hooks/useMonthlyActivity.js
-import { useState, useEffect } from 'react';
-
-export const useMonthlyActivity = () => {
-  const [monthlyActivityData, setMonthlyActivityData] = useState([]);
-  
-  // Generate monthly activity data for charts
-  useEffect(() => {
-    const generateMonthlyActivityData = () => {
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-      return months.map(month => ({
-        name: month,
-        reviews: Math.floor(Math.random() * 100) + 50,
-        additions: Math.floor(Math.random() * 40) + 10,
-        edits: Math.floor(Math.random() * 30) + 5,
-      }));
-    };
-    
-    setMonthlyActivityData(generateMonthlyActivityData());
-  }, []);
-  
-  return {
-    monthlyActivityData
-  };
-};
-
-// features/dashboard/hooks/useCategoryDistribution.js
-import { useState, useEffect } from 'react';
-import { usePhraseMetadata } from '@/features/data/hooks/usePhraseMetadata';
-
-export const useCategoryDistribution = () => {
-  const [categoryData, setCategoryData] = useState([]);
-  const { categories } = usePhraseMetadata();
-  
-  // Generate category data for charts
-  useEffect(() => {
-    const generateCategoryData = () => {
-      if (categories && categories.length > 0) {
-        // You could implement real data fetching here
-        return [
-          { name: 'Animals & Plants', value: 30 },
-          { name: 'Art & Design', value: 22 },
-          { name: 'Education & Learning', value: 13 },
-          { name: 'Celebrations & Traditions', value: 16 },
-          { name: 'Business & Careers', value: 19 },
-        ];
-      }
-      return [
-        { name: 'Animals & Plants', value: 30 },
-        { name: 'Art & Design', value: 22 },
-        { name: 'Education & Learning', value: 13 },
-        { name: 'Celebrations & Traditions', value: 16 },
-        { name: 'Business & Careers', value: 19 },
-      ];
-    };
-    
-    setCategoryData(generateCategoryData());
-  }, [categories]);
-  
-  return {
-    categoryData
-  };
-};
-
-// Add more hooks as needed...
-
-============================================================
-
-FILE: .\features\dashboard\hooks\useTableState.ts
-SIZE: 2.94 KB
-LAST MODIFIED: 03/21/2025 09:58:31
-
-// features/dashboard/hooks/useTableState.js
-import { useState, useEffect } from 'react';
-import { usePhrases } from '@/features/data/hooks/usePhrases';
-
-export const useTableState = () => {
-  const {
-    phrases,
-    pagination,
-    sortConfig,
-    filters,
-    handleSort,
-    handlePageChange,
-    handleRowsPerPageChange,
-    handleFilterChange,
-  } = usePhrases();
-
-  // Initialize table state
-  const [tableState, setTableState] = useState({
-    sortConfig: {
-      key: '',
-      direction: 'asc'
-    },
-    pagination: {
-      currentPage: 1,
-      rowsPerPage: 10,
-      totalItems: 0,
-      totalPages: 1
-    },
-    filters: {
-      searchTerm: '',
-      category: '',
-      difficulty: '',
-      subcategory: '',
-      part_of_speech: ''
-    }
-  });
-
-  // Sync Table State with hook state
-  useEffect(() => {
-    if (phrases && pagination) {
-      const totalItems = pagination.totalItems || phrases.length || 0;
-      const rowsPerPage = pagination.rowsPerPage || 10;
-      const totalPages = Math.ceil(totalItems / rowsPerPage);
-      
-      setTableState(prev => ({
-        ...prev,
-        sortConfig,
-        pagination: {
-          ...pagination,
-          rowsPerPage,
-          totalItems,
-          totalPages,
-          currentPage: Math.min(pagination.currentPage, totalPages || 1)
-        },
-        filters,
-      }));
-    }
-  }, [phrases, pagination, sortConfig, filters]);
-
-  /**
-   * Handle table state changes
-   */
-  const handleTableStateChange = (updates) => {
-    // Update local state first
-    setTableState(prev => {
-      const newState = { ...prev };
-      
-      if (updates.filters) {
-        newState.filters = { ...prev.filters, ...updates.filters };
-      }
-      
-      if (updates.sortConfig) {
-        newState.sortConfig = { ...prev.sortConfig, ...updates.sortConfig };
-      }
-      
-      if (updates.pagination) {
-        newState.pagination = { ...prev.pagination, ...updates.pagination };
-      }
-      
-      return newState;
-    });
-    
-    // Then immediately propagate changes to the hooks
-    if (updates.filters) {
-      // Apply each filter individually to ensure all are updated
-      Object.entries(updates.filters).forEach(([key, value]) => {
-        if (value !== undefined) { // Only update if value is provided
-          handleFilterChange(key, value || '');
-        }
-      });
-    }
-    
-    if (updates.sortConfig && updates.sortConfig.key) {
-      handleSort(updates.sortConfig.key);
-    }
-    
-    if (updates.pagination) {
-      // Note: Order matters here! First update rows per page, then page number
-      if (updates.pagination.rowsPerPage) {
-        handleRowsPerPageChange(updates.pagination.rowsPerPage);
-      }
-      
-      if (updates.pagination.currentPage) {
-        handlePageChange(updates.pagination.currentPage);
-      }
-    }
-  };
-
-  return {
-    tableState,
-    setTableState,
-    handleTableStateChange
-  };
-};
 
 ============================================================
 
@@ -5798,13 +4719,13 @@ export const usePhrases = () => {
 ============================================================
 
 FILE: .\features\data\hooks\useReviewers.ts
-SIZE: 0.95 KB
-LAST MODIFIED: 03/05/2025 15:03:18
+SIZE: 0.9 KB
+LAST MODIFIED: 03/22/2025 22:17:43
 
 // hooks/useReviewers.ts
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/services/supabase';
-import type { Reviewer } from '@/types/types';
+
 
 export const useReviewers = () => {
   const [reviewers, setReviewers] = useState<Reviewer[]>([]);
@@ -6269,8 +5190,8 @@ export default BulkImportForm;
 ============================================================
 
 FILE: .\features\phrases\ReviewModal.tsx
-SIZE: 22.48 KB
-LAST MODIFIED: 03/21/2025 23:09:32
+SIZE: 22.43 KB
+LAST MODIFIED: 03/22/2025 22:17:43
 
 'use client';
 
@@ -6283,7 +5204,7 @@ import { ChevronLeft, ChevronRight, Flag } from 'lucide-react';
 import { supabase } from '@/lib/services/supabase';
 import { usePhrases } from '@/features/data/hooks/usePhrases';
 import { generateTags, generateHint } from '@/lib/services/claudeService';
-import type { Reviewer } from '@/types/types';
+
 
 interface ReviewModalProps {
   isOpen: boolean;
@@ -6956,8 +5877,8 @@ export default ReviewModal;
 ============================================================
 
 FILE: .\features\phrases\WordCreatorModal.tsx
-SIZE: 19.24 KB
-LAST MODIFIED: 03/19/2025 08:29:13
+SIZE: 19.2 KB
+LAST MODIFIED: 03/22/2025 22:17:43
 
 'use client';
 
@@ -6969,7 +5890,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/services/supabase';
 import { generateTags, generateHint, generatePhrases, suggestCategory } from '@/lib/services/claudeService';
-import type { Reviewer } from '@/types/types';
+
 
 interface WordCreatorModalProps {
   isOpen: boolean;
@@ -7547,337 +6468,6 @@ export default WordCreatorModal;
 
 ============================================================
 
-FILE: .\features\phrases\components\PhrasesList\index.ts
-SIZE: 0.15 KB
-LAST MODIFIED: 03/20/2025 22:38:17
-
-// src/features/phrases/components/PhrasesList/index.ts
-export * from './PhrasesList';
-export * from './PhrasesListContainer';
-export * from './types';
-
-============================================================
-
-FILE: .\features\phrases\components\PhrasesList\PhrasesList.tsx
-SIZE: 5.68 KB
-LAST MODIFIED: 03/20/2025 22:54:01
-
-// In PhrasesList.tsx, update the difficulty rendering section
-import React from 'react';
-import { Button } from '@/components/ui/button';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
-import { Checkbox } from '@/components/ui/checkbox';
-import TagDisplay from '@/components/ui/tags';
-import { Pencil, Trash, MoreHorizontal } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import { PhraseListProps } from './types';
-import { getDifficultyBar } from '../../utils/formatting'; 
-import { cn } from '@/lib/utils';
-
-export function PhrasesList({
-  phrases,
-  loading,
-  selectedRows,
-  hiddenColumns,
-  onSelectRow,
-  onSelectAll,
-  onEdit,
-  onDelete,
-  newIds = []
-}: PhraseListProps) {
-  if (loading) {
-    return (
-      <TableRow>
-        <TableCell colSpan={8} className="h-24 text-center">
-          Loading...
-        </TableCell>
-      </TableRow>
-    );
-  }
-
-  if (phrases.length === 0) {
-    return (
-      <TableRow>
-        <TableCell colSpan={8} className="h-24 text-center">
-          No phrases found.
-        </TableCell>
-      </TableRow>
-    );
-  }
-
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          {/* Checkbox column */}
-          <TableHead className="w-12">
-            <Checkbox
-              checked={selectedRows.length > 0 && selectedRows.length === phrases.length}
-              indeterminate={selectedRows.length > 0 && selectedRows.length < phrases.length ? true : undefined}
-              onCheckedChange={onSelectAll}
-            />
-          </TableHead>
-          
-          {/* Phrase column */}
-          {!hiddenColumns.includes('phrase') && (
-            <TableHead>Phrase</TableHead>
-          )}
-          
-          {/* Category column */}
-          {!hiddenColumns.includes('category') && (
-            <TableHead>Category</TableHead>
-          )}
-          
-          {/* Hint column */}
-          {!hiddenColumns.includes('hint') && (
-            <TableHead>Hint</TableHead>
-          )}
-          
-          {/* Tags column */}
-          {!hiddenColumns.includes('tags') && (
-            <TableHead>Tags</TableHead>
-          )}
-          
-          {/* Difficulty column */}
-          {!hiddenColumns.includes('difficulty') && (
-            <TableHead>Difficulty</TableHead>
-          )}
-          
-          {/* Actions column */}
-          <TableHead className="w-[80px]">
-            Actions
-          </TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {phrases.map((phrase) => (
-          <TableRow 
-            key={phrase.id}
-            className={cn(
-              selectedRows.includes(phrase.id) && "bg-muted",
-              newIds.includes(phrase.id) && "animate-flash"
-            )}
-          >
-            {/* Checkbox */}
-            <TableCell className="w-12">
-              <Checkbox
-                checked={selectedRows.includes(phrase.id)}
-                onCheckedChange={() => onSelectRow(phrase.id)}
-              />
-            </TableCell>
-            
-            {/* Phrase */}
-            {!hiddenColumns.includes('phrase') && (
-              <TableCell className="font-medium">{phrase.phrase}</TableCell>
-            )}
-            
-            {/* Category */}
-            {!hiddenColumns.includes('category') && (
-              <TableCell>{phrase.category}</TableCell>
-            )}
-            
-            {/* Hint */}
-            {!hiddenColumns.includes('hint') && (
-              <TableCell>{phrase.hint || '-'}</TableCell>
-            )}
-            
-            {/* Tags */}
-            {!hiddenColumns.includes('tags') && (
-              <TableCell>
-                <TagDisplay tags={phrase.tags || ''} />
-              </TableCell>
-            )}
-            
-            {/* Difficulty - use the utility function */}
-            {!hiddenColumns.includes('difficulty') && (
-              <TableCell>
-                {/* Use the returned CSS classes */}
-                <div className={getDifficultyBar(phrase.difficulty).containerClass}>
-                  <div className={getDifficultyBar(phrase.difficulty).barClass}></div>
-                </div>
-              </TableCell>
-            )}
-            
-            {/* Actions */}
-            <TableCell>
-              <div className="flex justify-end">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
-                      <span className="sr-only">Open menu</span>
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => onEdit(phrase.id)}>
-                      <Pencil className="h-4 w-4 mr-2" />
-                      Edit
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem 
-                      onClick={() => onDelete(phrase.id)}
-                      className="text-red-600"
-                    >
-                      <Trash className="h-4 w-4 mr-2" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
-  );
-}
-
-============================================================
-
-FILE: .\features\phrases\components\PhrasesList\PhrasesListContainer.tsx
-SIZE: 2.82 KB
-LAST MODIFIED: 03/21/2025 09:11:45
-
-// features/phrases/components/PhrasesList/PhrasesListContainer.tsx
-import React, { useState } from 'react';
-import { usePhrases } from '../../hooks/usePhrases';
-import { useDeletePhrase } from '../../hooks/useDeletePhrase';
-import { PhrasesList } from './PhrasesList';
-import { Pagination } from '@/components/ui/pagination';
-import { useFilter } from '../../stores/filterContext';
-import { useRouter } from 'next/navigation';
-import { getDifficultyBar } from '../../utils/formatting';
-
-export function PhrasesListContainer() {
-  const router = useRouter();
-  const [selectedRows, setSelectedRows] = useState<number[]>([]);
-  const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
-  
-  // Use the filter context
-  const { 
-    searchTerm, 
-    category, 
-    difficulty, 
-    subcategory, 
-    part_of_speech, 
-    page, 
-    pageSize, 
-    sortBy, 
-    sortDirection,
-    setFilter, 
-    resetFilters 
-  } = useFilter();
-
-  // Compile all filters for the query
-  const filters = {
-    searchTerm,
-    category,
-    difficulty,
-    subcategory,
-    part_of_speech
-  };
-  
-  // Use the data fetching hook
-  const { data, isLoading, error } = usePhrases(
-    filters,
-    { page, pageSize },
-    { column: sortBy, direction: sortDirection }
-  );
-  
-  // Use the delete hook
-  const deletePhraseHook = useDeletePhrase();
-  
-  const handleSelectRow = (id: number) => {
-    setSelectedRows(prev =>
-      prev.includes(id)
-        ? prev.filter(rowId => rowId !== id)
-        : [...prev, id]
-    );
-  };
-  
-  const handleSelectAll = () => {
-    if (selectedRows.length === data?.data?.length) {
-      setSelectedRows([]);
-    } else {
-      setSelectedRows(data?.data?.map(phrase => phrase.id) || []);
-    }
-  };
-  
-  const handleEdit = (id: number) => {
-    router.push(`/admin/phrases/edit/${id}`);
-  };
-  
-  const handleDelete = (id: number) => {
-    if (window.confirm('Are you sure you want to delete this phrase?')) {
-      deletePhraseHook.mutate(id, {
-        onSuccess: () => {
-          setSelectedRows(prev => prev.filter(rowId => rowId !== id));
-        }
-      });
-    }
-  };
-  
-  const handlePageChange = (page: number) => {
-    setFilter('page', page);
-  };
-  
-  return (
-    <div className="space-y-4">
-      <div>
-        <PhrasesList
-          phrases={data?.data || []}
-          loading={isLoading}
-          selectedRows={selectedRows}
-          hiddenColumns={hiddenColumns}
-          onSelectRow={handleSelectRow}
-          onSelectAll={handleSelectAll}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
-      </div>
-      
-      {data?.totalPages > 1 && (
-        <Pagination
-          currentPage={page}
-          totalPages={data.totalPages}
-          onPageChange={handlePageChange}
-        />
-      )}
-    </div>
-  );
-}
-
-============================================================
-
-FILE: .\features\phrases\components\PhrasesList\types.ts
-SIZE: 0.38 KB
-LAST MODIFIED: 03/20/2025 22:38:04
-
-// src/features/phrases/components/PhrasesList/types.ts
-import { Phrase } from '@/types';
-
-export interface PhraseListProps {
-  phrases: Phrase[];
-  loading: boolean;
-  selectedRows: number[];
-  hiddenColumns: string[];
-  onSelectRow: (id: number) => void;
-  onSelectAll: () => void;
-  onEdit: (id: number) => void;
-  onDelete: (id: number) => void;
-  newIds?: number[];
-}
-
-============================================================
-
 FILE: .\features\phrases\hooks\useDeletePhrase.ts
 SIZE: 0.97 KB
 LAST MODIFIED: 03/21/2025 09:26:33
@@ -7924,154 +6514,9 @@ export const useDeletePhrase = () => {
 
 ============================================================
 
-FILE: .\features\phrases\hooks\usePhrases.ts
-SIZE: 3.9 KB
-LAST MODIFIED: 03/21/2025 09:26:41
-
-// features/phrases/hooks/usePhrases.ts
-import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/services/supabase';
-
-export const usePhrases = (
-  filters = {},
-  pagination = { page: 1, pageSize: 10 },
-  sort = { column: 'id', direction: 'desc' as const }
-) => {
-  const [data, setData] = useState<{ 
-    data: any[], 
-    totalItems: number, 
-    totalPages: number 
-  }>({ data: [], totalItems: 0, totalPages: 1 });
-  
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    const fetchPhrases = async () => {
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        // Start building the query
-        let query = supabase
-          .from('phrases')
-          .select(`
-            *,
-            categories:category_id(id, name),
-            subcategories:subcategory_id(id, name),
-            phrase_tags(
-              tags(id, tag)
-            )
-          `, { count: 'exact' });
-
-        // Apply filters
-        if (filters.searchTerm) {
-          query = query.ilike('phrase', `%${filters.searchTerm}%`);
-        }
-        
-        if (filters.category) {
-          // First get the category id
-          const { data: categoryData } = await supabase
-            .from('categories')
-            .select('id')
-            .eq('name', filters.category)
-            .single();
-            
-          if (categoryData?.id) {
-            query = query.eq('category_id', categoryData.id);
-          }
-        }
-        
-        if (filters.difficulty) {
-          query = query.eq('difficulty', filters.difficulty);
-        }
-        
-        if (filters.part_of_speech) {
-          query = query.eq('part_of_speech', filters.part_of_speech);
-        }
-        
-        if (filters.subcategory) {
-          const { data: subcategoryData } = await supabase
-            .from('subcategories')
-            .select('id')
-            .eq('name', filters.subcategory)
-            .single();
-            
-          if (subcategoryData?.id) {
-            query = query.eq('subcategory_id', subcategoryData.id);
-          }
-        }
-
-        // Apply sorting
-        query = query.order(sort.column, { 
-          ascending: sort.direction === 'asc' 
-        });
-
-        // Apply pagination
-        const from = (pagination.page - 1) * pagination.pageSize;
-        const to = from + pagination.pageSize - 1;
-        query = query.range(from, to);
-
-        // Execute the query
-        const { data: phraseData, error: queryError, count } = await query;
-
-        if (queryError) {
-          throw queryError;
-        }
-
-        // Transform the data
-        const transformedData = phraseData?.map(item => ({
-          id: item.id,
-          phrase: item.phrase || '',
-          category: item.categories?.name || '',
-          subcategory: item.subcategories?.name || '',
-          difficulty: item.difficulty || 1,
-          part_of_speech: item.part_of_speech || '',
-          hint: item.hint || '',
-          tags: item.phrase_tags
-            ?.map((pt: any) => pt.tags.tag)
-            .filter(Boolean)
-            .join(',') || ''
-        })) || [];
-
-        setData({
-          data: transformedData,
-          totalItems: count || 0,
-          totalPages: Math.ceil((count || 0) / pagination.pageSize)
-        });
-      } catch (err) {
-        console.error('Error fetching phrases:', err);
-        setError(err instanceof Error ? err : new Error('An unknown error occurred'));
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPhrases();
-  }, [
-    filters.searchTerm,
-    filters.category,
-    filters.difficulty,
-    filters.subcategory,
-    filters.part_of_speech,
-    pagination.page,
-    pagination.pageSize,
-    sort.column,
-    sort.direction
-  ]);
-
-  return {
-    data,
-    isLoading,
-    error
-  };
-};
-
-============================================================
-
 FILE: .\features\phrases\phrasesTable\index.tsx
-SIZE: 17.44 KB
-LAST MODIFIED: 03/20/2025 22:09:51
+SIZE: 17.01 KB
+LAST MODIFIED: 03/22/2025 22:43:03
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -8079,8 +6524,8 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Search, Columns, Pencil, Trash, ChevronLeft, ChevronRight, MoreHorizontal, X } from 'lucide-react';
-import { TableState } from '@/components/tables/types';
 import TagDisplay from '@/components/ui/tags';
+import { DifficultyIndicator } from '@/components/ui/difficulty-indicator';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8139,6 +6584,11 @@ export function PhrasesTable({
 
   // Current visible columns
   const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
+
+  // Helper function to get difficulty bar
+  const getDifficultyBar = (difficulty: number) => {
+    return <DifficultyIndicator difficulty={difficulty} />;
+  };
 
   // Handle search input changes
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -8286,24 +6736,7 @@ export function PhrasesTable({
     }
   };
 
-  // Helper function to get difficulty bar color and width
-  const getDifficultyBar = (difficulty: number) => {
-    const colorClass = 
-      difficulty === 1 ? 'bg-gray-200' : 
-      difficulty === 2 ? 'bg-gray-200' : 
-      difficulty === 3 ? 'bg-gray-200' : 'bg-gray-200';
-    
-    const width = 
-      difficulty === 1 ? 'w-1/3' : 
-      difficulty === 2 ? 'w-2/3' : 
-      difficulty === 3 ? 'w-full' : 'w-0';
-    
-    return (
-      <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-600">
-        <div className={`${colorClass} ${width} h-2.5 rounded-full`}></div>
-      </div>
-    );
-  };
+
 
   // Determine which data to show
   const displayData = searchValue && searchResults.length > 0 ? searchResults : phrases;
@@ -8673,107 +7106,6 @@ export function useFilter() {
 
 ============================================================
 
-FILE: .\features\phrases\stores\filterstore.ts
-SIZE: 1.03 KB
-LAST MODIFIED: 03/21/2025 09:24:30
-
-// features/phrases/stores/filterStore.ts
-import { create } from 'zustand';
-
-interface FilterState {
-  searchTerm: string;
-  category: string;
-  difficulty: string;
-  subcategory: string;
-  part_of_speech: string;
-  page: number;
-  pageSize: number;
-  sortBy: string;
-  sortDirection: 'asc' | 'desc';
-  setFilter: (key: string, value: string | number) => void;
-  resetFilters: () => void;
-}
-
-export const useFilterStore = create<FilterState>((set) => ({
-  searchTerm: '',
-  category: '',
-  difficulty: '',
-  subcategory: '',
-  part_of_speech: '',
-  page: 1,
-  pageSize: 10,
-  sortBy: 'id',
-  sortDirection: 'desc',
-  
-  setFilter: (key, value) => set((state) => ({ 
-    ...state, 
-    [key]: value,
-    // Reset to page 1 when changing filters
-    ...(key !== 'page' ? { page: 1 } : {})
-  })),
-  
-  resetFilters: () => set({
-    searchTerm: '',
-    category: '',
-    difficulty: '',
-    subcategory: '',
-    part_of_speech: '',
-    page: 1,
-    pageSize: 10,
-    sortBy: 'id',
-    sortDirection: 'desc'
-  })
-}));
-
-============================================================
-
-FILE: .\features\phrases\utils\formatting.ts
-SIZE: 1.1 KB
-LAST MODIFIED: 03/21/2025 09:24:12
-
-// features/phrases/utils/formatting.ts
-/**
- * Returns the appropriate CSS classes for a difficulty bar
- */
-export const getDifficultyBar = (difficulty: number) => {
-  const colorClass = 
-    difficulty === 1 ? 'bg-gray-200' : 
-    difficulty === 2 ? 'bg-gray-200' : 
-    difficulty === 3 ? 'bg-gray-200' : 'bg-gray-200';
-  
-  const width = 
-    difficulty === 1 ? 'w-1/3' : 
-    difficulty === 2 ? 'w-2/3' : 
-    difficulty === 3 ? 'w-full' : 'w-0';
-  
-  return (
-    <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-600">
-      <div className={`${colorClass} ${width} h-2.5 rounded-full`}></div>
-    </div>
-  );
-};
-
-/**
- * Converts a numeric difficulty to a human-readable string
- */
-export const formatDifficulty = (value: number): string => {
-  switch (value) {
-    case 1: return 'Easy';
-    case 2: return 'Medium';
-    case 3: return 'Hard';
-    default: return 'Unknown';
-  }
-};
-
-/**
- * Formats tags string into an array of tag strings
- */
-export const formatTags = (tags: string): string[] => {
-  return tags.split(',').map(tag => tag.trim()).filter(Boolean);
-};
-
-============================================================
-
 FILE: .\lib\utils.ts
 SIZE: 0.16 KB
 LAST MODIFIED: 03/04/2025 21:05:08
@@ -8785,345 +7117,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-
-============================================================
-
-FILE: .\lib\api\client.ts
-SIZE: 7.66 KB
-LAST MODIFIED: 03/20/2025 22:29:36
-
-// lib/api/client.ts
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from '@/types/supabase';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-
-export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-  }
-});
-
-// lib/api/base.ts
-/**
- * Helper functions for API calls
- */
-export async function handleResponse<T>(
-  promise: Promise<{ data: T | null; error: any }>
-): Promise<T> {
-  const { data, error } = await promise;
-
-  if (error) {
-    console.error('API error:', error);
-    throw new Error(error.message || 'An unknown error occurred');
-  }
-
-  if (!data) {
-    throw new Error('No data returned from API');
-  }
-
-  return data;
-}
-
-// lib/api/phrases.ts
-import { supabase } from './client';
-import { handleResponse } from './base';
-import type { Phrase, NewPhrase, PhraseFilters, PaginatedResponse } from '@/types';
-
-export const phrasesApi = {
-  /**
-   * Fetch phrases with filtering, sorting, and pagination
-   */
-  async getPhrases(
-    filters?: PhraseFilters,
-    pagination?: { page: number; pageSize: number },
-    sort?: { column: string; direction: 'asc' | 'desc' }
-  ): Promise<PaginatedResponse<Phrase>> {
-    try {
-      let query = supabase
-        .from('phrases')
-        .select(`
-          *,
-          categories:category_id(id, name),
-          subcategories:subcategory_id(id, name),
-          phrase_tags!inner(
-            tags(id, tag)
-          )
-        `, { count: 'exact' });
-
-      // Apply filters
-      if (filters) {
-        // Apply each filter conditionally
-        // ...implementation...
-      }
-
-      // Apply sorting
-      if (sort && sort.column) {
-        query = query.order(sort.column, {
-          ascending: sort.direction === 'asc',
-          nullsFirst: false,
-        });
-      } else {
-        // Default sort
-        query = query.order('id', { ascending: false });
-      }
-
-      // Apply pagination
-      if (pagination) {
-        const { page, pageSize } = pagination;
-        const start = (page - 1) * pageSize;
-        const end = start + pageSize - 1;
-        query = query.range(start, end);
-      }
-
-      const { data, error, count } = await query;
-
-      if (error) throw error;
-
-      // Transform the data
-      const transformedData = data?.map(item => ({
-        ...item,
-        category: item.categories?.name || '',
-        subcategory: item.subcategories?.name || '',
-        tags: item.phrase_tags
-          ?.map((pt: any) => pt.tags.tag)
-          .filter(Boolean)
-          .join(',') || '',
-      })) || [];
-
-      return {
-        data: transformedData,
-        total: count || 0,
-        page: pagination?.page || 1,
-        pageSize: pagination?.pageSize || transformedData.length,
-        totalPages: count ? Math.ceil(count / (pagination?.pageSize || 10)) : 1,
-      };
-    } catch (error) {
-      console.error('Error fetching phrases:', error);
-      throw error;
-    }
-  },
-
-  /**
-   * Get a single phrase by ID
-   */
-  async getPhrase(id: number): Promise<Phrase> {
-    return handleResponse(
-      supabase
-        .from('phrases')
-        .select(`
-          *,
-          categories:category_id(id, name),
-          subcategories:subcategory_id(id, name),
-          phrase_tags!inner(
-            tags(id, tag)
-          )
-        `)
-        .eq('id', id)
-        .single()
-    ).then(data => ({
-      ...data,
-      category: data.categories?.name || '',
-      subcategory: data.subcategories?.name || '',
-      tags: data.phrase_tags
-        ?.map((pt: any) => pt.tags.tag)
-        .filter(Boolean)
-        .join(',') || '',
-    }));
-  },
-
-  /**
-   * Add a new phrase
-   */
-  async addPhrase(phrase: NewPhrase): Promise<Phrase> {
-    // Implementation...
-    return {} as Phrase; // Placeholder
-  },
-
-  /**
-   * Update a phrase
-   */
-  async updatePhrase(id: number, updates: Partial<Phrase>): Promise<Phrase> {
-    // Implementation...
-    return {} as Phrase; // Placeholder
-  },
-
-  /**
-   * Delete a phrase
-   */
-  async deletePhrase(id: number): Promise<void> {
-    // Implementation...
-  }
-};
-
-// lib/api/categories.ts
-import { supabase } from './client';
-import { handleResponse } from './base';
-import type { Category } from '@/types';
-
-export const categoriesApi = {
-  /**
-   * Fetch all categories
-   */
-  async getCategories(): Promise<Category[]> {
-    return handleResponse(
-      supabase
-        .from('categories')
-        .select('*')
-        .order('name')
-    );
-  },
-  
-  /**
-   * Get a category by ID
-   */
-  async getCategory(id: number): Promise<Category> {
-    return handleResponse(
-      supabase
-        .from('categories')
-        .select('*')
-        .eq('id', id)
-        .single()
-    );
-  },
-  
-  /**
-   * Get a category by name
-   */
-  async getCategoryByName(name: string): Promise<Category> {
-    return handleResponse(
-      supabase
-        .from('categories')
-        .select('*')
-        .eq('name', name)
-        .single()
-    );
-  },
-  
-  /**
-   * Add a new category
-   */
-  async addCategory(name: string): Promise<Category> {
-    return handleResponse(
-      supabase
-        .from('categories')
-        .insert({ name })
-        .select()
-        .single()
-    );
-  },
-  
-  /**
-   * Update a category
-   */
-  async updateCategory(id: number, name: string): Promise<Category> {
-    return handleResponse(
-      supabase
-        .from('categories')
-        .update({ name })
-        .eq('id', id)
-        .select()
-        .single()
-    );
-  },
-  
-  /**
-   * Delete a category
-   */
-  async deleteCategory(id: number): Promise<void> {
-    await handleResponse(
-      supabase
-        .from('categories')
-        .delete()
-        .eq('id', id)
-    );
-  }
-};
-
-// lib/api/auth.ts
-import { supabase } from './client';
-import { handleResponse } from './base';
-import type { Reviewer } from '@/types';
-
-export const authApi = {
-  /**
-   * Fetch all reviewers
-   */
-  async getReviewers(): Promise<Reviewer[]> {
-    return handleResponse(
-      supabase
-        .from('reviewers')
-        .select('*')
-        .order('name')
-    );
-  },
-  
-  /**
-   * Get a reviewer by ID
-   */
-  async getReviewer(id: string): Promise<Reviewer> {
-    return handleResponse(
-      supabase
-        .from('reviewers')
-        .select('*')
-        .eq('id', id)
-        .single()
-    );
-  },
-  
-  /**
-   * Authenticate a reviewer with PIN
-   */
-  async authenticateReviewer(name: string, pin: string): Promise<Reviewer | null> {
-    const { data, error } = await supabase
-      .from('reviewers')
-      .select('*')
-      .eq('name', name)
-      .eq('pin', pin)
-      .single();
-    
-    if (error || !data) {
-      return null;
-    }
-    
-    return data;
-  },
-  
-  /**
-   * Update reviewer stats
-   */
-  async updateReviewerStats(id: string, stats: {
-    total_reviews?: number;
-    current_streak?: number;
-  }): Promise<void> {
-    await handleResponse(
-      supabase
-        .from('reviewers')
-        .update({
-          ...stats,
-          last_review_at: new Date().toISOString()
-        })
-        .eq('id', id)
-    );
-  }
-};
-
-// lib/api/index.ts
-// Barrel export for all API modules
-export * from './client';
-export * from './phrases';
-export * from './categories';
-export * from './auth';
-
-// Example usage in a component:
-// import { phrasesApi } from '@/lib/api';
-//
-// const { data, total } = await phrasesApi.getPhrases(
-//   { category: 'Animals' }, 
-//   { page: 1, pageSize: 10 }
-// );
 
 ============================================================
 
@@ -9340,1207 +7333,6 @@ export const checkAuth = async () => {
   const { data: { session } } = await supabase.auth.getSession()
   return session
 }
-
-============================================================
-
-FILE: .\lib\utils\bulkImport.ts
-SIZE: 5.11 KB
-LAST MODIFIED: 03/05/2025 15:03:18
-
-import { supabase } from '@/lib/services/supabase';
-import { validateBulkImport, sanitizePhrase } from './Validators';
-import type { NewPhrase, Phrase } from '@/types/types';
-
-interface BulkImportResult {
-  success: boolean;
-  message: string;
-  newIds?: number[];
-}
-
-interface ImportedPhrase extends NewPhrase {
-  id: number;
-}
-
-/**
- * Handles bulk import of phrases
- */
-export const handleBulkImport = async (text: string): Promise<BulkImportResult> => {
-  try {
-    // Validate the input format
-    const validation = validateBulkImport(text);
-    if (!validation.isValid) {
-      return {
-        success: false,
-        message: validation.errors.join('\n')
-      };
-    }
-
-    // Parse and process the data
-    const rows = text.trim().split('\n').map((row, index) => {
-      const [phrase, category, difficulty, subcategory, tags, hint, part_of_speech] = 
-        row.split(',').map(field => field.trim());
-
-      const newPhrase: NewPhrase = {
-        phrase,
-        category,
-        difficulty,
-        subcategory,
-        tags,
-        hint,
-        part_of_speech
-      };
-
-      return sanitizePhrase(newPhrase) as NewPhrase;
-    });
-
-    // Insert the data
-    const { data, error } = await supabase
-      .from('phrases')
-      .insert(rows)
-      .select('id');
-
-    if (error) {
-      throw new Error(error.message);
-    }
-
-    const newIds = (data as ImportedPhrase[]).map(phrase => phrase.id);
-
-    return {
-      success: true,
-      message: `Successfully imported ${rows.length} phrases.`,
-      newIds
-    };
-  } catch (err) {
-    console.error('Bulk import error:', err);
-    return {
-      success: false,
-      message: err instanceof Error 
-        ? err.message 
-        : 'An error occurred during import'
-    };
-  }
-};
-
-/**
- * Validates a CSV file before import
- */
-export const validateCSVFile = (file: File): Promise<{ isValid: boolean; message: string }> => {
-  return new Promise((resolve, reject) => {
-    // Check file type
-    if (!file.name.endsWith('.csv')) {
-      resolve({ 
-        isValid: false, 
-        message: 'File must be a CSV document' 
-      });
-      return;
-    }
-
-    // Check file size (e.g., 5MB limit)
-    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
-    if (file.size > maxSize) {
-      resolve({ 
-        isValid: false, 
-        message: 'File size must be less than 5MB' 
-      });
-      return;
-    }
-
-    const reader = new FileReader();
-
-    reader.onload = (e) => {
-      try {
-        const text = e.target?.result as string;
-        const validation = validateBulkImport(text);
-        
-        resolve({
-          isValid: validation.isValid,
-          message: validation.isValid 
-            ? 'File is valid' 
-            : validation.errors.join('\n')
-        });
-      } catch (err) {
-        resolve({
-          isValid: false,
-          message: 'Error reading file content'
-        });
-      }
-    };
-
-    reader.onerror = () => {
-      resolve({
-        isValid: false,
-        message: 'Error reading file'
-      });
-    };
-
-    reader.readAsText(file);
-  });
-};
-
-/**
- * Processes a CSV file and returns structured data
- */
-export const processCSVFile = async (file: File): Promise<NewPhrase[]> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onload = (e) => {
-      try {
-        const text = e.target?.result as string;
-        const phrases = text
-          .trim()
-          .split('\n')
-          .map((row) => {
-            const [phrase, category, difficulty, subcategory, tags, hint, part_of_speech] = 
-              row.split(',').map(field => field.trim());
-
-            return sanitizePhrase({
-              phrase,
-              category,
-              difficulty,
-              subcategory,
-              tags,
-              hint,
-              part_of_speech
-            }) as NewPhrase;
-          });
-
-        resolve(phrases);
-      } catch (err) {
-        reject(new Error('Error processing CSV file'));
-      }
-    };
-
-    reader.onerror = () => {
-      reject(new Error('Error reading CSV file'));
-    };
-
-    reader.readAsText(file);
-  });
-};
-
-/**
- * Downloads current phrases as CSV
- */
-export const exportToCSV = async (): Promise<string> => {
-  try {
-    const { data, error } = await supabase
-      .from('phrases')
-      .select('*')
-      .order('id');
-
-    if (error) throw error;
-    if (!data || data.length === 0) {
-      throw new Error('No data to export');
-    }
-
-    // Create CSV header
-    const headers = ['phrase', 'category', 'difficulty', 'subcategory', 'tags', 'hint', 'part_of_speech'];
-    
-    // Convert data to CSV rows
-    const rows = data.map((phrase: Phrase) =>
-      headers
-        .map(header => phrase[header as keyof Phrase] || '')
-        .map(field => `"${String(field).replace(/"/g, '""')}"`) // Escape quotes
-        .join(',')
-    );
-
-    // Combine header and rows
-    const csv = [headers.join(','), ...rows].join('\n');
-    
-    return csv;
-  } catch (err) {
-    console.error('Export error:', err);
-    throw err;
-  }
-};
-
-
-============================================================
-
-FILE: .\lib\utils\databaseMaintenance.ts
-SIZE: 5.37 KB
-LAST MODIFIED: 03/05/2025 15:03:18
-
-import { supabase } from '@/lib/services/supabase';
-import type { Phrase } from '@/types/types';
-
-interface MaintenanceResult {
-  success: boolean;
-  message: string;
-  details?: Record<string, any>;
-}
-
-interface PhraseTag {
-  id: number;
-  tags: string;
-}
-
-interface PhraseCategory {
-  category: string;
-}
-
-/**
- * Updates existing tags format
- */
-export const updateExistingTags = async (): Promise<MaintenanceResult> => {
-  try {
-    const { data, error } = await supabase
-      .from('phrases')
-      .select('id, tags');
-
-    if (error) throw error;
-    if (!data) throw new Error('No data returned');
-
-    const updates = data.map((phrase: PhraseTag) => ({
-      id: phrase.id,
-      tags: phrase.tags
-        .split(/[,\s]+/) // Split by comma or whitespace
-        .map((tag: string) => tag.trim())
-        .filter(Boolean)
-        .join(',')
-    }));
-
-    const { error: updateError } = await supabase
-      .from('phrases')
-      .upsert(updates);
-
-    if (updateError) throw updateError;
-
-    return {
-      success: true,
-      message: `Successfully updated tags for ${updates.length} phrases.`,
-      details: { updatedCount: updates.length }
-    };
-  } catch (err) {
-    console.error('Error updating tags:', err);
-    return {
-      success: false,
-      message: err instanceof Error ? err.message : 'An error occurred while updating tags'
-    };
-  }
-};
-
-/**
- * Cleans up unused categories
- */
-export const cleanupCategories = async (): Promise<MaintenanceResult> => {
-  try {
-    const { data, error } = await supabase
-      .from('phrases')
-      .select('category');
-
-    if (error) throw error;
-    if (!data) throw new Error('No data returned');
-
-    const categories = new Set(data.map((p: PhraseCategory) => p.category).filter(Boolean));
-    const unusedCategories = Array.from(categories).filter(category => 
-      !data.some((p: PhraseCategory) => p.category === category)
-    );
-
-    if (unusedCategories.length === 0) {
-      return {
-        success: true,
-        message: 'No unused categories found.',
-        details: { unusedCount: 0 }
-      };
-    }
-
-    const { error: deleteError } = await supabase
-      .from('phrases')
-      .update({ category: 'Uncategorized' })
-      .in('category', unusedCategories);
-
-    if (deleteError) throw deleteError;
-
-    return {
-      success: true,
-      message: `Cleaned up ${unusedCategories.length} unused categories.`,
-      details: {
-        unusedCount: unusedCategories.length,
-        categories: unusedCategories
-      }
-    };
-  } catch (err) {
-    console.error('Error cleaning categories:', err);
-    return {
-      success: false,
-      message: err instanceof Error ? err.message : 'An error occurred while cleaning categories'
-    };
-  }
-};
-
-/**
- * Validates all phrases in the database
- */
-export const validateDatabase = async (): Promise<MaintenanceResult> => {
-  try {
-    const { data, error } = await supabase
-      .from('phrases')
-      .select('*');
-
-    if (error) throw error;
-    if (!data) throw new Error('No data returned');
-
-    const issues: Array<{ id: number; issues: string[] }> = [];
-
-    data.forEach((phrase: Phrase) => {
-      const phraseIssues: string[] = [];
-
-      if (!phrase.phrase?.trim()) {
-        phraseIssues.push('Missing phrase text');
-      }
-      if (!phrase.category?.trim()) {
-        phraseIssues.push('Missing category');
-      }
-      if (!['Easy', 'Medium', 'Hard'].includes(phrase.difficulty)) {
-        phraseIssues.push('Invalid difficulty level');
-      }
-      if (!phrase.tags?.trim()) {
-        phraseIssues.push('Missing tags');
-      }
-
-      if (phraseIssues.length > 0) {
-        issues.push({ id: phrase.id, issues: phraseIssues });
-      }
-    });
-
-    return {
-      success: true,
-      message: `Validation complete. Found ${issues.length} phrases with issues.`,
-      details: { issues }
-    };
-  } catch (err) {
-    console.error('Error validating database:', err);
-    return {
-      success: false,
-      message: err instanceof Error ? err.message : 'An error occurred while validating the database'
-    };
-  }
-};
-
-/**
- * Performs database backup
- */
-export const backupDatabase = async (): Promise<MaintenanceResult> => {
-  try {
-    const { data, error } = await supabase
-      .from('phrases')
-      .select('*');
-
-    if (error) throw error;
-    if (!data) throw new Error('No data returned');
-
-    // Convert to CSV
-    const headers = Object.keys(data[0]);
-    const csv = [
-      headers.join(','),
-      ...data.map((row: Record<string, any>) =>
-        headers
-          .map(header => {
-            const cell = row[header]?.toString() ?? '';
-            return `"${cell.replace(/"/g, '""')}"`;
-          })
-          .join(',')
-      )
-    ].join('\n');
-
-    // Create backup timestamp
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `phrases-backup-${timestamp}.csv`;
-
-    return {
-      success: true,
-      message: 'Backup created successfully.',
-      details: {
-        filename,
-        content: csv,
-        timestamp,
-        recordCount: data.length
-      }
-    };
-  } catch (err) {
-    console.error('Error creating backup:', err);
-    return {
-      success: false,
-      message: err instanceof Error ? err.message : 'An error occurred while creating backup'
-    };
-  }
-};
-
-
-============================================================
-
-FILE: .\lib\utils\formatters.ts
-SIZE: 4.56 KB
-LAST MODIFIED: 02/09/2025 10:16:11
-
-/**
- * Formats a number with commas for thousands
- */
-export const formatNumber = (num: number): string => {
-  return new Intl.NumberFormat('en-US').format(num);
-};
-
-/**
- * Formats a number as a percentage
- */
-export const formatPercent = (num: number, decimals: number = 0): string => {
-  return `${num.toFixed(decimals)}%`;
-};
-
-/**
- * Formats a date in a localized format
- */
-export const formatDate = (date: Date | string | null): string => {
-  if (!date) return 'Never';
-  
-  return new Date(date).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-};
-
-/**
- * Formats a date relative to now (e.g., "2 days ago")
- */
-export const formatRelativeDate = (date: Date | string | null): string => {
-  if (!date) return 'Never';
-
-  const now = new Date();
-  const then = new Date(date);
-  const diffInSeconds = Math.floor((now.getTime() - then.getTime()) / 1000);
-  
-  if (diffInSeconds < 60) {
-    return 'just now';
-  }
-  
-  const diffInMinutes = Math.floor(diffInSeconds / 60);
-  if (diffInMinutes < 60) {
-    return `${diffInMinutes} minute${diffInMinutes === 1 ? '' : 's'} ago`;
-  }
-  
-  const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24) {
-    return `${diffInHours} hour${diffInHours === 1 ? '' : 's'} ago`;
-  }
-  
-  const diffInDays = Math.floor(diffInHours / 24);
-  if (diffInDays < 30) {
-    return `${diffInDays} day${diffInDays === 1 ? '' : 's'} ago`;
-  }
-  
-  const diffInMonths = Math.floor(diffInDays / 30);
-  if (diffInMonths < 12) {
-    return `${diffInMonths} month${diffInMonths === 1 ? '' : 's'} ago`;
-  }
-  
-  const diffInYears = Math.floor(diffInMonths / 12);
-  return `${diffInYears} year${diffInYears === 1 ? '' : 's'} ago`;
-};
-
-/**
- * Formats difficulty level with color class
- */
-export const formatDifficulty = (difficulty: string): { text: string; colorClass: string } => {
-  const normalized = difficulty.toLowerCase();
-  switch (normalized) {
-    case 'easy':
-      return { text: 'Easy', colorClass: 'text-green-400' };
-    case 'medium':
-      return { text: 'Medium', colorClass: 'text-yellow-400' };
-    case 'hard':
-      return { text: 'Hard', colorClass: 'text-red-400' };
-    default:
-      return { text: difficulty, colorClass: 'text-gray-400' };
-  }
-};
-
-/**
- * Formats tags as an array with optional truncation
- */
-export const formatTags = (tags: string, maxTags?: number): string[] => {
-  const tagArray = tags.split(',').map(tag => tag.trim()).filter(Boolean);
-  if (maxTags && tagArray.length > maxTags) {
-    return [...tagArray.slice(0, maxTags), `+${tagArray.length - maxTags} more`];
-  }
-  return tagArray;
-};
-
-/**
- * Formats file size in bytes to human readable format
- */
-export const formatFileSize = (bytes: number): string => {
-  if (bytes === 0) return '0 Bytes';
-
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
-};
-
-/**
- * Formats a string to title case
- */
-export const formatTitleCase = (str: string): string => {
-  return str
-    .toLowerCase()
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-};
-
-/**
- * Formats text with ellipsis if it exceeds max length
- */
-export const formatTruncate = (text: string, maxLength: number): string => {
-  if (text.length <= maxLength) return text;
-  return `${text.slice(0, maxLength)}...`;
-};
-
-/**
- * Formats category for display
- */
-export const formatCategory = (category: string): { text: string; icon: string } => {
-  const normalized = category.toLowerCase();
-  switch (normalized) {
-    case 'movies':
-      return { text: 'Movies', icon: 'ðŸŽ¬' };
-    case 'tv':
-      return { text: 'TV Shows', icon: 'ðŸ“º' };
-    case 'books':
-      return { text: 'Books', icon: 'ðŸ“š' };
-    case 'music':
-      return { text: 'Music', icon: 'ðŸŽµ' };
-    case 'games':
-      return { text: 'Games', icon: 'ðŸŽ®' };
-    default:
-      return { text: formatTitleCase(category), icon: 'ðŸ“' };
-  }
-};
-
-/**
- * Formats CSV data into a downloadable string
- */
-export const formatCSV = (data: Record<string, any>[]): string => {
-  if (data.length === 0) return '';
-
-  const headers = Object.keys(data[0]);
-  const rows = data.map(row => 
-    headers
-      .map(header => {
-        const cell = row[header]?.toString() ?? '';
-        return `"${cell.replace(/"/g, '""')}"`;
-      })
-      .join(',')
-  );
-
-  return [headers.join(','), ...rows].join('\n');
-};
-
-============================================================
-
-FILE: .\lib\utils\phraseUtils.ts
-SIZE: 6.53 KB
-LAST MODIFIED: 02/09/2025 10:18:26
-
-import type { Phrase, NewPhrase, TagValidationResult } from '@/types/types';
-
-/**
- * Validates and formats tags
- */
-export const validateTags = (tags: string): TagValidationResult => {
-  const tagArray = tags.split(',').map(t => t.trim()).filter(Boolean);
-  
-  const errors: string[] = [];
-  
-  if (tagArray.length === 0) {
-    errors.push('At least one tag is required');
-  }
-  
-  if (tagArray.some(tag => tag.length < 2)) {
-    errors.push('Tags must be at least 2 characters long');
-  }
-  
-  if (tagArray.some(tag => !/^[a-zA-Z0-9\s]+$/.test(tag))) {
-    errors.push('Tags can only contain letters, numbers, and spaces');
-  }
-
-  const formattedTags = tagArray.join(',');
-
-  return {
-    isValid: errors.length === 0,
-    formattedTags,
-    errors
-  };
-};
-
-/**
- * Formats and sanitizes a phrase object
- */
-export const sanitizePhrase = (phrase: Partial<Phrase | NewPhrase>): Partial<Phrase | NewPhrase> => {
-  return {
-    ...phrase,
-    phrase: phrase.phrase?.trim(),
-    category: phrase.category?.trim(),
-    difficulty: phrase.difficulty?.trim(),
-    subcategory: phrase.subcategory?.trim(),
-    tags: phrase.tags?.split(',').map(t => t.trim()).filter(Boolean).join(','),
-    hint: phrase.hint?.trim(),
-    part_of_speech: phrase.part_of_speech?.trim()
-  };
-};
-
-/**
- * Groups phrases by category
- */
-export const groupPhrasesByCategory = (phrases: Phrase[]): Record<string, Phrase[]> => {
-  return phrases.reduce((acc, phrase) => {
-    const category = phrase.category || 'Uncategorized';
-    acc[category] = acc[category] || [];
-    acc[category].push(phrase);
-    return acc;
-  }, {} as Record<string, Phrase[]>);
-};
-
-/**
- * Filters phrases based on search criteria
- */
-export const filterPhrases = (
-  phrases: Phrase[],
-  filters: {
-    searchTerm?: string;
-    category?: string;
-    difficulty?: string;
-    subcategory?: string;
-    part_of_speech?: string;
-  }
-): Phrase[] => {
-  return phrases.filter(phrase => {
-    const searchTermMatch = !filters.searchTerm || 
-      phrase.phrase.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
-      phrase.tags.toLowerCase().includes(filters.searchTerm.toLowerCase());
-
-    const categoryMatch = !filters.category || 
-      phrase.category.toLowerCase() === filters.category.toLowerCase();
-
-    const difficultyMatch = !filters.difficulty || 
-      phrase.difficulty.toLowerCase() === filters.difficulty.toLowerCase();
-
-    const subcategoryMatch = !filters.subcategory || 
-      phrase.subcategory.toLowerCase() === filters.subcategory.toLowerCase();
-
-    const partOfSpeechMatch = !filters.part_of_speech || 
-      phrase.part_of_speech.toLowerCase() === filters.part_of_speech.toLowerCase();
-
-    return searchTermMatch && categoryMatch && difficultyMatch && 
-           subcategoryMatch && partOfSpeechMatch;
-  });
-};
-
-/**
- * Sorts phrases by specified criteria
- */
-export const sortPhrases = (
-  phrases: Phrase[],
-  sortKey: keyof Phrase,
-  sortDirection: 'asc' | 'desc'
-): Phrase[] => {
-  return [...phrases].sort((a, b) => {
-    const aVal = a[sortKey];
-    const bVal = b[sortKey];
-
-    if (aVal === bVal) return 0;
-    
-    if (aVal === null || aVal === undefined) return 1;
-    if (bVal === null || bVal === undefined) return -1;
-
-    const comparison = aVal < bVal ? -1 : 1;
-    return sortDirection === 'asc' ? comparison : -comparison;
-  });
-};
-
-/**
- * Checks if a phrase needs review (hasn't been used in a while)
- */
-export const needsReview = (phrase: Phrase, daysThreshold: number = 30): boolean => {
-  if (!phrase.last_used) return true;
-  
-  const lastUsed = new Date(phrase.last_used);
-  const now = new Date();
-  const diffTime = Math.abs(now.getTime() - lastUsed.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  
-  return diffDays > daysThreshold;
-};
-
-/**
- * Gets phrases that haven't been used in a while
- */
-export const getPhrasesNeedingReview = (
-  phrases: Phrase[],
-  daysThreshold: number = 30
-): Phrase[] => {
-  return phrases.filter(phrase => needsReview(phrase, daysThreshold));
-};
-
-/**
- * Gets phrases by difficulty level
- */
-export const getPhrasesByDifficulty = (
-  phrases: Phrase[],
-  difficulty: string
-): Phrase[] => {
-  return phrases.filter(
-    phrase => phrase.difficulty.toLowerCase() === difficulty.toLowerCase()
-  );
-};
-
-/**
- * Gets related phrases based on tags
- */
-export const getRelatedPhrases = (
-  phrases: Phrase[],
-  currentPhrase: Phrase,
-  maxResults: number = 5
-): Phrase[] => {
-  const currentTags = new Set(currentPhrase.tags.split(',').map(t => t.trim()));
-  
-  return phrases
-    .filter(phrase => phrase.id !== currentPhrase.id)
-    .map(phrase => {
-      const phraseTags = new Set(phrase.tags.split(',').map(t => t.trim()));
-      const commonTags = new Set(
-        [...currentTags].filter(tag => phraseTags.has(tag))
-      );
-      return {
-        phrase,
-        commonTagCount: commonTags.size
-      };
-    })
-    .filter(({ commonTagCount }) => commonTagCount > 0)
-    .sort((a, b) => b.commonTagCount - a.commonTagCount)
-    .slice(0, maxResults)
-    .map(({ phrase }) => phrase);
-};
-
-/**
- * Gets phrase usage statistics
- */
-export const getPhraseUsageStats = (phrases: Phrase[]) => {
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
-  
-  return phrases.reduce((stats, phrase) => {
-    if (!phrase.last_used) {
-      stats.neverUsed++;
-    } else {
-      const lastUsed = new Date(phrase.last_used);
-      if (lastUsed < thirtyDaysAgo) {
-        stats.notRecentlyUsed++;
-      } else {
-        stats.recentlyUsed++;
-      }
-    }
-    return stats;
-  }, {
-    neverUsed: 0,
-    notRecentlyUsed: 0,
-    recentlyUsed: 0
-  });
-};
-
-/**
- * Gets the most used tags across all phrases
- */
-export const getMostUsedTags = (
-  phrases: Phrase[],
-  limit: number = 10
-): Array<{ tag: string; count: number }> => {
-  const tagCounts = phrases.reduce((acc, phrase) => {
-    phrase.tags.split(',').forEach(tag => {
-      const trimmedTag = tag.trim();
-      acc[trimmedTag] = (acc[trimmedTag] || 0) + 1;
-    });
-    return acc;
-  }, {} as Record<string, number>);
-
-  return Object.entries(tagCounts)
-    .map(([tag, count]) => ({ tag, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, limit);
-};
-
-export default {
-  validateTags,
-  sanitizePhrase,
-  groupPhrasesByCategory,
-  filterPhrases,
-  sortPhrases,
-  needsReview,
-  getPhrasesNeedingReview,
-  getPhrasesByDifficulty,
-  getRelatedPhrases,
-  getPhraseUsageStats,
-  getMostUsedTags
-};
-
-============================================================
-
-FILE: .\lib\utils\safeStorage.ts
-SIZE: 0.79 KB
-LAST MODIFIED: 03/05/2025 15:17:36
-
-// Add this utility function somewhere in your utils folder
-// utils/safeStorage.ts
-
-export const safeStorage = {
-  getItem: (key: string): string | null => {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        return localStorage.getItem(key);
-      }
-      return null;
-    } catch (error) {
-      console.warn('Unable to access localStorage:', error);
-      return null;
-    }
-  },
-    
-    setItem: (key: string, value: string): boolean => {
-      try {
-        if (typeof window !== 'undefined' && window.localStorage) {
-          localStorage.setItem(key, value);
-          return true;
-        }
-        return false;
-      } catch (error) {
-        console.warn('Unable to access localStorage:', error);
-        return false;
-      }
-    }
-  };
-
-============================================================
-
-FILE: .\lib\utils\statsUtils.ts
-SIZE: 4.29 KB
-LAST MODIFIED: 02/09/2025 10:15:14
-
-import { SupabaseClient } from '@supabase/supabase-js';
-import type { Stats, Phrase } from '@/types/types';
-
-interface StatsResult {
-  data: Stats | null;
-  error: string | null;
-}
-
-/**
- * Calculates statistics from phrase data
- */
-export const calculateStats = async (supabase: SupabaseClient): Promise<StatsResult> => {
-  try {
-    const { data: phrases, error, count } = await supabase
-      .from('phrases')
-      .select('*', { count: 'exact' });
-
-    if (error) throw error;
-    if (!phrases || phrases.length === 0) {
-      return {
-        data: {
-          total: 0,
-          uniqueCategories: 0,
-          difficultyBreakdown: { easy: 0, medium: 0, hard: 0 }
-        },
-        error: null
-      };
-    }
-
-    // Calculate unique categories
-    const uniqueCategories = new Set(phrases.map(p => p.category)).size;
-
-    // Calculate difficulty breakdown
-    const difficultyCount = phrases.reduce((acc, phrase) => {
-      const difficulty = phrase.difficulty.toLowerCase();
-      acc[difficulty] = (acc[difficulty] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const total = count || phrases.length;
-
-    // Calculate percentages with rounding adjustments
-    let easy = Math.round((difficultyCount['easy'] || 0) / total * 100);
-    let medium = Math.round((difficultyCount['medium'] || 0) / total * 100);
-    let hard = Math.round((difficultyCount['hard'] || 0) / total * 100);
-
-    // Adjust for rounding errors to ensure sum is 100
-    const sum = easy + medium + hard;
-    if (sum !== 100) {
-      const diff = 100 - sum;
-      if (easy >= medium && easy >= hard) {
-        easy += diff;
-      } else if (medium >= easy && medium >= hard) {
-        medium += diff;
-      } else {
-        hard += diff;
-      }
-    }
-
-    return {
-      data: {
-        total,
-        uniqueCategories,
-        difficultyBreakdown: {
-          easy,
-          medium,
-          hard
-        }
-      },
-      error: null
-    };
-  } catch (err) {
-    console.error('Error calculating stats:', err);
-    return {
-      data: null,
-      error: err instanceof Error ? err.message : 'An unknown error occurred'
-    };
-  }
-};
-
-/**
- * Calculates usage statistics for phrases
- */
-export const calculateUsageStats = (phrases: Phrase[]) => {
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now.setDate(now.getDate() - 30));
-
-  return phrases.reduce((stats, phrase) => {
-    if (!phrase.last_used) {
-      stats.neverUsed++;
-    } else {
-      const lastUsed = new Date(phrase.last_used);
-      if (lastUsed < thirtyDaysAgo) {
-        stats.notRecentlyUsed++;
-      } else {
-        stats.recentlyUsed++;
-      }
-    }
-    return stats;
-  }, {
-    neverUsed: 0,
-    notRecentlyUsed: 0,
-    recentlyUsed: 0
-  });
-};
-
-/**
- * Calculates category distribution
- */
-export const calculateCategoryStats = (phrases: Phrase[]) => {
-  const categoryCount = phrases.reduce((acc, phrase) => {
-    acc[phrase.category] = (acc[phrase.category] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  // Convert to percentages
-  const total = phrases.length;
-  const categoryPercentages = Object.entries(categoryCount).map(([category, count]) => ({
-    category,
-    percentage: Math.round((count / total) * 100)
-  }));
-
-  // Sort by percentage descending
-  return categoryPercentages.sort((a, b) => b.percentage - a.percentage);
-};
-
-/**
- * Calculates difficulty distribution over time
- */
-export const calculateDifficultyTrends = (phrases: Phrase[]) => {
-  // Group by month
-  const monthlyStats = phrases.reduce((acc, phrase) => {
-    const date = phrase.last_used 
-      ? new Date(phrase.last_used)
-      : new Date();
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    
-    if (!acc[monthKey]) {
-      acc[monthKey] = { easy: 0, medium: 0, hard: 0 };
-    }
-    
-    const difficulty = phrase.difficulty.toLowerCase();
-    acc[monthKey][difficulty as 'easy' | 'medium' | 'hard']++;
-    
-    return acc;
-  }, {} as Record<string, Record<'easy' | 'medium' | 'hard', number>>);
-
-  // Convert to array and sort by date
-  return Object.entries(monthlyStats)
-    .map(([month, stats]) => ({
-      month,
-      ...stats
-    }))
-    .sort((a, b) => a.month.localeCompare(b.month));
-};
-
-============================================================
-
-FILE: .\lib\utils\validators.ts
-SIZE: 3.81 KB
-LAST MODIFIED: 02/09/2025 10:13:27
-
-import type { TagValidationResult, Phrase, NewPhrase } from '@/types/types';
-
-/**
- * Validates tags input
- */
-export const validateTags = (tags: string): TagValidationResult => {
-  const tagArray = tags.split(',').map(t => t.trim()).filter(Boolean);
-  
-  const errors: string[] = [];
-  
-  if (tagArray.length === 0) {
-    errors.push('At least one tag is required');
-  }
-  
-  if (tagArray.some(tag => tag.length < 2)) {
-    errors.push('Tags must be at least 2 characters long');
-  }
-  
-  if (tagArray.some(tag => !/^[a-zA-Z0-9\s]+$/.test(tag))) {
-    errors.push('Tags can only contain letters, numbers, and spaces');
-  }
-
-  return {
-    isValid: errors.length === 0,
-    formattedTags: tagArray.join(','),
-    errors
-  };
-};
-
-/**
- * Validates a complete phrase object
- */
-export const validatePhrase = (phrase: Partial<Phrase | NewPhrase>): {
-  isValid: boolean;
-  errors: Record<string, string>;
-} => {
-  const errors: Record<string, string> = {};
-
-  // Required fields
-  if (!phrase.phrase?.trim()) {
-    errors.phrase = 'Phrase is required';
-  }
-
-  if (!phrase.category?.trim()) {
-    errors.category = 'Category is required';
-  }
-
-  if (!phrase.difficulty?.trim()) {
-    errors.difficulty = 'Difficulty is required';
-  }
-
-  if (!phrase.part_of_speech?.trim()) {
-    errors.part_of_speech = 'Part of speech is required';
-  }
-
-  // Length validations
-  if (phrase.phrase && phrase.phrase.length < 2) {
-    errors.phrase = 'Phrase must be at least 2 characters long';
-  }
-
-  if (phrase.subcategory && phrase.subcategory.length < 2) {
-    errors.subcategory = 'Subcategory must be at least 2 characters long';
-  }
-
-  // Validate difficulty values
-  if (
-    phrase.difficulty &&
-    !['Easy', 'Medium', 'Hard'].includes(phrase.difficulty)
-  ) {
-    errors.difficulty = 'Invalid difficulty value';
-  }
-
-  // Validate tags
-  if (phrase.tags) {
-    const tagValidation = validateTags(phrase.tags);
-    if (!tagValidation.isValid) {
-      errors.tags = tagValidation.errors?.[0] || 'Invalid tags';
-    }
-  }
-
-  return {
-    isValid: Object.keys(errors).length === 0,
-    errors
-  };
-};
-
-/**
- * Validates bulk import data format
- */
-export const validateBulkImport = (
-  data: string
-): { isValid: boolean; errors: string[] } => {
-  const errors: string[] = [];
-  const lines = data.trim().split('\n');
-
-  if (lines.length === 0) {
-    errors.push('No data provided');
-    return { isValid: false, errors };
-  }
-
-  lines.forEach((line, index) => {
-    const fields = line.split(',').map(field => field.trim());
-
-    if (fields.length !== 7) {
-      errors.push(
-        `Line ${index + 1}: Expected 7 fields but got ${fields.length}`
-      );
-      return;
-    }
-
-    const [phrase, category, difficulty, subcategory, tags, hint, part_of_speech] = fields;
-
-    if (!phrase) {
-      errors.push(`Line ${index + 1}: Phrase is required`);
-    }
-
-    if (!category) {
-      errors.push(`Line ${index + 1}: Category is required`);
-    }
-
-    if (!['Easy', 'Medium', 'Hard'].includes(difficulty)) {
-      errors.push(`Line ${index + 1}: Invalid difficulty value`);
-    }
-
-    const tagValidation = validateTags(tags);
-    if (!tagValidation.isValid) {
-      errors.push(`Line ${index + 1}: ${tagValidation.errors?.[0]}`);
-    }
-  });
-
-  return {
-    isValid: errors.length === 0,
-    errors
-  };
-};
-
-/**
- * Formats and sanitizes phrase data
- */
-export const sanitizePhrase = (phrase: Partial<Phrase | NewPhrase>): Partial<Phrase | NewPhrase> => {
-  return {
-    ...phrase,
-    phrase: phrase.phrase?.trim(),
-    category: phrase.category?.trim(),
-    subcategory: phrase.subcategory?.trim(),
-    tags: phrase.tags?.split(',').map(t => t.trim()).filter(Boolean).join(','),
-    hint: phrase.hint?.trim(),
-    part_of_speech: phrase.part_of_speech?.trim()
-  };
-};
 
 ============================================================
 
@@ -10880,4 +7672,259 @@ function groupByDay(data: any[]): Record<string, number> {
   });
   
   return result;
+}
+
+============================================================
+
+FILE: .\types\types.ts
+SIZE: 5.43 KB
+LAST MODIFIED: 03/17/2025 11:40:41
+
+import type { Session } from '@supabase/supabase-js';
+
+export interface PhraseWithRelations extends Phrase {
+  categories: Category;
+  subcategories?: Subcategory;
+  phrase_tags: {
+    tags: Tag;
+  }[];
+}
+
+export interface SupabaseQueryResponse<T> {
+  data: T[] | null;
+  error: any;
+  count?: number | null;
+}
+
+export interface Category {
+  id: number;
+  name: string;
+}
+
+export interface PhraseTagWithTag {
+  tag_id: number;
+  tags: {
+    id: number;
+    tag: string;
+  };
+}
+
+export type SubcategoryName = {
+  name: string;
+}
+
+export interface Subcategory {
+  id: number;
+  name: string;
+  category_id: number;
+}
+
+export interface Tag {
+  id: number;
+  tag: string;
+}
+
+export interface PhraseTag {
+  phrase_id: number;
+  tag_id: number;
+}
+
+export interface PhraseBase {
+  phrase: string;
+  category_id: number;
+  subcategory_id?: number | null;
+  difficulty: number;  // Changed from string to number
+  part_of_speech: string;
+  hint?: string | null;
+}
+
+export interface Phrase extends Omit<PhraseBase, 'category_id' | 'subcategory_id'> {
+  id: number;
+  category: string;
+  subcategory?: string;
+  tags: string;
+  difficulty: number;
+}
+
+export interface NewPhrase {
+  phrase: string;
+  category: string;
+  subcategory?: string;
+  difficulty: string;
+  part_of_speech: string;
+  hint?: string;
+  tags?: string;
+}
+
+export interface Vote {
+  id: string;
+  reviewer_id: string;
+  phrase_id: number;
+  category: VoteCategory;
+  vote: boolean;
+  created_at: string;
+}
+
+export type VoteCategory = 'phrase' | 'category' | 'subcategory' | 'hint' | 'tags' | 'difficulty';
+
+export interface Filters {
+  searchTerm: string;
+  category: string;
+  difficulty: string;
+  subcategory: string;
+  part_of_speech: string;
+}
+
+export interface PaginationState {
+  currentPage: number;
+  rowsPerPage: number;
+  totalPages: number;
+  totalItems?: number; // Make sure this is included
+}
+export interface TableState {
+  sortConfig: SortConfig;
+  pagination: PaginationState;
+  filters: Filters;
+}
+export interface SortConfig {
+  key: keyof Phrase | '';
+  direction: 'asc' | 'desc';
+}
+
+export interface Stats {
+  total: number;
+  uniqueCategories: number;
+  difficultyBreakdown: {
+    easy: number;
+    medium: number;
+    hard: number;
+  };
+}
+
+export interface Reviewer {
+  id: string;
+  name: string;
+  pin: string;
+  total_reviews: number;
+  current_streak: number;
+  last_review_at: string | null;
+}
+
+export interface BulkImportFormProps {
+  onSuccess: (importedIds?: number[]) => void;
+  onError: (errorMessage: string) => void;
+  categories?: string[];
+  difficulties?: string[];
+  partsOfSpeech?: string[];
+}
+
+export interface ImportedPhrase extends NewPhrase {
+  id: number;
+}
+
+export interface AddPhraseFormProps {
+  onAddPhrase: (phrase: NewPhrase) => Promise<void>;
+  categories: string[];
+  difficulties: string[];
+  partsOfSpeech: string[];
+  loading: boolean;
+}
+
+export interface FilterControlsProps {
+  filters: Filters;
+  onChange: (name: string, value: string) => void;
+  onReset: () => void;
+  categories: string[];
+  difficulties: string[];
+  partsOfSpeech: string[];
+  loading?: boolean;
+}
+
+export interface PhrasesTableProps {
+  phrases: any[]; // This should match the actual data structure
+  loading?: boolean;
+  tableState: TableState;
+  onTableStateChange: (updates: Partial<TableState>) => void;
+  onEdit?: (id: number) => void;
+  onDelete?: (id: number) => void;
+  newIds?: number[];
+  onShowFilters?: () => void;
+}
+
+export interface CardViewModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  phrases: Phrase[];
+  currentIndex: number;
+  onNavigate: (index: number) => void;
+  isEditing: boolean;
+  editedPhrase: Phrase | null;
+  onEdit: () => void;
+  onSave: () => void;
+  onCancel: () => void;
+  onEditChange: (field: keyof Phrase, value: string) => void;
+  categories: string[];
+  difficulties: string[];
+  partsOfSpeech: string[];
+  reviewer?: Reviewer;
+  onTagClick?: (tag: string) => void;
+  loading?: boolean;
+  error?: string | null;
+}
+
+export interface UsePhrasesReturn {
+  phrases: Phrase[];
+  loading: boolean;
+  error: string | null;
+  setError: (error: string | null) => void;
+  pagination: PaginationState;
+  sortConfig: SortConfig;
+  filters: Filters;
+  handleSort: (key: keyof Phrase) => void;
+  handlePageChange: (page: number) => void;
+  handleRowsPerPageChange: (rowsPerPage: number) => void;
+  handleFilterChange: (name: string, value: string) => void;
+  addPhrase: (phrase: NewPhrase) => Promise<void>;
+  editPhrase: (phrase: Phrase) => Promise<void>;
+  deletePhrase: (id: number) => Promise<void>;
+  fetchPhrases: () => Promise<void>;
+  resetFilters: () => void;
+  sortByIdDesc: () => void;
+}
+
+export interface TagValidationResult {
+  isValid: boolean;
+  formattedTags: string;
+  errors?: string[];
+}
+
+export interface UsePaginationProps {
+  totalItems: number;
+  itemsPerPage: number;
+  currentPage: number;
+}
+
+export interface LoadingSpinnerProps {
+  size?: 'small' | 'medium' | 'large';
+  className?: string;
+}
+
+export interface TagDisplayProps {
+  tags: string;
+  onClick?: (tag: string) => void;
+}
+
+export interface SelectProps {
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+  placeholder?: string;
+  required?: boolean;
+  disabled?: boolean;
+  className?: string;
+}
+
+export interface StatsSectionProps {
+  stats: Stats | null;
+  loading: boolean;
 }

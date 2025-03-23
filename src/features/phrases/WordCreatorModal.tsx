@@ -14,7 +14,7 @@ interface WordCreatorModalProps {
   isOpen: boolean;
   onClose: () => void;
   reviewer: Reviewer;
-  onWordAdded?: () => void;
+  onWordAdded?: (id?: number) => void;
 }
 
 interface NewWord {
@@ -358,7 +358,13 @@ const WordCreatorModal: React.FC<WordCreatorModalProps> = ({
         setWordGenerated(false);
         
         if (onWordAdded) {
-          onWordAdded();
+          // Pass the ID if available
+          if (phraseData && phraseData.id) {
+            onWordAdded(phraseData.id);
+          } else {
+            // Or call without an ID if not available
+            onWordAdded();
+          }
         }
       }, 1500);
       

@@ -4,7 +4,6 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Search, Columns, Pencil, Trash, ChevronLeft, ChevronRight, MoreHorizontal, X } from 'lucide-react';
-import { TableState } from '@/components/tables/types';
 import TagDisplay from '@/components/ui/tags';
 import { DifficultyIndicator } from '@/components/ui/difficulty-indicator';
 import {

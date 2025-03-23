@@ -1,82 +1,98 @@
 // features/dashboard/hooks/useDashboardState.ts
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/services/supabase';
-import { DashboardFilters } from '../types';
+import type { Reviewer } from '@/types/types';
+import { useToast } from '@/hooks/useToast';
 
 export const useDashboardState = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+  
+  // Tab and Modal States
   const [activeTab, setActiveTab] = useState<string>('phrases');
   const [showWordCreatorModal, setShowWordCreatorModal] = useState<boolean>(false);
   const [showReviewModal, setShowReviewModal] = useState<boolean>(false);
   const [showFilterModal, setShowFilterModal] = useState<boolean>(false);
   const [showExportModal, setShowExportModal] = useState<boolean>(false);
+  
+  // Data States
+  const [selectedPhraseId, setSelectedPhraseId] = useState<number | null>(null); 
   const [newIds, setNewIds] = useState<number[]>([]);
-  const [dateRange, setDateRange] = useState<number>(30); // Default to 30 days
-  const [filters, setFilters] = useState<DashboardFilters>({
-    categories: [],
-    subcategories: [],
-    difficulty: [],
-    dateRange: { start: null, end: null },
-  });
+  const [dateRange, setDateRange] = useState<number>(30);
+  const [currentReviewer, setCurrentReviewer] = useState<Reviewer | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  
+  // Loading States
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Initialize current reviewer from localStorage
+  useEffect(() => {
+    const initializeReviewer = () => {
+      const savedReviewer = localStorage.getItem('currentReviewer');
+      if (savedReviewer) {
+        try {
+          setCurrentReviewer(JSON.parse(savedReviewer));
+        } catch (e) {
+          console.error("Error parsing saved reviewer:", e);
+          localStorage.removeItem('currentReviewer');
+          toast({
+            title: "Error",
+            description: "Your login session was corrupted and has been reset",
+            variant: "destructive"
+          });
+        }
+      }
+      
+      setIsLoading(false);
+    };
+    
+    initializeReviewer();
+  }, []);
 
   // Function to update date range
   const updateDateRange = useCallback((days: number) => {
     setDateRange(days);
   }, []);
-
-  // Function to update filters
-  const updateFilters = useCallback((newFilters: Partial<DashboardFilters>) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
-  }, []);
-
-  // Function to reset filters
-  const resetFilters = useCallback(() => {
-    setFilters({
-      categories: [],
-      subcategories: [],
-      difficulty: [],
-      dateRange: { start: null, end: null },
-    });
-  }, []);
-
-  // Load initial metadata (categories, subcategories, etc.)
-  useEffect(() => {
-    const loadMetadata = async () => {
-      setIsLoading(true);
-      setError(null);
-      
-      try {
-        // Load categories
-        const { data: categories, error: categoriesError } = await supabase
-          .from('categories')
-          .select('id, name');
-        
-        if (categoriesError) throw categoriesError;
-        
-        // Load subcategories
-        const { data: subcategories, error: subcategoriesError } = await supabase
-          .from('subcategories')
-          .select('id, name, category_id');
-        
-        if (subcategoriesError) throw subcategoriesError;
-        
-        // Initialize any other necessary data
-        
-      } catch (err) {
-        setError('Failed to load dashboard data');
-        console.error('Dashboard data loading error:', err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  
+  // Login/Logout handlers
+  const handleLoginSuccess = useCallback((reviewer: Reviewer) => {
+    setCurrentReviewer(reviewer);
+    localStorage.setItem('currentReviewer', JSON.stringify(reviewer));
     
-    loadMetadata();
-  }, []);
+    toast({
+      title: "Welcome back!",
+      description: `You're now logged in as ${reviewer.name}`,
+      variant: "success",
+    });
+  }, [toast]);
+  
+  const handleLogout = useCallback(() => {
+    setCurrentReviewer(null);
+    localStorage.removeItem('currentReviewer');
+    
+    toast({
+      title: "Logged out",
+      description: "You've been logged out successfully",
+      variant: "info",
+    });
+  }, [toast]);
+
+  // Word Creator handlers
+  const handleWordAdded = useCallback((id?: number) => {
+    // Only add to newIds if an id is provided
+    if (id !== undefined) {
+      setNewIds(prev => [...prev, id]);
+    }
+    
+    toast({
+      title: "Success",
+      description: "New phrase added successfully",
+      variant: "success",
+    });
+  }, [toast]);
 
   return {
-    isLoading,
-    error,
+    // Tab and Modal States
     activeTab, 
     setActiveTab,
     showWordCreatorModal, 
@@ -87,14 +103,26 @@ export const useDashboardState = () => {
     setShowFilterModal,
     showExportModal, 
     setShowExportModal,
+    
+    // Data States
+    selectedPhraseId,
+    setSelectedPhraseId,
     newIds, 
     setNewIds,
     dateRange,
     updateDateRange,
-    filters,
-    updateFilters,
-    resetFilters
+    currentReviewer,
+    setCurrentReviewer,
+    isExporting,
+    setIsExporting,
+    
+    // Loading States
+    isLoading,
+    error,
+    
+    // Handlers
+    handleLoginSuccess,
+    handleLogout,
+    handleWordAdded
   };
 };
-
-export default useDashboardState;

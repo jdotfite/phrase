@@ -1,15 +1,21 @@
-// features/dashboard/components/PhrasesSection.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
 import { PhrasesTable } from '@/features/phrases/phrasesTable';
 import { FilterProvider } from '@/features/phrases/stores/filterContext';
 import { useDeletePhrase } from '@/features/phrases/hooks/useDeletePhrase';
 import { usePhrases } from '@/features/data/hooks/usePhrases';
+import { useToast } from '@/hooks/useToast';
 
 interface PhrasesSectionProps {
   newIds: number[];
+  onEdit: (id: number) => void;
 }
 
-export const PhrasesSection: React.FC<PhrasesSectionProps> = ({ newIds }) => {
+export const PhrasesSection: React.FC<PhrasesSectionProps> = ({ 
+  newIds,
+  onEdit
+}) => {
+  const { toast } = useToast();
+  
   const {
     phrases,
     loading: phrasesLoading,
@@ -26,15 +32,27 @@ export const PhrasesSection: React.FC<PhrasesSectionProps> = ({ newIds }) => {
   // Initialize the delete phrase mutation
   const deletePhraseMutation = useDeletePhrase();
   
-  // Add handlers for edit and delete
-  const handleEdit = (id: number) => {
-    console.log('Editing phrase with ID:', id);
-  };
-
+  // Watch for errors from the delete mutation
+  useEffect(() => {
+    if (deletePhraseMutation.error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete phrase",
+        variant: "destructive"
+      });
+    }
+  }, [deletePhraseMutation.error, toast]);
+  
+  // Handle delete phrase
   const handleDelete = (id: number) => {
     if (window.confirm('Are you sure you want to delete this phrase?')) {
       deletePhraseMutation.mutate(id, {
         onSuccess: () => {
+          toast({
+            title: "Success",
+            description: "Phrase deleted successfully",
+            variant: "success"
+          });
           fetchPhrases();
         }
       });
@@ -81,7 +99,7 @@ export const PhrasesSection: React.FC<PhrasesSectionProps> = ({ newIds }) => {
           loading={phrasesLoading}
           tableState={tableState}
           onTableStateChange={handleTableStateChange}
-          onEdit={handleEdit}
+          onEdit={onEdit}
           onDelete={handleDelete}
           newIds={newIds}
         />
@@ -89,3 +107,5 @@ export const PhrasesSection: React.FC<PhrasesSectionProps> = ({ newIds }) => {
     </div>
   );
 };
+
+export default PhrasesSection;

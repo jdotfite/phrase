@@ -10,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, LogOut, FileDownIcon, Plus, CheckSquare } from "lucide-react";
-import type { Reviewer } from '@/types/types';
 
 // Avatar icons for reviewers (should match those in ReviewerLoginModal)
 const AVATAR_EMOJIS = ['🐙', '🐈', '🐕', '🐒', '🐢', '🐣', '🦊', '🐼'];

@@ -9,7 +9,7 @@ import { ChevronLeft, ChevronRight, Flag } from 'lucide-react';
 import { supabase } from '@/lib/services/supabase';
 import { usePhrases } from '@/features/data/hooks/usePhrases';
 import { generateTags, generateHint } from '@/lib/services/claudeService';
-import type { Reviewer } from '@/types/types';
+
 
 interface ReviewModalProps {
   isOpen: boolean;

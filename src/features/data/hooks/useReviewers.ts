@@ -1,7 +1,7 @@
 // hooks/useReviewers.ts
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/services/supabase';
-import type { Reviewer } from '@/types/types';
+
 
 export const useReviewers = () => {
   const [reviewers, setReviewers] = useState<Reviewer[]>([]);

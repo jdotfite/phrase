@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/services/supabase';
 import PinPad from './PinPad';
-import type { Reviewer } from '@/types/types';
+
 
 interface ReviewerLoginModalProps {
   open: boolean;
