@@ -8,8 +8,37 @@ import TeamsScreen from '../screens/TeamsScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import HowToPlayScreen from '../screens/HowToPlayScreen';
 
-// Use supabase for categories
-import { supabase } from '@/lib/services/supabase';
+// Mock data for phrases
+const mockPhrases = [
+  { phrase: "Couch potato", category: "Expressions" },
+  { phrase: "Break a leg", category: "Expressions" },
+  { phrase: "Bite the bullet", category: "Expressions" },
+  { phrase: "Cut to the chase", category: "Movies" },
+  { phrase: "Down to earth", category: "Expressions" },
+  { phrase: "Hit the road", category: "Travel" },
+  { phrase: "On cloud nine", category: "Emotions" },
+  { phrase: "Piece of cake", category: "Food" },
+  { phrase: "Under the weather", category: "Health" },
+  { phrase: "Wild goose chase", category: "Animals" },
+  { phrase: "Knock on wood", category: "Superstitions" },
+  { phrase: "Call it a day", category: "Time" },
+  { phrase: "Back to square one", category: "Games" },
+  { phrase: "Draw the line", category: "Art" },
+  { phrase: "Give the cold shoulder", category: "Body Parts" },
+  { phrase: "Keep your chin up", category: "Body Parts" },
+  { phrase: "Lose your touch", category: "Skills" },
+  { phrase: "Make a long story short", category: "Storytelling" },
+  { phrase: "Put your foot down", category: "Body Parts" },
+  { phrase: "Ring a bell", category: "Sounds" }
+];
+
+// Categories for the game
+const categories = [
+  "Movies", "Food", "Sports", "Music", "Animals", "Geography", "History", 
+  "Science", "TV Shows", "Books", "Expressions", "Travel", "Emotions", 
+  "Health", "Superstitions", "Time", "Games", "Art", "Body Parts", 
+  "Skills", "Storytelling", "Sounds"
+];
 
 // Type for game screens
 type GameScreen = 'menu' | 'game' | 'categories' | 'teams' | 'settings' | 'howtoplay';
@@ -18,15 +47,11 @@ const CatchPhraseGame = () => {
   // Current screen state
   const [screen, setScreen] = useState<GameScreen>('menu');
   
-  // Categories for the game
-  const [categories, setCategories] = useState<string[]>([]);
-  const [loadingCategories, setLoadingCategories] = useState(true);
-  
   // Get responsive data
   const responsive = useResponsive();
   
   // Get game state from custom hook
-  const gameState = useGameState(60);
+  const gameState = useGameState(mockPhrases, 60);
   
   // Set viewport height CSS variable for mobile browsers
   useEffect(() => {
@@ -38,35 +63,8 @@ const CatchPhraseGame = () => {
     setVHVariable();
     window.addEventListener('resize', setVHVariable);
     
-    // Fetch categories
-    fetchCategories();
-    
     return () => window.removeEventListener('resize', setVHVariable);
   }, []);
-  
-  // Fetch categories from Supabase
-  const fetchCategories = async () => {
-    setLoadingCategories(true);
-    try {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('name')
-        .order('name');
-      
-      if (error) throw error;
-      
-      if (data) {
-        const categoryNames = data.map(c => c.name);
-        setCategories(categoryNames);
-      }
-    } catch (err) {
-      console.error('Error fetching categories:', err);
-      // Fallback to some default categories
-      setCategories(['General', 'Movies', 'Sports', 'Music', 'Food']);
-    } finally {
-      setLoadingCategories(false);
-    }
-  };
   
   // Start new game
   const handleStartGame = () => {
@@ -74,12 +72,13 @@ const CatchPhraseGame = () => {
     setScreen('game');
   };
   
+  
   // Handle Got It button press
   const handleGotIt = () => {
     gameState.passPhrase();
   };
   
-  // Return to menu
+// Return to menu
   const handleReturnToMenu = () => {
     gameState.resetGame();
     setScreen('menu');
@@ -150,15 +149,10 @@ const CatchPhraseGame = () => {
       className="h-screen w-full overflow-hidden flex flex-col bg-[#7b86eb]" 
       style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
     >
-      {gameState.isLoading ? (
-        <div className="flex justify-center items-center h-full">
-          <div className="text-white text-lg">Loading game data...</div>
-        </div>
-      ) : (
-        renderScreen()
-      )}
+      {renderScreen()}
     </div>
   );
 };
 
 export default CatchPhraseGame;
+

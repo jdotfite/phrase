@@ -8,9 +8,9 @@ interface LogoProps {
 const Logo: React.FC<LogoProps> = ({ size = 'medium', className = '' }) => {
   // Size classes mapping
   const sizeClasses = {
-    small: 'text-xl',
-    medium: 'text-3xl',
-    large: 'text-5xl'
+    small: 'text-2xl',
+    medium: 'text-4xl',
+    large: 'text-6xl'
   };
 
   return (
@@ -22,4 +22,3 @@ const Logo: React.FC<LogoProps> = ({ size = 'medium', className = '' }) => {
 };
 
 export default Logo;
-

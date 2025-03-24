@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import { supabase } from '@/lib/services/supabase';
 
 // Types
 export interface PhraseItem {
@@ -8,7 +7,7 @@ export interface PhraseItem {
 }
 
 // Game state hook that manages all game logic
-export const useGameState = (initialTime: number = 60) => {
+export const useGameState = (mockPhrases: PhraseItem[], initialTime: number = 60) => {
   const [currentPhrase, setCurrentPhrase] = useState('');
   const [currentCategory, setCurrentCategory] = useState('');
   const [timeLeft, setTimeLeft] = useState(initialTime);
@@ -16,8 +15,6 @@ export const useGameState = (initialTime: number = 60) => {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [isGameOver, setIsGameOver] = useState(false);
-  const [phrases, setPhrases] = useState<PhraseItem[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   
   // Refs for interval timers
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -35,41 +32,11 @@ export const useGameState = (initialTime: number = 60) => {
       endAudioRef.current = new Audio('/end.mp3');
     }
     
-    fetchPhrases();
-    
     return () => {
       // Clean up
       cleanupTimers();
     };
   }, []);
-  
-  // Fetch phrases from Supabase
-  const fetchPhrases = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('phrases')
-        .select(`
-          phrase,
-          categories:category_id(name)
-        `);
-      
-      if (error) throw error;
-      
-      if (data) {
-        // Transform data to match the expected format
-        const formattedPhrases: PhraseItem[] = data.map(item => ({
-          phrase: item.phrase,
-          category: item.categories?.name || 'Uncategorized'
-        }));
-        setPhrases(formattedPhrases);
-      }
-    } catch (err) {
-      console.error('Error fetching phrases:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
   
   // Cleanup function for all timers
   const cleanupTimers = () => {
@@ -84,23 +51,18 @@ export const useGameState = (initialTime: number = 60) => {
   
   // Generate a random phrase from the data
   const getRandomPhrase = () => {
-    // If no phrases are loaded, return a default phrase
-    if (phrases.length === 0) {
-      return { phrase: "Loading phrases...", category: "System" };
-    }
-    
-    let filteredPhrases = phrases;
+    let filteredPhrases = mockPhrases;
     
     // Filter by selected categories if any
     if (selectedCategories.length > 0) {
-      filteredPhrases = phrases.filter(p => 
+      filteredPhrases = mockPhrases.filter(p => 
         selectedCategories.includes(p.category)
       );
     }
     
     // If no phrases match the categories, use all phrases
     if (filteredPhrases.length === 0) {
-      filteredPhrases = phrases;
+      filteredPhrases = mockPhrases;
     }
     
     const randomIndex = Math.floor(Math.random() * filteredPhrases.length);
@@ -237,7 +199,6 @@ export const useGameState = (initialTime: number = 60) => {
     isTimerRunning,
     selectedCategories,
     isGameOver,
-    isLoading,
     startGame,
     passPhrase,
     toggleCategory,

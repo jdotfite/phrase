@@ -1,5 +1,5 @@
 ﻿PROJECT ANALYSIS
-Generated: 03/23/2025 16:17:25
+Generated: 03/24/2025 10:11:08
 Directory: C:\_websites\phrase\src
 ===========================================
 ENVIRONMENT INFORMATION
@@ -376,6 +376,20 @@ export async function POST(request: NextRequest) {
     console.error('Error in stats API route:', error);
     return NextResponse.json({ error: 'Failed to process request' }, { status: 500 });
   }
+}
+
+============================================================
+
+FILE: .\app\game\page.tsx
+SIZE: 0.16 KB
+LAST MODIFIED: 03/23/2025 21:59:34
+
+"use client"
+
+import CatchPhraseGame from '@/features/game/components/CatchPhraseGame';
+
+export default function GamePage() {
+  return <CatchPhraseGame />;
 }
 
 ============================================================
@@ -2225,7 +2239,7 @@ export default TagDisplay;
 
 FILE: .\components\ui\toast.tsx
 SIZE: 4.88 KB
-LAST MODIFIED: 03/22/2025 23:31:45
+LAST MODIFIED: 03/23/2025 22:36:32
 
 import * as React from "react";
 import * as ToastPrimitives from "@radix-ui/react-toast";
@@ -5697,6 +5711,1244 @@ const FilterModal: React.FC<FilterModalProps> = ({
 };
 
 export default FilterModal;
+
+============================================================
+
+FILE: .\features\game\components\CatchPhraseGame.tsx
+SIZE: 4.97 KB
+LAST MODIFIED: 03/24/2025 08:55:41
+
+import React, { useState, useEffect } from 'react';
+import useGameState from '../hooks/useGameState';
+import useResponsive from '../hooks/useResponsive';
+import MenuScreen from '../screens/MenuScreen';
+import GameScreen from '../screens/GameScreen';
+import CategoriesScreen from '../screens/CategoriesScreen';
+import TeamsScreen from '../screens/TeamsScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+import HowToPlayScreen from '../screens/HowToPlayScreen';
+
+// Mock data for phrases
+const mockPhrases = [
+  { phrase: "Couch potato", category: "Expressions" },
+  { phrase: "Break a leg", category: "Expressions" },
+  { phrase: "Bite the bullet", category: "Expressions" },
+  { phrase: "Cut to the chase", category: "Movies" },
+  { phrase: "Down to earth", category: "Expressions" },
+  { phrase: "Hit the road", category: "Travel" },
+  { phrase: "On cloud nine", category: "Emotions" },
+  { phrase: "Piece of cake", category: "Food" },
+  { phrase: "Under the weather", category: "Health" },
+  { phrase: "Wild goose chase", category: "Animals" },
+  { phrase: "Knock on wood", category: "Superstitions" },
+  { phrase: "Call it a day", category: "Time" },
+  { phrase: "Back to square one", category: "Games" },
+  { phrase: "Draw the line", category: "Art" },
+  { phrase: "Give the cold shoulder", category: "Body Parts" },
+  { phrase: "Keep your chin up", category: "Body Parts" },
+  { phrase: "Lose your touch", category: "Skills" },
+  { phrase: "Make a long story short", category: "Storytelling" },
+  { phrase: "Put your foot down", category: "Body Parts" },
+  { phrase: "Ring a bell", category: "Sounds" }
+];
+
+// Categories for the game
+const categories = [
+  "Movies", "Food", "Sports", "Music", "Animals", "Geography", "History", 
+  "Science", "TV Shows", "Books", "Expressions", "Travel", "Emotions", 
+  "Health", "Superstitions", "Time", "Games", "Art", "Body Parts", 
+  "Skills", "Storytelling", "Sounds"
+];
+
+// Type for game screens
+type GameScreen = 'menu' | 'game' | 'categories' | 'teams' | 'settings' | 'howtoplay';
+
+const CatchPhraseGame = () => {
+  // Current screen state
+  const [screen, setScreen] = useState<GameScreen>('menu');
+  
+  // Get responsive data
+  const responsive = useResponsive();
+  
+  // Get game state from custom hook
+  const gameState = useGameState(mockPhrases, 60);
+  
+  // Set viewport height CSS variable for mobile browsers
+  useEffect(() => {
+    const setVHVariable = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+    
+    setVHVariable();
+    window.addEventListener('resize', setVHVariable);
+    
+    return () => window.removeEventListener('resize', setVHVariable);
+  }, []);
+  
+  // Start new game
+  const handleStartGame = () => {
+    gameState.startGame();
+    setScreen('game');
+  };
+  
+  
+  // Handle Got It button press
+  const handleGotIt = () => {
+    gameState.passPhrase();
+  };
+  
+// Return to menu
+  const handleReturnToMenu = () => {
+    gameState.resetGame();
+    setScreen('menu');
+  };
+  
+  // Render the appropriate screen
+  const renderScreen = () => {
+    switch(screen) {
+      case 'game':
+        return (
+          <GameScreen 
+            timeLeft={gameState.timeLeft}
+            totalTime={gameState.totalTime}
+            isTimerRunning={gameState.isTimerRunning}
+            currentPhrase={gameState.currentPhrase}
+            currentCategory={gameState.currentCategory}
+            isGameOver={gameState.isGameOver}
+            onReturnToMenu={handleReturnToMenu}
+            onNewGame={handleStartGame}
+            onPassPhrase={gameState.passPhrase}
+            onGotIt={handleGotIt}
+          />
+        );
+      case 'categories':
+        return (
+          <CategoriesScreen 
+            categories={categories}
+            selectedCategories={gameState.selectedCategories}
+            onToggleCategory={gameState.toggleCategory}
+            onReturnToMenu={handleReturnToMenu}
+          />
+        );
+      case 'teams':
+        return (
+          <TeamsScreen 
+            onReturnToMenu={handleReturnToMenu}
+          />
+        );
+      case 'settings':
+        return (
+          <SettingsScreen 
+            totalTime={gameState.totalTime}
+            onSetGameTime={gameState.setGameTime}
+            onReturnToMenu={handleReturnToMenu}
+          />
+        );
+      case 'howtoplay':
+        return (
+          <HowToPlayScreen 
+            onReturnToMenu={handleReturnToMenu}
+          />
+        );
+      default:
+        return (
+          <MenuScreen 
+            onPlay={handleStartGame}
+            onSelectCategories={() => setScreen('categories')}
+            onSelectTeams={() => setScreen('teams')}
+            onSelectSettings={() => setScreen('settings')}
+            onSelectHowToPlay={() => setScreen('howtoplay')}
+          />
+        );
+    }
+  };
+
+  return (
+    <div 
+      className="h-screen w-full overflow-hidden flex flex-col bg-[#7b86eb]" 
+      style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+    >
+      {renderScreen()}
+    </div>
+  );
+};
+
+export default CatchPhraseGame;
+
+
+
+============================================================
+
+FILE: .\features\game\components\CircleBackground.tsx
+SIZE: 2.54 KB
+LAST MODIFIED: 03/23/2025 22:45:52
+
+import React, { useEffect, useState } from 'react';
+import useResponsive from '../hooks/useResponsive';
+
+interface CircleBackgroundProps {
+  className?: string;
+}
+
+const CircleBackground: React.FC<CircleBackgroundProps> = ({ className = '' }) => {
+  const responsive = useResponsive();
+  const [circleSizes, setCircleSizes] = useState({
+    largest: '600px',
+    large: '480px',
+    medium: '360px',
+    small: '240px'
+  });
+  
+  // Adjust circle sizes based on screen size
+useEffect(() => {
+  if (responsive.width === 0) return; // Skip initial render
+  
+  // Base size calculation based on viewport dimensions
+  const baseDimension = Math.min(responsive.width, responsive.height);
+  const sizeFactor = baseDimension < 375 ? 0.8 : 1;
+  // Increase base size by approximately 150px
+  const scaledBaseSizePx = Math.min(1050, baseDimension * 1.2* sizeFactor);
+  
+  setCircleSizes({
+    largest: `${scaledBaseSizePx}px`,
+    large: `${scaledBaseSizePx * 0.8}px`,
+    medium: `${scaledBaseSizePx * 0.6}px`,
+    small: `${scaledBaseSizePx * 0.4}px`
+  });
+}, [responsive.width, responsive.height]);
+  
+  return (
+    <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}>
+      {/* Center point of all circles is moved up by 15% of viewport height */}
+      <div className="absolute top-[24%] left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+        <div className="relative">
+          {/* Circle components remain the same */}
+          <div 
+            className="absolute rounded-full bg-white opacity-10 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+            style={{ width: circleSizes.largest, height: circleSizes.largest }}
+          />
+          
+          {/* Large circle */}
+          <div 
+            className="absolute rounded-full bg-white opacity-10 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+            style={{ width: circleSizes.large, height: circleSizes.large }}
+          />
+          
+          {/* Medium circle */}
+          <div 
+            className="absolute rounded-full bg-white opacity-10 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+            style={{ width: circleSizes.medium, height: circleSizes.medium }}
+          />
+          
+          {/* Smallest circle */}
+          <div 
+            className="absolute rounded-full bg-white opacity-10 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+            style={{ width: circleSizes.small, height: circleSizes.small }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CircleBackground;
+
+
+============================================================
+
+FILE: .\features\game\components\Logo.tsx
+SIZE: 0.55 KB
+LAST MODIFIED: 03/24/2025 10:02:49
+
+import React from 'react';
+
+interface LogoProps {
+  size?: 'small' | 'medium' | 'large';
+  className?: string;
+}
+
+const Logo: React.FC<LogoProps> = ({ size = 'medium', className = '' }) => {
+  // Size classes mapping
+  const sizeClasses = {
+    small: 'text-2xl',
+    medium: 'text-4xl',
+    large: 'text-6xl'
+  };
+
+  return (
+    <div className={`font-bold flex flex-col items-center ${sizeClasses[size]} ${className}`}>
+      <span className="text-white">Phrase</span>
+      <span className="text-[#5bfdf8]">Game</span>
+    </div>
+  );
+};
+
+export default Logo;
+
+
+============================================================
+
+FILE: .\features\game\components\PhraseDisplay.tsx
+SIZE: 1.44 KB
+LAST MODIFIED: 03/24/2025 08:54:30
+
+import React, { useEffect, useState } from 'react';
+
+interface PhraseDisplayProps {
+  phrase: string;
+  category?: string;
+}
+
+const PhraseDisplay: React.FC<PhraseDisplayProps> = ({ phrase, category }) => {
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [displayPhrase, setDisplayPhrase] = useState(phrase);
+
+  // Animate when phrase changes
+  useEffect(() => {
+    if (phrase !== displayPhrase) {
+      setIsAnimating(true);
+      
+      // Wait for exit animation to complete
+      const timer = setTimeout(() => {
+        setDisplayPhrase(phrase);
+        setIsAnimating(false);
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [phrase, displayPhrase]);
+
+  return (
+    <div className="w-full max-w-md mx-auto">
+      {category && (
+        <div className="text-center mb-2">
+          <span className="inline-block bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
+            {category}
+          </span>
+        </div>
+      )}
+      
+      <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-gray-200">
+        <div 
+          className={`transition-all duration-300 ${
+            isAnimating ? 'opacity-0 transform translate-y-4' : 'opacity-100 transform translate-y-0'
+          }`}
+        >
+          <p className="text-3xl sm:text-4xl font-bold text-center py-4 break-words text-gray-800">{displayPhrase}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PhraseDisplay;
+
+
+============================================================
+
+FILE: .\features\game\components\Timer.tsx
+SIZE: 1.15 KB
+LAST MODIFIED: 03/23/2025 17:28:03
+
+import React from 'react';
+
+interface TimerProps {
+  timeLeft: number;
+  totalTime: number;
+  isRunning: boolean;
+}
+
+const Timer: React.FC<TimerProps> = ({ timeLeft, totalTime, isRunning }) => {
+  // Calculate percentage of time left
+  const percentage = (timeLeft / totalTime) * 100;
+  
+  // Determine color based on time left
+  const getColor = () => {
+    if (percentage > 60) return 'bg-green-500';
+    if (percentage > 30) return 'bg-yellow-500';
+    return 'bg-red-500';
+  };
+
+  // Make the timer border pulse when time is running low
+  const getPulseClass = () => {
+    if (percentage <= 10 && isRunning) {
+      return 'animate-pulse';
+    }
+    return '';
+  };
+
+  return (
+    <div className={`relative w-16 h-16 rounded-full border-4 border-gray-200 ${getPulseClass()}`}>
+      <div 
+        className={`absolute inset-0.5 rounded-full ${getColor()} transition-all duration-1000`}
+        style={{ 
+          clipPath: `circle(${percentage}% at center)` 
+        }}
+      />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-lg font-bold">{timeLeft}</span>
+      </div>
+    </div>
+  );
+};
+
+export default Timer;
+
+
+============================================================
+
+FILE: .\features\game\hooks\useGameState.ts
+SIZE: 6.19 KB
+LAST MODIFIED: 03/23/2025 21:54:53
+
+import { useState, useRef, useEffect } from 'react';
+
+// Types
+export interface PhraseItem {
+  phrase: string;
+  category: string;
+}
+
+// Game state hook that manages all game logic
+export const useGameState = (mockPhrases: PhraseItem[], initialTime: number = 60) => {
+  const [currentPhrase, setCurrentPhrase] = useState('');
+  const [currentCategory, setCurrentCategory] = useState('');
+  const [timeLeft, setTimeLeft] = useState(initialTime);
+  const [totalTime, setTotalTime] = useState(initialTime);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [isGameOver, setIsGameOver] = useState(false);
+  
+  // Refs for interval timers
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const beepIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const beepTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Audio refs
+  const beepAudioRef = useRef<HTMLAudioElement | null>(null);
+  const endAudioRef = useRef<HTMLAudioElement | null>(null);
+  
+  // Initialize audio on component mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      beepAudioRef.current = new Audio('/beep.mp3');
+      endAudioRef.current = new Audio('/end.mp3');
+    }
+    
+    return () => {
+      // Clean up
+      cleanupTimers();
+    };
+  }, []);
+  
+  // Cleanup function for all timers
+  const cleanupTimers = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
+    if (beepTimeoutRef.current) clearTimeout(beepTimeoutRef.current);
+    
+    timerRef.current = null;
+    beepIntervalRef.current = null;
+    beepTimeoutRef.current = null;
+  };
+  
+  // Generate a random phrase from the data
+  const getRandomPhrase = () => {
+    let filteredPhrases = mockPhrases;
+    
+    // Filter by selected categories if any
+    if (selectedCategories.length > 0) {
+      filteredPhrases = mockPhrases.filter(p => 
+        selectedCategories.includes(p.category)
+      );
+    }
+    
+    // If no phrases match the categories, use all phrases
+    if (filteredPhrases.length === 0) {
+      filteredPhrases = mockPhrases;
+    }
+    
+    const randomIndex = Math.floor(Math.random() * filteredPhrases.length);
+    return filteredPhrases[randomIndex];
+  };
+  
+  // Start the game
+  const startGame = () => {
+    const randomPhrase = getRandomPhrase();
+    setCurrentPhrase(randomPhrase.phrase);
+    setCurrentCategory(randomPhrase.category);
+    setTimeLeft(totalTime);
+    setIsTimerRunning(true);
+    setIsGameOver(false);
+    startTimer();
+    scheduleBeeps();
+  };
+  
+  // Pass current phrase and get a new one
+  const passPhrase = () => {
+    const randomPhrase = getRandomPhrase();
+    setCurrentPhrase(randomPhrase.phrase);
+    setCurrentCategory(randomPhrase.category);
+  };
+  
+  // Start the timer
+  const startTimer = () => {
+    // Clear any existing timer
+    if (timerRef.current) clearInterval(timerRef.current);
+    
+    // Set new timer
+    timerRef.current = setInterval(() => {
+      setTimeLeft(prevTime => {
+        if (prevTime <= 1) {
+          handleTimerEnd();
+          return 0;
+        }
+        return prevTime - 1;
+      });
+    }, 1000);
+  };
+  
+  // Handle timer end
+  const handleTimerEnd = () => {
+    cleanupTimers();
+    setIsTimerRunning(false);
+    setIsGameOver(true);
+    
+    // Play end sound
+    if (endAudioRef.current) {
+      endAudioRef.current.play().catch(err => 
+        console.error("Could not play end sound:", err)
+      );
+    }
+  };
+  
+  // Schedule beeping sounds based on time remaining
+  const scheduleBeeps = () => {
+    // Clear any existing beep schedules
+    if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
+    if (beepTimeoutRef.current) clearTimeout(beepTimeoutRef.current);
+    
+    // Function to play beep sound
+    const playBeep = () => {
+      if (beepAudioRef.current) {
+        beepAudioRef.current.currentTime = 0;
+        beepAudioRef.current.play().catch(err => 
+          console.error("Could not play beep:", err)
+        );
+      }
+    };
+
+    // Set up beep intervals based on time remaining
+    if (timeLeft > 30) {
+      // Phase 1: Slow beeps every 5 seconds
+      beepIntervalRef.current = setInterval(playBeep, 5000);
+      
+      // Schedule transition to Phase 2
+      beepTimeoutRef.current = setTimeout(() => {
+        if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
+        beepIntervalRef.current = setInterval(playBeep, 2000);
+        
+        // Schedule transition to Phase 3
+        beepTimeoutRef.current = setTimeout(() => {
+          if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
+          beepIntervalRef.current = setInterval(playBeep, 500);
+        }, 15000); // After 15 more seconds (when ~15 seconds remain)
+        
+      }, (timeLeft - 30) * 1000); // When 30 seconds remain
+    }
+    else if (timeLeft > 15) {
+      // Phase 2: Medium beeps every 2 seconds
+      beepIntervalRef.current = setInterval(playBeep, 2000);
+      
+      // Schedule transition to Phase 3
+      beepTimeoutRef.current = setTimeout(() => {
+        if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
+        beepIntervalRef.current = setInterval(playBeep, 500);
+      }, (timeLeft - 15) * 1000); // When 15 seconds remain
+    }
+    else {
+      // Phase 3: Fast beeps every 0.5 seconds
+      beepIntervalRef.current = setInterval(playBeep, 500);
+    }
+  };
+  
+  // Toggle category selection
+  const toggleCategory = (category: string) => {
+    if (selectedCategories.includes(category)) {
+      setSelectedCategories(selectedCategories.filter(c => c !== category));
+    } else {
+      setSelectedCategories([...selectedCategories, category]);
+    }
+  };
+  
+  // Reset game state and cleanup
+  const resetGame = () => {
+    cleanupTimers();
+    setIsTimerRunning(false);
+    setIsGameOver(false);
+  };
+  
+  // Update game time setting
+  const setGameTime = (seconds: number) => {
+    setTotalTime(seconds);
+    setTimeLeft(seconds);
+  };
+  
+  return {
+    currentPhrase,
+    currentCategory,
+    timeLeft,
+    totalTime,
+    isTimerRunning,
+    selectedCategories,
+    isGameOver,
+    startGame,
+    passPhrase,
+    toggleCategory,
+    resetGame,
+    setGameTime
+  };
+};
+
+export default useGameState;
+
+
+============================================================
+
+FILE: .\features\game\hooks\useResponsive.ts
+SIZE: 2.45 KB
+LAST MODIFIED: 03/23/2025 21:54:51
+
+import { useState, useEffect } from 'react';
+
+// Define breakpoints
+export const breakpoints = {
+  xs: 360,   // Extra small devices
+  sm: 640,   // Small devices
+  md: 768,   // Medium devices
+  lg: 1024,  // Large devices
+  xl: 1280,  // Extra large devices
+};
+
+export interface ResponsiveData {
+  width: number;
+  height: number;
+  aspectRatio: number;
+  screenSize: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  isMobile: boolean;
+  isTablet: boolean;
+  isDesktop: boolean;
+  isPortrait: boolean;
+  isLandscape: boolean;
+}
+
+export const useResponsive = (): ResponsiveData => {
+  // Initial state with defaults
+  const [responsive, setResponsive] = useState<ResponsiveData>({
+    width: 0,
+    height: 0,
+    aspectRatio: 0,
+    screenSize: 'md',
+    isMobile: false,
+    isTablet: false, 
+    isDesktop: false,
+    isPortrait: true,
+    isLandscape: false
+  });
+
+  useEffect(() => {
+    // Function to handle viewport sizing
+    const updateDimensions = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const aspectRatio = width / height;
+      const isPortrait = height > width;
+      
+      // Set CSS variable for viewport height to handle mobile browsers
+      document.documentElement.style.setProperty('--vh', `${height * 0.01}px`);
+      
+      // Determine screen size category
+      let screenSize: 'xs' | 'sm' | 'md' | 'lg' | 'xl' = 'xs';
+      if (width >= breakpoints.xl) screenSize = 'xl';
+      else if (width >= breakpoints.lg) screenSize = 'lg';
+      else if (width >= breakpoints.md) screenSize = 'md';
+      else if (width >= breakpoints.sm) screenSize = 'sm';
+      
+      // Determine device type
+      const isMobile = width < breakpoints.md;
+      const isTablet = width >= breakpoints.md && width < breakpoints.lg;
+      const isDesktop = width >= breakpoints.lg;
+      
+      setResponsive({
+        width,
+        height,
+        aspectRatio,
+        screenSize,
+        isMobile,
+        isTablet,
+        isDesktop,
+        isPortrait,
+        isLandscape: !isPortrait
+      });
+    };
+    
+    // Initial call
+    updateDimensions();
+    
+    // Add event listeners
+    window.addEventListener('resize', updateDimensions);
+    window.addEventListener('orientationchange', updateDimensions);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('resize', updateDimensions);
+      window.removeEventListener('orientationchange', updateDimensions);
+    };
+  }, []);
+  
+  return responsive;
+};
+
+export default useResponsive;
+
+
+============================================================
+
+FILE: .\features\game\screens\CategoriesScreen.tsx
+SIZE: 2.11 KB
+LAST MODIFIED: 03/24/2025 10:01:20
+
+import React from 'react';
+import CircleBackground from '../components/CircleBackground';
+
+interface CategoriesScreenProps {
+  categories: string[];
+  selectedCategories: string[];
+  onToggleCategory: (category: string) => void;
+  onReturnToMenu: () => void;
+}
+
+const CategoriesScreen: React.FC<CategoriesScreenProps> = ({
+  categories,
+  selectedCategories,
+  onToggleCategory,
+  onReturnToMenu
+}) => {
+  return (
+    <div 
+      className="flex flex-col h-full bg-[#7b86eb]" 
+      style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+    >
+      <CircleBackground />
+      <div className="flex justify-between items-center p-4 relative z-10">
+        <button 
+          onClick={onReturnToMenu}
+          className="w-12 h-12 rounded-full bg-[#5bfdf8] flex items-center justify-center shadow-xl"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="#4B5563">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h2 className="text-xl font-bold">Categories</h2>
+        <div className="w-10"></div>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto p-4 relative z-10">
+        <div className="grid grid-cols-1 gap-3">
+          {categories.map((category, index) => (
+            <button
+              key={index}
+              onClick={() => onToggleCategory(category)}
+              className={`p-4 rounded-lg text-left ${
+                selectedCategories.includes(category)
+                  ? 'bg-white text-black border-2 border-black'
+                  : 'bg-gray-200 text-gray-800'
+              }`}
+            >
+              <span className="font-medium">{category}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      
+      <div className="p-4 border-t relative z-10">
+        <button 
+          onClick={onReturnToMenu}
+          className="w-full bg-white hover:bg-gray-100 text-black font-bold py-3 rounded-3xl shadow-lg"
+        >
+          Save Categories
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default CategoriesScreen;
+
+
+
+============================================================
+
+FILE: .\features\game\screens\GameScreen.tsx
+SIZE: 2.53 KB
+LAST MODIFIED: 03/24/2025 10:04:38
+
+import React from 'react';
+import PhraseDisplay from '../components/PhraseDisplay';
+
+interface GameScreenProps {
+  timeLeft: number;
+  totalTime: number;
+  isTimerRunning: boolean;
+  currentPhrase: string;
+  currentCategory: string;
+  isGameOver: boolean;
+  onReturnToMenu: () => void;
+  onNewGame: () => void;
+  onPassPhrase: () => void;
+  onGotIt: () => void;
+}
+
+const GameScreen: React.FC<GameScreenProps> = ({
+  timeLeft,
+  totalTime,
+  isTimerRunning,
+  currentPhrase,
+  currentCategory,
+  isGameOver,
+  onReturnToMenu,
+  onNewGame,
+  onPassPhrase,
+  onGotIt
+}) => {
+  return (
+    <div 
+      className="flex flex-col h-full bg-[#7b86eb] relative" 
+      style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+    >
+      <div className="flex justify-between items-center p-4 relative z-10">
+        <button 
+  onClick={onReturnToMenu}
+  className="w-12 h-12 rounded-full bg-[#5bfdf8] shadow-xl shadow-xl flex items-center justify-center shadow-lg"
+>
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="#4B5563">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+</button>
+        <div className="w-10"></div> {/* Empty div for flex balance */}
+      </div>
+      
+      <div className="flex-1 flex items-center justify-center p-6 relative z-10">
+        {isGameOver ? (
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-red-500 mb-4">Time's Up!</h2>
+            <button
+              onClick={onNewGame}
+              className="bg-white hover:bg-gray-100 text-black font-bold py-3 px-6 rounded-3xl text-xl shadow-lg"
+            >
+              New Game
+            </button>
+          </div>
+        ) : (
+          <PhraseDisplay phrase={currentPhrase} category={currentCategory} />
+        )}
+      </div>
+      
+      {!isGameOver && (
+        <div className="p-4 relative z-10">
+          <div className="max-w-md mx-auto flex flex-col gap-3">
+            <button 
+              onClick={onGotIt}
+              className="w-full bg-white hover:bg-gray-100 text-gray-800 font-bold py-4 px-6 rounded-3xl text-xl shadow-lg"
+            >
+              GOT IT!
+            </button>
+            <button 
+              onClick={onPassPhrase}
+              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-4 px-6 rounded-3xl text-xl shadow-lg"
+            >
+              SKIP WORD
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default GameScreen;
+
+
+
+
+
+
+
+============================================================
+
+FILE: .\features\game\screens\HowToPlayScreen.tsx
+SIZE: 2.98 KB
+LAST MODIFIED: 03/24/2025 09:59:40
+
+import React from 'react';
+import CircleBackground from '../components/CircleBackground';
+
+interface HowToPlayScreenProps {
+  onReturnToMenu: () => void;
+}
+
+const HowToPlayScreen: React.FC<HowToPlayScreenProps> = ({ onReturnToMenu }) => {
+  return (
+    <div 
+      className="flex flex-col h-full bg-[#7b86eb]" 
+      style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+    >
+      <CircleBackground />
+      <div className="flex justify-between items-center p-4 relative z-10">
+        <button 
+          onClick={onReturnToMenu}
+          className="w-12 h-12 rounded-full bg-[#5bfdf8] flex items-center justify-center shadow-xl"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="#4B5563">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h2 className="text-xl font-bold">How to Play</h2>
+        <div className="w-10"></div>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto p-6 relative z-10">
+        <div className="bg-white rounded-xl shadow-md p-5 mb-6">
+          <h3 className="text-lg font-bold mb-2 text-gray-800">Game Rules</h3>
+          <ol className="list-decimal pl-5 space-y-2 text-gray-800">
+            <li>Form two teams and sit in a circle alternating team members.</li>
+            <li>The first player starts with the device and sees a word or phrase.</li>
+            <li>They must describe the word WITHOUT saying any part of it.</li>
+            <li>When their team guesses correctly, they pass to the next player (on the opposing team).</li>
+            <li>If the timer runs out while a player is holding the device, the opposing team gets a point.</li>
+            <li>First team to reach 7 points wins!</li>
+          </ol>
+        </div>
+        
+        <div className="bg-white rounded-xl shadow-md p-5 mb-6">
+          <h3 className="text-lg font-bold mb-2 text-gray-800">What Not To Do</h3>
+          <ul className="list-disc pl-5 space-y-2 text-gray-800">
+            <li>Don't say any part of the word or phrase</li>
+            <li>Don't use "rhymes with" clues</li>
+            <li>Don't use "sounds like" clues</li>
+            <li>Don't use "first letter is..." clues</li>
+            <li>Don't use gestures or charades</li>
+          </ul>
+        </div>
+        
+        <div className="bg-white rounded-xl shadow-md p-5">
+          <h3 className="text-lg font-bold mb-2 text-gray-800">Tips for Success</h3>
+          <ul className="list-disc pl-5 space-y-2 text-gray-800">
+            <li>Use synonyms and related concepts</li>
+            <li>Describe the meaning or purpose</li>
+            <li>For expressions, explain what situation you might use it in</li>
+            <li>Break down compound phrases by describing each component separately</li>
+            <li>If your team is struggling, move on and try a new phrase!</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default HowToPlayScreen;
+
+
+
+============================================================
+
+FILE: .\features\game\screens\MenuScreen.tsx
+SIZE: 2.27 KB
+LAST MODIFIED: 03/23/2025 22:41:25
+
+import React from 'react';
+import Image from 'next/image';
+import Logo from '../components/Logo';
+import CircleBackground from '../components/CircleBackground';
+import useResponsive from '../hooks/useResponsive';
+
+interface MenuScreenProps {
+  onPlay: () => void;
+  onSelectSettings: () => void;
+  onSelectHowToPlay: () => void;
+}
+
+const MenuButton: React.FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => (
+  <button 
+    onClick={onClick}
+    className="w-full bg-white hover:bg-gray-100 text-black font-bold py-4 
+    px-6 rounded-3xl text-xl shadow-lg transform transition-transform 
+    duration-150 hover:scale-[1.02] active:scale-[0.98]"
+  >
+    {label}
+  </button>
+);
+
+const MenuScreen: React.FC<MenuScreenProps> = ({ 
+  onPlay, 
+  onSelectSettings, 
+  onSelectHowToPlay 
+}) => {
+  const responsive = useResponsive();
+  
+  return (
+    <div 
+      className="flex flex-col items-center justify-between h-full bg-[#7b86eb]" 
+      style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+    >
+      <CircleBackground />
+      
+      {/* Center section with logo - positioned absolutely in the center */}
+      <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center">
+       {/* Logo image - made 200% larger */}
+       <div className="relative w-72 h-72 md:w-80 md:h-80">
+  <Image 
+    src="/images/game-logo.png?v=4" 
+    alt="Phrase Game Logo"
+    fill
+    sizes="(max-width: 768px) 288px, 320px"
+    style={{ 
+      objectFit: "contain",
+      filter: "drop-shadow(0px 8px 8px rgba(0, 0, 0, 0.3))"
+    }}
+    priority
+  />
+</div>
+        
+        {/* Text logo directly below the image */}
+        <div className="mt-6">
+          <Logo 
+            size="large"
+            className="font-extrabold" 
+          />
+        </div>
+      </div>
+      
+      {/* Button container - fixed at bottom with proper spacing */}
+      <div className="w-full max-w-xs sm:max-w-md px-4 sm:px-6 mb-8 sm:mb-10 mt-auto z-10">
+        <div className="flex flex-col gap-3 sm:gap-4">
+          <MenuButton label="Play" onClick={onPlay} />
+          <MenuButton label="Settings" onClick={onSelectSettings} />
+          <MenuButton label="How to Play" onClick={onSelectHowToPlay} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default MenuScreen;
+
+============================================================
+
+FILE: .\features\game\screens\SettingsScreen.tsx
+SIZE: 4 KB
+LAST MODIFIED: 03/24/2025 09:59:35
+
+import React from 'react';
+import CircleBackground from '../components/CircleBackground';
+
+interface SettingsScreenProps {
+  totalTime: number;
+  onSetGameTime: (seconds: number) => void;
+  onReturnToMenu: () => void;
+}
+
+const SettingsScreen: React.FC<SettingsScreenProps> = ({ 
+  totalTime, 
+  onSetGameTime, 
+  onReturnToMenu 
+}) => {
+  // Available time options in seconds
+  const timeOptions = [30, 45, 60, 90, 120];
+  
+  return (
+    <div 
+      className="flex flex-col h-full bg-[#7b86eb]" 
+      style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+    >
+      <CircleBackground />
+      <div className="flex justify-between items-center p-4 relative z-10">
+        <button 
+          onClick={onReturnToMenu}
+          className="w-12 h-12 rounded-full bg-[#5bfdf8] flex items-center justify-center shadow-xl"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="#4B5563">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h2 className="text-xl font-bold">Settings</h2>
+        <div className="w-10"></div>
+      </div>
+      
+      <div className="flex-1 flex items-center justify-center p-6 relative z-10">
+        <div className="bg-white rounded-xl shadow-md p-6 max-w-md w-full">
+          <h3 className="text-gray-800 text-lg font-bold mb-4">Game Settings</h3>
+          
+          <div className="mb-6">
+            <h4 className="text-gray-800 font-medium mb-2">Timer Duration</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {timeOptions.map((seconds) => (
+                <button
+                  key={seconds}
+                  onClick={() => onSetGameTime(seconds)}
+                  className={`py-2 px-3 rounded-lg ${
+                    totalTime === seconds
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                  }`}
+                >
+                  {seconds} seconds
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="mb-6">
+            <h4 className="text-gray-800 font-medium mb-2">Sound Effects</h4>
+            <div className="flex items-center">
+              <div className="relative inline-block w-10 mr-2 align-middle select-none">
+                <input 
+                  type="checkbox" 
+                  name="soundEffects" 
+                  id="soundEffects" 
+                  defaultChecked={true}
+                  className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
+                />
+                <label 
+                  htmlFor="soundEffects" 
+                  className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"
+                ></label>
+              </div>
+              <label htmlFor="soundEffects" className="ml-2 text-gray-800">Enable sound effects</label>
+            </div>
+          </div>
+          
+          <div>
+            <h4 className="text-gray-800 font-medium mb-2">Vibration</h4>
+            <div className="flex items-center">
+              <div className="relative inline-block w-10 mr-2 align-middle select-none">
+                <input 
+                  type="checkbox" 
+                  name="vibration" 
+                  id="vibration" 
+                  defaultChecked={true}
+                  className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
+                />
+                <label 
+                  htmlFor="vibration" 
+                  className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"
+                ></label>
+              </div>
+              <label htmlFor="vibration" className="ml-2 text-gray-800">Enable vibration</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SettingsScreen;
+
+
+
+============================================================
+
+FILE: .\features\game\screens\TeamsScreen.tsx
+SIZE: 2.21 KB
+LAST MODIFIED: 03/24/2025 10:00:29
+
+import React from 'react';
+import CircleBackground from '../components/CircleBackground';
+
+interface TeamsScreenProps {
+  onReturnToMenu: () => void;
+}
+
+const TeamsScreen: React.FC<TeamsScreenProps> = ({ onReturnToMenu }) => {
+  return (
+    <div 
+      className="flex flex-col h-full bg-[#7b86eb]" 
+      style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+    >
+      <CircleBackground />
+      <div className="flex justify-between items-center p-4 relative z-10">
+        <button 
+          onClick={onReturnToMenu}
+          className="w-12 h-12 rounded-full bg-[#5bfdf8] flex items-center justify-center shadow-xl"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="#4B5563">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h2 className="text-xl font-bold">Teams</h2>
+        <div className="w-10"></div>
+      </div>
+      
+      <div className="flex-1 flex items-center justify-center p-6 relative z-10">
+        <div className="text-center bg-white rounded-xl shadow-md p-6 max-w-md w-full">
+          <p className="text-xl font-medium mb-4 text-gray-800">Team setup will go here</p>
+          <p className="text-gray-700 mb-6">Coming soon!</p>
+          
+          {/* Placeholder UI for future implementation */}
+          <div className="border border-dashed border-gray-300 rounded-lg p-4 mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-medium">Team 1</span>
+              <button className="text-blue-500 text-sm">Edit</button>
+            </div>
+            <div className="h-8 bg-gray-100 rounded-md w-full mb-2"></div>
+          </div>
+          
+          <div className="border border-dashed border-gray-300 rounded-lg p-4 mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-medium">Team 2</span>
+              <button className="text-blue-500 text-sm">Edit</button>
+            </div>
+            <div className="h-8 bg-gray-100 rounded-md w-full mb-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default TeamsScreen;
+
+
+
+============================================================
+
+FILE: .\features\game\utils\toggle-styles.css
+SIZE: 0.33 KB
+LAST MODIFIED: 03/23/2025 21:56:53
+
+/* Add this to your globals.css file */
+
+.toggle-checkbox:checked {
+  right: 0;
+  border-color: #3b82f6;
+}
+
+.toggle-checkbox:checked + .toggle-label {
+  background-color: #3b82f6;
+}
+
+.toggle-label {
+  transition: background-color 0.2s ease;
+}
+
+.toggle-checkbox {
+  transition: all 0.2s ease;
+  right: 50%;
+  border-color: #cbd5e1;
+}
+
 
 ============================================================
 

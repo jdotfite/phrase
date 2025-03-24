@@ -34,11 +34,11 @@ const GameScreen: React.FC<GameScreenProps> = ({
       <div className="flex justify-between items-center p-4 relative z-10">
         <button 
   onClick={onReturnToMenu}
-  className="w-12 h-12 rounded-full bg-[#5bfdf8] flex items-center justify-center shadow-lg"
+  className="w-12 h-12 rounded-full bg-[#5bfdf8] shadow-xl shadow-xl flex items-center justify-center shadow-lg"
 >
   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="#4B5563">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-  </svg>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
 </button>
         <div className="w-10"></div> {/* Empty div for flex balance */}
       </div>
@@ -82,5 +82,8 @@ const GameScreen: React.FC<GameScreenProps> = ({
 };
 
 export default GameScreen;
+
+
+
 
 
