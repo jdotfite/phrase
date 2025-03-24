@@ -35,7 +35,7 @@ useEffect(() => {
   return (
     <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}>
       {/* Center point of all circles is moved up by 15% of viewport height */}
-      <div className="absolute top-[24.4%] left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+      <div className="absolute top-[24%] left-1/2 transform -translate-x-1/2 -translate-y-1/2">
         <div className="relative">
           {/* Circle components remain the same */}
           <div 
