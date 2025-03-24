@@ -22,7 +22,7 @@ useEffect(() => {
   const baseDimension = Math.min(responsive.width, responsive.height);
   const sizeFactor = baseDimension < 375 ? 0.8 : 1;
   // Increase base size by approximately 150px
-  const scaledBaseSizePx = Math.min(750, baseDimension * 1.2 * sizeFactor);
+  const scaledBaseSizePx = Math.min(850, baseDimension * 1.0* sizeFactor);
   
   setCircleSizes({
     largest: `${scaledBaseSizePx}px`,
@@ -35,7 +35,7 @@ useEffect(() => {
   return (
     <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}>
       {/* Center point of all circles is moved up by 15% of viewport height */}
-      <div className="absolute top-[24.2%] left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+      <div className="absolute top-[24.6%] left-1/2 transform -translate-x-1/2 -translate-y-1/2">
         <div className="relative">
           {/* Circle components remain the same */}
           <div 
