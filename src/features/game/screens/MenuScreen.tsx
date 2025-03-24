@@ -6,8 +6,6 @@ import useResponsive from '../hooks/useResponsive';
 
 interface MenuScreenProps {
   onPlay: () => void;
-  onSelectCategories: () => void;
-  onSelectTeams: () => void;
   onSelectSettings: () => void;
   onSelectHowToPlay: () => void;
 }
@@ -25,8 +23,6 @@ const MenuButton: React.FC<{ label: string; onClick: () => void }> = ({ label, o
 
 const MenuScreen: React.FC<MenuScreenProps> = ({ 
   onPlay, 
-  onSelectCategories, 
-  onSelectTeams, 
   onSelectSettings, 
   onSelectHowToPlay 
 }) => {
@@ -69,8 +65,6 @@ const MenuScreen: React.FC<MenuScreenProps> = ({
       <div className="w-full max-w-xs sm:max-w-md px-4 sm:px-6 mb-8 sm:mb-10 mt-auto z-10">
         <div className="flex flex-col gap-3 sm:gap-4">
           <MenuButton label="Play" onClick={onPlay} />
-          <MenuButton label="Categories" onClick={onSelectCategories} />
-          <MenuButton label="Teams" onClick={onSelectTeams} />
           <MenuButton label="Settings" onClick={onSelectSettings} />
           <MenuButton label="How to Play" onClick={onSelectHowToPlay} />
         </div>
