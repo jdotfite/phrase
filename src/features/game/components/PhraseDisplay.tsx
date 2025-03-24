@@ -40,8 +40,7 @@ const PhraseDisplay: React.FC<PhraseDisplayProps> = ({ phrase, category }) => {
             isAnimating ? 'opacity-0 transform translate-y-4' : 'opacity-100 transform translate-y-0'
           }`}
         >
-          <h2 className="text-xl text-gray-500 font-medium mb-2 text-center">Your Phrase</h2>
-          <p className="text-3xl sm:text-4xl font-bold text-center py-4 break-words">{displayPhrase}</p>
+          <p className="text-3xl sm:text-4xl font-bold text-center py-4 break-words text-gray-800">{displayPhrase}</p>
         </div>
       </div>
     </div>

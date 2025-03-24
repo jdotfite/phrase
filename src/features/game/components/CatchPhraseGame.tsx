@@ -72,7 +72,13 @@ const CatchPhraseGame = () => {
     setScreen('game');
   };
   
-  // Return to menu
+  
+  // Handle Got It button press
+  const handleGotIt = () => {
+    gameState.passPhrase();
+  };
+  
+// Return to menu
   const handleReturnToMenu = () => {
     gameState.resetGame();
     setScreen('menu');
@@ -93,6 +99,7 @@ const CatchPhraseGame = () => {
             onReturnToMenu={handleReturnToMenu}
             onNewGame={handleStartGame}
             onPassPhrase={gameState.passPhrase}
+            onGotIt={handleGotIt}
           />
         );
       case 'categories':
@@ -148,3 +155,4 @@ const CatchPhraseGame = () => {
 };
 
 export default CatchPhraseGame;
+

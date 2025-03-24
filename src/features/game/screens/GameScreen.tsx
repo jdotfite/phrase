@@ -1,7 +1,5 @@
 import React from 'react';
-import Timer from '../components/Timer';
 import PhraseDisplay from '../components/PhraseDisplay';
-import CircleBackground from '../components/CircleBackground';
 
 interface GameScreenProps {
   timeLeft: number;
@@ -13,6 +11,7 @@ interface GameScreenProps {
   onReturnToMenu: () => void;
   onNewGame: () => void;
   onPassPhrase: () => void;
+  onGotIt: () => void;
 }
 
 const GameScreen: React.FC<GameScreenProps> = ({
@@ -24,22 +23,23 @@ const GameScreen: React.FC<GameScreenProps> = ({
   isGameOver,
   onReturnToMenu,
   onNewGame,
-  onPassPhrase
+  onPassPhrase,
+  onGotIt
 }) => {
   return (
     <div 
       className="flex flex-col h-full bg-[#7b86eb] relative" 
       style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
     >
-      <CircleBackground />
-      <div className="flex justify-between items-center p-4 border-b relative z-10">
+      <div className="flex justify-between items-center p-4 relative z-10">
         <button 
-          onClick={onReturnToMenu}
-          className="text-gray-600 hover:text-gray-800"
-        >
-          Menu
-        </button>
-        <Timer timeLeft={timeLeft} totalTime={totalTime} isRunning={isTimerRunning} />
+  onClick={onReturnToMenu}
+  className="w-12 h-12 rounded-full bg-[#5bfdf8] flex items-center justify-center shadow-lg"
+>
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="#4B5563">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+  </svg>
+</button>
         <div className="w-10"></div> {/* Empty div for flex balance */}
       </div>
       
@@ -60,13 +60,21 @@ const GameScreen: React.FC<GameScreenProps> = ({
       </div>
       
       {!isGameOver && (
-        <div className="p-4 border-t relative z-10">
-          <button 
-            onClick={onPassPhrase}
-            className="w-full bg-white hover:bg-gray-100 text-black font-bold py-4 px-6 rounded-3xl text-xl shadow-lg"
-          >
-            PASS
-          </button>
+        <div className="p-4 relative z-10">
+          <div className="max-w-md mx-auto flex flex-col gap-3">
+            <button 
+              onClick={onGotIt}
+              className="w-full bg-white hover:bg-gray-100 text-gray-800 font-bold py-4 px-6 rounded-3xl text-xl shadow-lg"
+            >
+              GOT IT!
+            </button>
+            <button 
+              onClick={onPassPhrase}
+              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-4 px-6 rounded-3xl text-xl shadow-lg"
+            >
+              SKIP WORD
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -74,3 +82,5 @@ const GameScreen: React.FC<GameScreenProps> = ({
 };
 
 export default GameScreen;
+
+
