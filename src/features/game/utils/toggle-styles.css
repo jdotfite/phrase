@@ -1,0 +1,20 @@
+/* Add this to your globals.css file */
+
+.toggle-checkbox:checked {
+  right: 0;
+  border-color: #3b82f6;
+}
+
+.toggle-checkbox:checked + .toggle-label {
+  background-color: #3b82f6;
+}
+
+.toggle-label {
+  transition: background-color 0.2s ease;
+}
+
+.toggle-checkbox {
+  transition: all 0.2s ease;
+  right: 50%;
+  border-color: #cbd5e1;
+}

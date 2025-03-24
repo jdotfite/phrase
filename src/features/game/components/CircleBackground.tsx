@@ -1,25 +1,64 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import useResponsive from '../hooks/useResponsive';
 
 interface CircleBackgroundProps {
   className?: string;
 }
 
 const CircleBackground: React.FC<CircleBackgroundProps> = ({ className = '' }) => {
+  const responsive = useResponsive();
+  const [circleSizes, setCircleSizes] = useState({
+    largest: '600px',
+    large: '480px',
+    medium: '360px',
+    small: '240px'
+  });
+  
+  // Adjust circle sizes based on screen size
+  useEffect(() => {
+    if (responsive.width === 0) return; // Skip initial render
+    
+    // Base size calculation based on viewport dimensions
+    const baseDimension = Math.min(responsive.width, responsive.height);
+    const sizeFactor = baseDimension < 375 ? 0.8 : 1;
+    const scaledBaseSizePx = Math.min(600, baseDimension * 0.8 * sizeFactor);
+    
+    setCircleSizes({
+      largest: `${scaledBaseSizePx}px`,
+      large: `${scaledBaseSizePx * 0.8}px`,
+      medium: `${scaledBaseSizePx * 0.6}px`,
+      small: `${scaledBaseSizePx * 0.4}px`
+    });
+  }, [responsive.width, responsive.height]);
+  
   return (
     <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}>
-      <div className="absolute top-[35vh] left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+      {/* Center point of all circles is moved up by 15% of viewport height */}
+      <div className="absolute top-[25.5%] left-1/2 transform -translate-x-1/2 -translate-y-1/2">
         <div className="relative">
-          {/* Largest circle - increased sizes by ~50% */}
-          <div className="absolute rounded-full bg-white opacity-10 w-[600px] h-[600px] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
+          {/* Circle components remain the same */}
+          <div 
+            className="absolute rounded-full bg-white opacity-10 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+            style={{ width: circleSizes.largest, height: circleSizes.largest }}
+          />
+          
+          {/* Large circle */}
+          <div 
+            className="absolute rounded-full bg-white opacity-10 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+            style={{ width: circleSizes.large, height: circleSizes.large }}
+          />
           
           {/* Medium circle */}
-          <div className="absolute rounded-full bg-white opacity-10 w-[480px] h-[480px] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
-          
-          {/* Small circle */}
-          <div className="absolute rounded-full bg-white opacity-10 w-[360px] h-[360px] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
+          <div 
+            className="absolute rounded-full bg-white opacity-10 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+            style={{ width: circleSizes.medium, height: circleSizes.medium }}
+          />
           
           {/* Smallest circle */}
-          <div className="absolute rounded-full bg-white opacity-10 w-[240px] h-[240px] top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"></div>
+          <div 
+            className="absolute rounded-full bg-white opacity-10 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+            style={{ width: circleSizes.small, height: circleSizes.small }}
+          />
         </div>
       </div>
     </div>
@@ -27,4 +66,3 @@ const CircleBackground: React.FC<CircleBackgroundProps> = ({ className = '' }) =
 };
 
 export default CircleBackground;
-
