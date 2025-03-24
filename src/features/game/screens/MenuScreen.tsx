@@ -43,14 +43,17 @@ const MenuScreen: React.FC<MenuScreenProps> = ({
       <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center">
         {/* Logo image - made larger */}
         <div className="relative w-48 h-48 md:w-56 md:h-56">
-          <Image 
-            src="/images/game-logo.png?v=4" 
-            alt="Phrase Game Logo"
-            fill
-            sizes="(max-width: 768px) 192px, 224px"
-            style={{ objectFit: "contain" }}
-            priority
-          />
+        <Image 
+          src="/images/game-logo.png?v=4" 
+          alt="Phrase Game Logo"
+          fill
+          sizes="(max-width: 768px) 192px, 224px"
+          style={{ 
+            objectFit: "contain",
+            filter: "drop-shadow(0px 8px 8px rgba(0, 0, 0, 0.3))"
+          }}
+          priority
+        />
         </div>
         
         {/* Text logo directly below the image */}
