@@ -15,26 +15,27 @@ const CircleBackground: React.FC<CircleBackgroundProps> = ({ className = '' }) =
   });
   
   // Adjust circle sizes based on screen size
-  useEffect(() => {
-    if (responsive.width === 0) return; // Skip initial render
-    
-    // Base size calculation based on viewport dimensions
-    const baseDimension = Math.min(responsive.width, responsive.height);
-    const sizeFactor = baseDimension < 375 ? 0.8 : 1;
-    const scaledBaseSizePx = Math.min(600, baseDimension * 0.8 * sizeFactor);
-    
-    setCircleSizes({
-      largest: `${scaledBaseSizePx}px`,
-      large: `${scaledBaseSizePx * 0.8}px`,
-      medium: `${scaledBaseSizePx * 0.6}px`,
-      small: `${scaledBaseSizePx * 0.4}px`
-    });
-  }, [responsive.width, responsive.height]);
+useEffect(() => {
+  if (responsive.width === 0) return; // Skip initial render
+  
+  // Base size calculation based on viewport dimensions
+  const baseDimension = Math.min(responsive.width, responsive.height);
+  const sizeFactor = baseDimension < 375 ? 0.8 : 1;
+  // Increase base size by approximately 150px
+  const scaledBaseSizePx = Math.min(750, baseDimension * 1.2 * sizeFactor);
+  
+  setCircleSizes({
+    largest: `${scaledBaseSizePx}px`,
+    large: `${scaledBaseSizePx * 0.8}px`,
+    medium: `${scaledBaseSizePx * 0.6}px`,
+    small: `${scaledBaseSizePx * 0.4}px`
+  });
+}, [responsive.width, responsive.height]);
   
   return (
     <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}>
       {/* Center point of all circles is moved up by 15% of viewport height */}
-      <div className="absolute top-[25.5%] left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+      <div className="absolute top-[24.2%] left-1/2 transform -translate-x-1/2 -translate-y-1/2">
         <div className="relative">
           {/* Circle components remain the same */}
           <div 
