@@ -96,7 +96,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <ToastProvider>
-      <div className="container mx-auto py-6 space-y-6">
+      <div className="container mx-auto py-6 px-4 sm:px-6 md:px-8 space-y-6">
         {/* Header Component */}
       <DashboardHeader
         theme={theme}

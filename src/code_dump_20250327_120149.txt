@@ -1,5 +1,5 @@
 ﻿PROJECT ANALYSIS
-Generated: 03/24/2025 10:11:08
+Generated: 03/27/2025 12:01:49
 Directory: C:\_websites\phrase\src
 ===========================================
 ENVIRONMENT INFORMATION
@@ -3059,8 +3059,8 @@ export function ReviewerProfileDropdown({
 ============================================================
 
 FILE: .\features\dashboard\Dashboard.tsx
-SIZE: 5.64 KB
-LAST MODIFIED: 03/23/2025 16:15:54
+SIZE: 5.66 KB
+LAST MODIFIED: 03/27/2025 11:13:46
 
 'use client';
 
@@ -3160,7 +3160,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <ToastProvider>
-      <div className="container mx-auto py-6 space-y-6">
+      <div className="container mx-auto py-6 px-4 sm:px-6 md:px-8 space-y-6">
         {/* Header Component */}
       <DashboardHeader
         theme={theme}
@@ -3513,16 +3513,16 @@ export interface DashboardStateHook {
 ============================================================
 
 FILE: .\features\dashboard\components\AnalyticsSection.tsx
-SIZE: 13.83 KB
-LAST MODIFIED: 03/23/2025 16:13:35
+SIZE: 13.96 KB
+LAST MODIFIED: 03/27/2025 11:57:19
 
 // features/dashboard/components/AnalyticsSection/AnalyticsSection.tsx
 import React, { useState, useEffect } from 'react';
 import { useTheme } from '@/providers/ThemeContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import {
-  PieChart, Pie, Cell, BarChart, Bar, 
-  ResponsiveContainer, Tooltip, Legend, XAxis, YAxis, CartesianGrid
+  PieChart, Pie, Cell, BarChart, Bar,
+  ResponsiveContainer, Tooltip, Legend, XAxis, YAxis, CartesianGrid, Customized
 } from 'recharts';
 import { supabase } from '@/lib/services/supabase';
 import { cn } from '@/lib/utils';
@@ -3557,7 +3557,7 @@ export const AnalyticsSection = () => {
         const categoryDataArray = Object.entries(categoryCounts)
           .map(([name, value]) => ({ name, value }))
           .sort((a, b) => b.value - a.value)
-          .slice(0, 10); // Take top 10 categories for better visualization
+          .slice(0, 6); // Take top 10 categories for better visualization
 
         setCategoryData(categoryDataArray);
 
@@ -3671,37 +3671,44 @@ export const AnalyticsSection = () => {
 
   // Gauge chart needle renderer
   const renderNeedle = (value, data, cx, cy, iRadius, oRadius, color) => {
-    const angle = 180 - value * 1.8; // Convert percentage to angle (180 to 0)
-    const length = oRadius * 0.8; // Length of the needle
-    const sin = Math.sin(-angle * Math.PI / 180);
-    const cos = Math.cos(-angle * Math.PI / 180);
-    const r = 5; // Needle base radius
+    const angle = 180 - value * 1.8;
+    const rad = Math.PI / 180;
+    const needleLength = oRadius * 0.85;
+    const needleBaseRadius = 5;
+  
     const x0 = cx;
     const y0 = cy;
-    const xba = x0 + r * sin;
-    const yba = y0 - r * cos;
-    const xbb = x0 - r * sin;
-    const ybb = y0 + r * cos;
-    const xp = x0 + length * sin;
-    const yp = y0 - length * cos;
-
-    // Use the first color from the COLORS array
-    const needleColor = COLORS[0];
-
+    const x = cx + needleLength * Math.cos(rad * angle);
+    const y = cy - needleLength * Math.sin(rad * angle);
+  
+    const xba = x0 + needleBaseRadius * Math.cos(rad * (angle - 90));
+    const yba = y0 - needleBaseRadius * Math.sin(rad * (angle - 90));
+  
+    const xbb = x0 + needleBaseRadius * Math.cos(rad * (angle + 90));
+    const ybb = y0 - needleBaseRadius * Math.sin(rad * (angle + 90));
+    
     return [
-      <circle cx={x0} cy={y0} r={r + 2} fill={needleColor} stroke="none" key="needle-center" />,
-      <path d={`M${xba} ${yba}L${xbb} ${ybb}L${xp} ${yp}Z`} fill={needleColor} key="needle-path" />
+      <circle key="needle-base" cx={x0} cy={y0} r={needleBaseRadius + 1} fill={color} />,
+      <path
+        key="needle"
+        d={`M${xba},${yba} L${xbb},${ybb} L${x},${y} Z`}
+        fill={color}
+      />
     ];
   };
 
   // Get accent-specific empty gauge color
   const getEmptyGaugeColor = () => {
-    return accent === 'default' ? '#E5E7EB' : '#E5E7EB';
+    return COLORS[0]; // Darkest tone for remaining portion
   };
 
   // Get accent-specific filled gauge color
   const getFilledGaugeColor = () => {
-    return COLORS[0];
+    return COLORS[4]; // Lightest tone for completed portion
+  };
+  
+  const getNeedleColor = () => {
+    return COLORS[2]; // Mid-tone gray/purple/green/etc.
   };
 
   const cardBorderClass = getCardBorderClass();
@@ -3729,6 +3736,7 @@ export const AnalyticsSection = () => {
                   dataKey="name" 
                   width={75}
                   tick={{ fontSize: 11 }}
+                  interval={0}
                 />
                 <Tooltip
                   formatter={(value) => [`${value} phrases`, 'Count']}
@@ -3783,111 +3791,144 @@ export const AnalyticsSection = () => {
 
       {/* Monthly Phrases Goal Gauge */}
       <Card className={cn("border rounded-md border-2", cardBorderClass)}>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Words Added This Month</CardTitle>
-          <CardDescription>Progress towards the goal of 100 words</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  startAngle={180}
-                  endAngle={0}
-                  data={[
-                    { name: 'Empty', value: 100 - phrasesPercentage, fill: getEmptyGaugeColor() },
-                    { name: 'Progress', value: phrasesPercentage, fill: getFilledGaugeColor() }
-                  ]}
-                  cx="50%"
-                  cy="80%"
-                  innerRadius={70}
-                  outerRadius={90}
-                  fill="#8884d8"
-                  paddingAngle={0}
-                  dataKey="value"
-                  stroke="none"
-                >
-                </Pie>
-                {renderNeedle(phrasesPercentage, null, '50%', '80%', 70, 90, COLORS[0])}
-                <text
-                  x="50%"
-                  y="50%"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  className="fill-foreground font-bold"
-                  fontSize="24"
-                >
-                  {phrasesPercentage}%
-                </text>
-                <text
-                  x="50%"
-                  y="75%"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  className="fill-foreground"
-                  fontSize="14"
-                >
-                  {phrasesAdded}/100 words
-                </text>
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+  <CardHeader className="pb-2">
+    <CardTitle className="text-lg">Words Added This Month</CardTitle>
+    <CardDescription>Progress towards the goal of 100 words</CardDescription>
+  </CardHeader>
+  <CardContent>
+    <div className="h-[250px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            startAngle={180}
+            endAngle={0}
+            data={[
+              { name: 'Progress', value: phrasesPercentage, fill: getFilledGaugeColor() },
+              { name: 'Empty', value: 100 - phrasesPercentage, fill: getEmptyGaugeColor() }
+            ]}
+            cx="50%"
+            cy="80%"
+            innerRadius={70}
+            outerRadius={90}
+            paddingAngle={0}
+            dataKey="value"
+            stroke="none"
+          />
+
+          <Customized
+            component={({ width, height }) =>
+              renderNeedle(
+                phrasesPercentage,
+                null,
+                width / 2,
+                height * 0.8,
+                70,
+                90,
+                getNeedleColor()
+              )
+            }
+          />
+
+          {/* Top-centered percentage */}
+          <text
+            x="50%"
+            y="35%"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="fill-foreground font-bold"
+            fontSize="24"
+          >
+            {phrasesPercentage}%
+          </text>
+
+          {/* Bottom-centered count */}
+          <text
+            x="50%"
+            y="85%"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="fill-foreground"
+            fontSize="14"
+          >
+            {phrasesAdded}/100 words
+          </text>
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  </CardContent>
+</Card>
+
 
       {/* Monthly Reviews Goal Gauge */}
       <Card className={cn("border rounded-md border-2", cardBorderClass)}>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Reviews Completed This Month</CardTitle>
-          <CardDescription>Progress towards 100 reviews this month</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  startAngle={180}
-                  endAngle={0}
-                  data={[
-                    { name: 'Empty', value: 100 - reviewsPercentage, fill: getEmptyGaugeColor() },
-                    { name: 'Progress', value: reviewsPercentage, fill: getFilledGaugeColor() }
-                  ]}
-                  cx="50%"
-                  cy="80%"
-                  innerRadius={70}
-                  outerRadius={90}
-                  fill="#8884d8"
-                  paddingAngle={0}
-                  dataKey="value"
-                  stroke="none"
-                >
-                </Pie>
-                {renderNeedle(reviewsPercentage, null, '50%', '80%', 70, 90, COLORS[0])}
-                <text
-                  x="50%"
-                  y="50%"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  className="fill-foreground font-bold"
-                  fontSize="24"
-                >
-                  {reviewsPercentage}%
-                </text>
-                <text
-                  x="50%"
-                  y="75%"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  className="fill-foreground"
-                  fontSize="14"
-                >
-                  {reviewsCompleted}/100 reviews
-                </text>
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+  <CardHeader className="pb-2">
+    <CardTitle className="text-lg">Reviews Completed This Month</CardTitle>
+    <CardDescription>Progress towards 100 reviews this month</CardDescription>
+  </CardHeader>
+  <CardContent>
+    <div className="h-[250px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            startAngle={180}
+            endAngle={0}
+            data={[
+              { name: 'Progress', value: reviewsPercentage, fill: getFilledGaugeColor() },
+              { name: 'Empty', value: 100 - reviewsPercentage, fill: getEmptyGaugeColor() }
+            ]}
+            cx="50%"
+            cy="80%"
+            innerRadius={70}
+            outerRadius={90}
+            paddingAngle={0}
+            dataKey="value"
+            stroke="none"
+          />
+
+          {/* Render needle with actual cx/cy */}
+          <Customized
+  component={({ width, height }) =>
+    renderNeedle(
+      reviewsPercentage,
+      null,
+      width / 2,
+      height * 0.8,
+      70,
+      90,
+      getNeedleColor()
+    )
+  }
+/>
+
+          {/* Top-centered percentage */}
+          <text
+            x="50%"
+            y="35%"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="fill-foreground font-bold"
+            fontSize="24"
+          >
+            {reviewsPercentage}%
+          </text>
+
+          {/* Bottom-centered count */}
+          <text
+            x="50%"
+            y="85%"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="fill-foreground"
+            fontSize="14"
+          >
+            {reviewsCompleted}/100 reviews
+          </text>
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  </CardContent>
+</Card>
+
     </div>
   );
 };
@@ -4339,7 +4380,7 @@ export default PhrasesSection;
 
 FILE: .\features\dashboard\components\StatsCards.tsx
 SIZE: 7.93 KB
-LAST MODIFIED: 03/23/2025 16:16:28
+LAST MODIFIED: 03/27/2025 11:53:33
 
 // features/dashboard/components/StatsCards.tsx
 import React, { useEffect, useState } from 'react';
@@ -4547,7 +4588,7 @@ export const StatsCards: React.FC = () => {
   }, [dateRange]);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div className="grid grid-cols-1 grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
       <StatCard
         title="NEW PHRASES"
         value={stats.newPhrases.value}
@@ -5714,7 +5755,1867 @@ export default FilterModal;
 
 ============================================================
 
+FILE: .\features\game\code_dump_20250325_213716.txt
+SIZE: 50.34 KB
+LAST MODIFIED: 03/25/2025 21:37:16
+
+PROJECT ANALYSIS
+Generated: 03/25/2025 21:37:16
+Directory: C:\_websites\phrase\src\features\game
+===========================================
+ENVIRONMENT INFORMATION
+===========================================
+PowerShell Version: 5.1.19041.5607
+OS: Microsoft Windows 10 Pro
+Computer Name: OFFICE
+
+============================================================
+
+FILE CONTENTS:
+
+============================================================
+
+FILE: .\components\CatchPhraseGame.tsx
+SIZE: 4.67 KB
+LAST MODIFIED: 03/24/2025 10:16:41
+
+import React, { useState, useEffect } from 'react';
+import useGameState from '../hooks/useGameState';
+import useResponsive from '../hooks/useResponsive';
+import MenuScreen from '../screens/MenuScreen';
+import GameScreen from '../screens/GameScreen';
+import CategoriesScreen from '../screens/CategoriesScreen';
+import TeamsScreen from '../screens/TeamsScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+import HowToPlayScreen from '../screens/HowToPlayScreen';
+
+// Use supabase for categories
+import { supabase } from '@/lib/services/supabase';
+
+// Type for game screens
+type GameScreen = 'menu' | 'game' | 'categories' | 'teams' | 'settings' | 'howtoplay';
+
+const CatchPhraseGame = () => {
+  // Current screen state
+  const [screen, setScreen] = useState<GameScreen>('menu');
+  
+  // Categories for the game
+  const [categories, setCategories] = useState<string[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  
+  // Get responsive data
+  const responsive = useResponsive();
+  
+  // Get game state from custom hook
+  const gameState = useGameState(60);
+  
+  // Set viewport height CSS variable for mobile browsers
+  useEffect(() => {
+    const setVHVariable = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+    
+    setVHVariable();
+    window.addEventListener('resize', setVHVariable);
+    
+    // Fetch categories
+    fetchCategories();
+    
+    return () => window.removeEventListener('resize', setVHVariable);
+  }, []);
+  
+  // Fetch categories from Supabase
+  const fetchCategories = async () => {
+    setLoadingCategories(true);
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('name')
+        .order('name');
+      
+      if (error) throw error;
+      
+      if (data) {
+        const categoryNames = data.map(c => c.name);
+        setCategories(categoryNames);
+      }
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+      // Fallback to some default categories
+      setCategories(['General', 'Movies', 'Sports', 'Music', 'Food']);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+  
+  // Start new game
+  const handleStartGame = () => {
+    gameState.startGame();
+    setScreen('game');
+  };
+  
+  // Handle Got It button press
+  const handleGotIt = () => {
+    gameState.passPhrase();
+  };
+  
+  // Return to menu
+  const handleReturnToMenu = () => {
+    gameState.resetGame();
+    setScreen('menu');
+  };
+  
+  // Render the appropriate screen
+  const renderScreen = () => {
+    switch(screen) {
+      case 'game':
+        return (
+          <GameScreen 
+            timeLeft={gameState.timeLeft}
+            totalTime={gameState.totalTime}
+            isTimerRunning={gameState.isTimerRunning}
+            currentPhrase={gameState.currentPhrase}
+            currentCategory={gameState.currentCategory}
+            isGameOver={gameState.isGameOver}
+            onReturnToMenu={handleReturnToMenu}
+            onNewGame={handleStartGame}
+            onPassPhrase={gameState.passPhrase}
+            onGotIt={handleGotIt}
+          />
+        );
+      case 'categories':
+        return (
+          <CategoriesScreen 
+            categories={categories}
+            selectedCategories={gameState.selectedCategories}
+            onToggleCategory={gameState.toggleCategory}
+            onReturnToMenu={handleReturnToMenu}
+          />
+        );
+      case 'teams':
+        return (
+          <TeamsScreen 
+            onReturnToMenu={handleReturnToMenu}
+          />
+        );
+      case 'settings':
+        return (
+          <SettingsScreen 
+            totalTime={gameState.totalTime}
+            onSetGameTime={gameState.setGameTime}
+            onReturnToMenu={handleReturnToMenu}
+          />
+        );
+      case 'howtoplay':
+        return (
+          <HowToPlayScreen 
+            onReturnToMenu={handleReturnToMenu}
+          />
+        );
+      default:
+        return (
+          <MenuScreen 
+            onPlay={handleStartGame}
+            onSelectCategories={() => setScreen('categories')}
+            onSelectTeams={() => setScreen('teams')}
+            onSelectSettings={() => setScreen('settings')}
+            onSelectHowToPlay={() => setScreen('howtoplay')}
+          />
+        );
+    }
+  };
+
+  return (
+    <div 
+      className="h-screen w-full overflow-hidden flex flex-col bg-[#7b86eb]" 
+      style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+    >
+      {gameState.isLoading ? (
+        <div className="flex justify-center items-center h-full">
+          <div className="text-white text-lg">Loading game data...</div>
+        </div>
+      ) : (
+        renderScreen()
+      )}
+    </div>
+  );
+};
+
+export default CatchPhraseGame;
+
+
+============================================================
+
+FILE: .\components\CatchPhraseGame.tsx.bak
+SIZE: 4.97 KB
+LAST MODIFIED: 03/24/2025 08:55:41
+
+import React, { useState, useEffect } from 'react';
+import useGameState from '../hooks/useGameState';
+import useResponsive from '../hooks/useResponsive';
+import MenuScreen from '../screens/MenuScreen';
+import GameScreen from '../screens/GameScreen';
+import CategoriesScreen from '../screens/CategoriesScreen';
+import TeamsScreen from '../screens/TeamsScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+import HowToPlayScreen from '../screens/HowToPlayScreen';
+
+// Mock data for phrases
+const mockPhrases = [
+  { phrase: "Couch potato", category: "Expressions" },
+  { phrase: "Break a leg", category: "Expressions" },
+  { phrase: "Bite the bullet", category: "Expressions" },
+  { phrase: "Cut to the chase", category: "Movies" },
+  { phrase: "Down to earth", category: "Expressions" },
+  { phrase: "Hit the road", category: "Travel" },
+  { phrase: "On cloud nine", category: "Emotions" },
+  { phrase: "Piece of cake", category: "Food" },
+  { phrase: "Under the weather", category: "Health" },
+  { phrase: "Wild goose chase", category: "Animals" },
+  { phrase: "Knock on wood", category: "Superstitions" },
+  { phrase: "Call it a day", category: "Time" },
+  { phrase: "Back to square one", category: "Games" },
+  { phrase: "Draw the line", category: "Art" },
+  { phrase: "Give the cold shoulder", category: "Body Parts" },
+  { phrase: "Keep your chin up", category: "Body Parts" },
+  { phrase: "Lose your touch", category: "Skills" },
+  { phrase: "Make a long story short", category: "Storytelling" },
+  { phrase: "Put your foot down", category: "Body Parts" },
+  { phrase: "Ring a bell", category: "Sounds" }
+];
+
+// Categories for the game
+const categories = [
+  "Movies", "Food", "Sports", "Music", "Animals", "Geography", "History", 
+  "Science", "TV Shows", "Books", "Expressions", "Travel", "Emotions", 
+  "Health", "Superstitions", "Time", "Games", "Art", "Body Parts", 
+  "Skills", "Storytelling", "Sounds"
+];
+
+// Type for game screens
+type GameScreen = 'menu' | 'game' | 'categories' | 'teams' | 'settings' | 'howtoplay';
+
+const CatchPhraseGame = () => {
+  // Current screen state
+  const [screen, setScreen] = useState<GameScreen>('menu');
+  
+  // Get responsive data
+  const responsive = useResponsive();
+  
+  // Get game state from custom hook
+  const gameState = useGameState(mockPhrases, 60);
+  
+  // Set viewport height CSS variable for mobile browsers
+  useEffect(() => {
+    const setVHVariable = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+    
+    setVHVariable();
+    window.addEventListener('resize', setVHVariable);
+    
+    return () => window.removeEventListener('resize', setVHVariable);
+  }, []);
+  
+  // Start new game
+  const handleStartGame = () => {
+    gameState.startGame();
+    setScreen('game');
+  };
+  
+  
+  // Handle Got It button press
+  const handleGotIt = () => {
+    gameState.passPhrase();
+  };
+  
+// Return to menu
+  const handleReturnToMenu = () => {
+    gameState.resetGame();
+    setScreen('menu');
+  };
+  
+  // Render the appropriate screen
+  const renderScreen = () => {
+    switch(screen) {
+      case 'game':
+        return (
+          <GameScreen 
+            timeLeft={gameState.timeLeft}
+            totalTime={gameState.totalTime}
+            isTimerRunning={gameState.isTimerRunning}
+            currentPhrase={gameState.currentPhrase}
+            currentCategory={gameState.currentCategory}
+            isGameOver={gameState.isGameOver}
+            onReturnToMenu={handleReturnToMenu}
+            onNewGame={handleStartGame}
+            onPassPhrase={gameState.passPhrase}
+            onGotIt={handleGotIt}
+          />
+        );
+      case 'categories':
+        return (
+          <CategoriesScreen 
+            categories={categories}
+            selectedCategories={gameState.selectedCategories}
+            onToggleCategory={gameState.toggleCategory}
+            onReturnToMenu={handleReturnToMenu}
+          />
+        );
+      case 'teams':
+        return (
+          <TeamsScreen 
+            onReturnToMenu={handleReturnToMenu}
+          />
+        );
+      case 'settings':
+        return (
+          <SettingsScreen 
+            totalTime={gameState.totalTime}
+            onSetGameTime={gameState.setGameTime}
+            onReturnToMenu={handleReturnToMenu}
+          />
+        );
+      case 'howtoplay':
+        return (
+          <HowToPlayScreen 
+            onReturnToMenu={handleReturnToMenu}
+          />
+        );
+      default:
+        return (
+          <MenuScreen 
+            onPlay={handleStartGame}
+            onSelectCategories={() => setScreen('categories')}
+            onSelectTeams={() => setScreen('teams')}
+            onSelectSettings={() => setScreen('settings')}
+            onSelectHowToPlay={() => setScreen('howtoplay')}
+          />
+        );
+    }
+  };
+
+  return (
+    <div 
+      className="h-screen w-full overflow-hidden flex flex-col bg-[#7b86eb]" 
+      style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+    >
+      {renderScreen()}
+    </div>
+  );
+};
+
+export default CatchPhraseGame;
+
+
+
+============================================================
+
+FILE: .\components\CircleBackground.tsx
+SIZE: 2.54 KB
+LAST MODIFIED: 03/23/2025 22:45:52
+
+import React, { useEffect, useState } from 'react';
+import useResponsive from '../hooks/useResponsive';
+
+interface CircleBackgroundProps {
+  className?: string;
+}
+
+const CircleBackground: React.FC<CircleBackgroundProps> = ({ className = '' }) => {
+  const responsive = useResponsive();
+  const [circleSizes, setCircleSizes] = useState({
+    largest: '600px',
+    large: '480px',
+    medium: '360px',
+    small: '240px'
+  });
+  
+  // Adjust circle sizes based on screen size
+useEffect(() => {
+  if (responsive.width === 0) return; // Skip initial render
+  
+  // Base size calculation based on viewport dimensions
+  const baseDimension = Math.min(responsive.width, responsive.height);
+  const sizeFactor = baseDimension < 375 ? 0.8 : 1;
+  // Increase base size by approximately 150px
+  const scaledBaseSizePx = Math.min(1050, baseDimension * 1.2* sizeFactor);
+  
+  setCircleSizes({
+    largest: `${scaledBaseSizePx}px`,
+    large: `${scaledBaseSizePx * 0.8}px`,
+    medium: `${scaledBaseSizePx * 0.6}px`,
+    small: `${scaledBaseSizePx * 0.4}px`
+  });
+}, [responsive.width, responsive.height]);
+  
+  return (
+    <div className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}>
+      {/* Center point of all circles is moved up by 15% of viewport height */}
+      <div className="absolute top-[24%] left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+        <div className="relative">
+          {/* Circle components remain the same */}
+          <div 
+            className="absolute rounded-full bg-white opacity-10 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+            style={{ width: circleSizes.largest, height: circleSizes.largest }}
+          />
+          
+          {/* Large circle */}
+          <div 
+            className="absolute rounded-full bg-white opacity-10 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+            style={{ width: circleSizes.large, height: circleSizes.large }}
+          />
+          
+          {/* Medium circle */}
+          <div 
+            className="absolute rounded-full bg-white opacity-10 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+            style={{ width: circleSizes.medium, height: circleSizes.medium }}
+          />
+          
+          {/* Smallest circle */}
+          <div 
+            className="absolute rounded-full bg-white opacity-10 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2"
+            style={{ width: circleSizes.small, height: circleSizes.small }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CircleBackground;
+
+
+============================================================
+
+FILE: .\components\Logo.tsx
+SIZE: 0.55 KB
+LAST MODIFIED: 03/24/2025 10:02:49
+
+import React from 'react';
+
+interface LogoProps {
+  size?: 'small' | 'medium' | 'large';
+  className?: string;
+}
+
+const Logo: React.FC<LogoProps> = ({ size = 'medium', className = '' }) => {
+  // Size classes mapping
+  const sizeClasses = {
+    small: 'text-2xl',
+    medium: 'text-4xl',
+    large: 'text-6xl'
+  };
+
+  return (
+    <div className={`font-bold flex flex-col items-center ${sizeClasses[size]} ${className}`}>
+      <span className="text-white">Phrase</span>
+      <span className="text-[#5bfdf8]">Game</span>
+    </div>
+  );
+};
+
+export default Logo;
+
+
+============================================================
+
+FILE: .\components\PhraseDisplay.tsx
+SIZE: 1.44 KB
+LAST MODIFIED: 03/24/2025 08:54:30
+
+import React, { useEffect, useState } from 'react';
+
+interface PhraseDisplayProps {
+  phrase: string;
+  category?: string;
+}
+
+const PhraseDisplay: React.FC<PhraseDisplayProps> = ({ phrase, category }) => {
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [displayPhrase, setDisplayPhrase] = useState(phrase);
+
+  // Animate when phrase changes
+  useEffect(() => {
+    if (phrase !== displayPhrase) {
+      setIsAnimating(true);
+      
+      // Wait for exit animation to complete
+      const timer = setTimeout(() => {
+        setDisplayPhrase(phrase);
+        setIsAnimating(false);
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [phrase, displayPhrase]);
+
+  return (
+    <div className="w-full max-w-md mx-auto">
+      {category && (
+        <div className="text-center mb-2">
+          <span className="inline-block bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">
+            {category}
+          </span>
+        </div>
+      )}
+      
+      <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-gray-200">
+        <div 
+          className={`transition-all duration-300 ${
+            isAnimating ? 'opacity-0 transform translate-y-4' : 'opacity-100 transform translate-y-0'
+          }`}
+        >
+          <p className="text-3xl sm:text-4xl font-bold text-center py-4 break-words text-gray-800">{displayPhrase}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PhraseDisplay;
+
+
+============================================================
+
+FILE: .\components\Timer.tsx
+SIZE: 1.15 KB
+LAST MODIFIED: 03/23/2025 17:28:03
+
+import React from 'react';
+
+interface TimerProps {
+  timeLeft: number;
+  totalTime: number;
+  isRunning: boolean;
+}
+
+const Timer: React.FC<TimerProps> = ({ timeLeft, totalTime, isRunning }) => {
+  // Calculate percentage of time left
+  const percentage = (timeLeft / totalTime) * 100;
+  
+  // Determine color based on time left
+  const getColor = () => {
+    if (percentage > 60) return 'bg-green-500';
+    if (percentage > 30) return 'bg-yellow-500';
+    return 'bg-red-500';
+  };
+
+  // Make the timer border pulse when time is running low
+  const getPulseClass = () => {
+    if (percentage <= 10 && isRunning) {
+      return 'animate-pulse';
+    }
+    return '';
+  };
+
+  return (
+    <div className={`relative w-16 h-16 rounded-full border-4 border-gray-200 ${getPulseClass()}`}>
+      <div 
+        className={`absolute inset-0.5 rounded-full ${getColor()} transition-all duration-1000`}
+        style={{ 
+          clipPath: `circle(${percentage}% at center)` 
+        }}
+      />
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-lg font-bold">{timeLeft}</span>
+      </div>
+    </div>
+  );
+};
+
+export default Timer;
+
+
+============================================================
+
+FILE: .\hooks\useGameState.ts
+SIZE: 7.23 KB
+LAST MODIFIED: 03/24/2025 10:16:41
+
+import { useState, useRef, useEffect } from 'react';
+import { supabase } from '@/lib/services/supabase';
+
+// Types
+export interface PhraseItem {
+  phrase: string;
+  category: string;
+}
+
+// Game state hook that manages all game logic
+export const useGameState = (initialTime: number = 60) => {
+  const [currentPhrase, setCurrentPhrase] = useState('');
+  const [currentCategory, setCurrentCategory] = useState('');
+  const [timeLeft, setTimeLeft] = useState(initialTime);
+  const [totalTime, setTotalTime] = useState(initialTime);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [isGameOver, setIsGameOver] = useState(false);
+  const [phrases, setPhrases] = useState<PhraseItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Refs for interval timers
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const beepIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const beepTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Audio refs
+  const beepAudioRef = useRef<HTMLAudioElement | null>(null);
+  const endAudioRef = useRef<HTMLAudioElement | null>(null);
+  
+  // Initialize audio on component mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      beepAudioRef.current = new Audio('/beep.mp3');
+      endAudioRef.current = new Audio('/end.mp3');
+    }
+    
+    fetchPhrases();
+    
+    return () => {
+      // Clean up
+      cleanupTimers();
+    };
+  }, []);
+  
+  // Fetch phrases from Supabase
+  const fetchPhrases = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('phrases')
+        .select(`
+          phrase,
+          categories:category_id(name)
+        `);
+      
+      if (error) throw error;
+      
+      if (data) {
+        // Transform data to match the expected format
+        const formattedPhrases: PhraseItem[] = data.map(item => ({
+          phrase: item.phrase,
+          category: item.categories?.name || 'Uncategorized'
+        }));
+        setPhrases(formattedPhrases);
+      }
+    } catch (err) {
+      console.error('Error fetching phrases:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Cleanup function for all timers
+  const cleanupTimers = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
+    if (beepTimeoutRef.current) clearTimeout(beepTimeoutRef.current);
+    
+    timerRef.current = null;
+    beepIntervalRef.current = null;
+    beepTimeoutRef.current = null;
+  };
+  
+  // Generate a random phrase from the data
+  const getRandomPhrase = () => {
+    // If no phrases are loaded, return a default phrase
+    if (phrases.length === 0) {
+      return { phrase: "Loading phrases...", category: "System" };
+    }
+    
+    let filteredPhrases = phrases;
+    
+    // Filter by selected categories if any
+    if (selectedCategories.length > 0) {
+      filteredPhrases = phrases.filter(p => 
+        selectedCategories.includes(p.category)
+      );
+    }
+    
+    // If no phrases match the categories, use all phrases
+    if (filteredPhrases.length === 0) {
+      filteredPhrases = phrases;
+    }
+    
+    const randomIndex = Math.floor(Math.random() * filteredPhrases.length);
+    return filteredPhrases[randomIndex];
+  };
+  
+  // Start the game
+  const startGame = () => {
+    const randomPhrase = getRandomPhrase();
+    setCurrentPhrase(randomPhrase.phrase);
+    setCurrentCategory(randomPhrase.category);
+    setTimeLeft(totalTime);
+    setIsTimerRunning(true);
+    setIsGameOver(false);
+    startTimer();
+    scheduleBeeps();
+  };
+  
+  // Pass current phrase and get a new one
+  const passPhrase = () => {
+    const randomPhrase = getRandomPhrase();
+    setCurrentPhrase(randomPhrase.phrase);
+    setCurrentCategory(randomPhrase.category);
+  };
+  
+  // Start the timer
+  const startTimer = () => {
+    // Clear any existing timer
+    if (timerRef.current) clearInterval(timerRef.current);
+    
+    // Set new timer
+    timerRef.current = setInterval(() => {
+      setTimeLeft(prevTime => {
+        if (prevTime <= 1) {
+          handleTimerEnd();
+          return 0;
+        }
+        return prevTime - 1;
+      });
+    }, 1000);
+  };
+  
+  // Handle timer end
+  const handleTimerEnd = () => {
+    cleanupTimers();
+    setIsTimerRunning(false);
+    setIsGameOver(true);
+    
+    // Play end sound
+    if (endAudioRef.current) {
+      endAudioRef.current.play().catch(err => 
+        console.error("Could not play end sound:", err)
+      );
+    }
+  };
+  
+  // Schedule beeping sounds based on time remaining
+  const scheduleBeeps = () => {
+    // Clear any existing beep schedules
+    if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
+    if (beepTimeoutRef.current) clearTimeout(beepTimeoutRef.current);
+    
+    // Function to play beep sound
+    const playBeep = () => {
+      if (beepAudioRef.current) {
+        beepAudioRef.current.currentTime = 0;
+        beepAudioRef.current.play().catch(err => 
+          console.error("Could not play beep:", err)
+        );
+      }
+    };
+
+    // Set up beep intervals based on time remaining
+    if (timeLeft > 30) {
+      // Phase 1: Slow beeps every 5 seconds
+      beepIntervalRef.current = setInterval(playBeep, 5000);
+      
+      // Schedule transition to Phase 2
+      beepTimeoutRef.current = setTimeout(() => {
+        if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
+        beepIntervalRef.current = setInterval(playBeep, 2000);
+        
+        // Schedule transition to Phase 3
+        beepTimeoutRef.current = setTimeout(() => {
+          if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
+          beepIntervalRef.current = setInterval(playBeep, 500);
+        }, 15000); // After 15 more seconds (when ~15 seconds remain)
+        
+      }, (timeLeft - 30) * 1000); // When 30 seconds remain
+    }
+    else if (timeLeft > 15) {
+      // Phase 2: Medium beeps every 2 seconds
+      beepIntervalRef.current = setInterval(playBeep, 2000);
+      
+      // Schedule transition to Phase 3
+      beepTimeoutRef.current = setTimeout(() => {
+        if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
+        beepIntervalRef.current = setInterval(playBeep, 500);
+      }, (timeLeft - 15) * 1000); // When 15 seconds remain
+    }
+    else {
+      // Phase 3: Fast beeps every 0.5 seconds
+      beepIntervalRef.current = setInterval(playBeep, 500);
+    }
+  };
+  
+  // Toggle category selection
+  const toggleCategory = (category: string) => {
+    if (selectedCategories.includes(category)) {
+      setSelectedCategories(selectedCategories.filter(c => c !== category));
+    } else {
+      setSelectedCategories([...selectedCategories, category]);
+    }
+  };
+  
+  // Reset game state and cleanup
+  const resetGame = () => {
+    cleanupTimers();
+    setIsTimerRunning(false);
+    setIsGameOver(false);
+  };
+  
+  // Update game time setting
+  const setGameTime = (seconds: number) => {
+    setTotalTime(seconds);
+    setTimeLeft(seconds);
+  };
+  
+  return {
+    currentPhrase,
+    currentCategory,
+    timeLeft,
+    totalTime,
+    isTimerRunning,
+    selectedCategories,
+    isGameOver,
+    isLoading,
+    startGame,
+    passPhrase,
+    toggleCategory,
+    resetGame,
+    setGameTime
+  };
+};
+
+export default useGameState;
+
+
+============================================================
+
+FILE: .\hooks\useGameState.ts.bak
+SIZE: 6.19 KB
+LAST MODIFIED: 03/23/2025 21:54:53
+
+import { useState, useRef, useEffect } from 'react';
+
+// Types
+export interface PhraseItem {
+  phrase: string;
+  category: string;
+}
+
+// Game state hook that manages all game logic
+export const useGameState = (mockPhrases: PhraseItem[], initialTime: number = 60) => {
+  const [currentPhrase, setCurrentPhrase] = useState('');
+  const [currentCategory, setCurrentCategory] = useState('');
+  const [timeLeft, setTimeLeft] = useState(initialTime);
+  const [totalTime, setTotalTime] = useState(initialTime);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [isGameOver, setIsGameOver] = useState(false);
+  
+  // Refs for interval timers
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const beepIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const beepTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Audio refs
+  const beepAudioRef = useRef<HTMLAudioElement | null>(null);
+  const endAudioRef = useRef<HTMLAudioElement | null>(null);
+  
+  // Initialize audio on component mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      beepAudioRef.current = new Audio('/beep.mp3');
+      endAudioRef.current = new Audio('/end.mp3');
+    }
+    
+    return () => {
+      // Clean up
+      cleanupTimers();
+    };
+  }, []);
+  
+  // Cleanup function for all timers
+  const cleanupTimers = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
+    if (beepTimeoutRef.current) clearTimeout(beepTimeoutRef.current);
+    
+    timerRef.current = null;
+    beepIntervalRef.current = null;
+    beepTimeoutRef.current = null;
+  };
+  
+  // Generate a random phrase from the data
+  const getRandomPhrase = () => {
+    let filteredPhrases = mockPhrases;
+    
+    // Filter by selected categories if any
+    if (selectedCategories.length > 0) {
+      filteredPhrases = mockPhrases.filter(p => 
+        selectedCategories.includes(p.category)
+      );
+    }
+    
+    // If no phrases match the categories, use all phrases
+    if (filteredPhrases.length === 0) {
+      filteredPhrases = mockPhrases;
+    }
+    
+    const randomIndex = Math.floor(Math.random() * filteredPhrases.length);
+    return filteredPhrases[randomIndex];
+  };
+  
+  // Start the game
+  const startGame = () => {
+    const randomPhrase = getRandomPhrase();
+    setCurrentPhrase(randomPhrase.phrase);
+    setCurrentCategory(randomPhrase.category);
+    setTimeLeft(totalTime);
+    setIsTimerRunning(true);
+    setIsGameOver(false);
+    startTimer();
+    scheduleBeeps();
+  };
+  
+  // Pass current phrase and get a new one
+  const passPhrase = () => {
+    const randomPhrase = getRandomPhrase();
+    setCurrentPhrase(randomPhrase.phrase);
+    setCurrentCategory(randomPhrase.category);
+  };
+  
+  // Start the timer
+  const startTimer = () => {
+    // Clear any existing timer
+    if (timerRef.current) clearInterval(timerRef.current);
+    
+    // Set new timer
+    timerRef.current = setInterval(() => {
+      setTimeLeft(prevTime => {
+        if (prevTime <= 1) {
+          handleTimerEnd();
+          return 0;
+        }
+        return prevTime - 1;
+      });
+    }, 1000);
+  };
+  
+  // Handle timer end
+  const handleTimerEnd = () => {
+    cleanupTimers();
+    setIsTimerRunning(false);
+    setIsGameOver(true);
+    
+    // Play end sound
+    if (endAudioRef.current) {
+      endAudioRef.current.play().catch(err => 
+        console.error("Could not play end sound:", err)
+      );
+    }
+  };
+  
+  // Schedule beeping sounds based on time remaining
+  const scheduleBeeps = () => {
+    // Clear any existing beep schedules
+    if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
+    if (beepTimeoutRef.current) clearTimeout(beepTimeoutRef.current);
+    
+    // Function to play beep sound
+    const playBeep = () => {
+      if (beepAudioRef.current) {
+        beepAudioRef.current.currentTime = 0;
+        beepAudioRef.current.play().catch(err => 
+          console.error("Could not play beep:", err)
+        );
+      }
+    };
+
+    // Set up beep intervals based on time remaining
+    if (timeLeft > 30) {
+      // Phase 1: Slow beeps every 5 seconds
+      beepIntervalRef.current = setInterval(playBeep, 5000);
+      
+      // Schedule transition to Phase 2
+      beepTimeoutRef.current = setTimeout(() => {
+        if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
+        beepIntervalRef.current = setInterval(playBeep, 2000);
+        
+        // Schedule transition to Phase 3
+        beepTimeoutRef.current = setTimeout(() => {
+          if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
+          beepIntervalRef.current = setInterval(playBeep, 500);
+        }, 15000); // After 15 more seconds (when ~15 seconds remain)
+        
+      }, (timeLeft - 30) * 1000); // When 30 seconds remain
+    }
+    else if (timeLeft > 15) {
+      // Phase 2: Medium beeps every 2 seconds
+      beepIntervalRef.current = setInterval(playBeep, 2000);
+      
+      // Schedule transition to Phase 3
+      beepTimeoutRef.current = setTimeout(() => {
+        if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
+        beepIntervalRef.current = setInterval(playBeep, 500);
+      }, (timeLeft - 15) * 1000); // When 15 seconds remain
+    }
+    else {
+      // Phase 3: Fast beeps every 0.5 seconds
+      beepIntervalRef.current = setInterval(playBeep, 500);
+    }
+  };
+  
+  // Toggle category selection
+  const toggleCategory = (category: string) => {
+    if (selectedCategories.includes(category)) {
+      setSelectedCategories(selectedCategories.filter(c => c !== category));
+    } else {
+      setSelectedCategories([...selectedCategories, category]);
+    }
+  };
+  
+  // Reset game state and cleanup
+  const resetGame = () => {
+    cleanupTimers();
+    setIsTimerRunning(false);
+    setIsGameOver(false);
+  };
+  
+  // Update game time setting
+  const setGameTime = (seconds: number) => {
+    setTotalTime(seconds);
+    setTimeLeft(seconds);
+  };
+  
+  return {
+    currentPhrase,
+    currentCategory,
+    timeLeft,
+    totalTime,
+    isTimerRunning,
+    selectedCategories,
+    isGameOver,
+    startGame,
+    passPhrase,
+    toggleCategory,
+    resetGame,
+    setGameTime
+  };
+};
+
+export default useGameState;
+
+
+============================================================
+
+FILE: .\hooks\useResponsive.ts
+SIZE: 2.45 KB
+LAST MODIFIED: 03/23/2025 21:54:51
+
+import { useState, useEffect } from 'react';
+
+// Define breakpoints
+export const breakpoints = {
+  xs: 360,   // Extra small devices
+  sm: 640,   // Small devices
+  md: 768,   // Medium devices
+  lg: 1024,  // Large devices
+  xl: 1280,  // Extra large devices
+};
+
+export interface ResponsiveData {
+  width: number;
+  height: number;
+  aspectRatio: number;
+  screenSize: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  isMobile: boolean;
+  isTablet: boolean;
+  isDesktop: boolean;
+  isPortrait: boolean;
+  isLandscape: boolean;
+}
+
+export const useResponsive = (): ResponsiveData => {
+  // Initial state with defaults
+  const [responsive, setResponsive] = useState<ResponsiveData>({
+    width: 0,
+    height: 0,
+    aspectRatio: 0,
+    screenSize: 'md',
+    isMobile: false,
+    isTablet: false, 
+    isDesktop: false,
+    isPortrait: true,
+    isLandscape: false
+  });
+
+  useEffect(() => {
+    // Function to handle viewport sizing
+    const updateDimensions = () => {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const aspectRatio = width / height;
+      const isPortrait = height > width;
+      
+      // Set CSS variable for viewport height to handle mobile browsers
+      document.documentElement.style.setProperty('--vh', `${height * 0.01}px`);
+      
+      // Determine screen size category
+      let screenSize: 'xs' | 'sm' | 'md' | 'lg' | 'xl' = 'xs';
+      if (width >= breakpoints.xl) screenSize = 'xl';
+      else if (width >= breakpoints.lg) screenSize = 'lg';
+      else if (width >= breakpoints.md) screenSize = 'md';
+      else if (width >= breakpoints.sm) screenSize = 'sm';
+      
+      // Determine device type
+      const isMobile = width < breakpoints.md;
+      const isTablet = width >= breakpoints.md && width < breakpoints.lg;
+      const isDesktop = width >= breakpoints.lg;
+      
+      setResponsive({
+        width,
+        height,
+        aspectRatio,
+        screenSize,
+        isMobile,
+        isTablet,
+        isDesktop,
+        isPortrait,
+        isLandscape: !isPortrait
+      });
+    };
+    
+    // Initial call
+    updateDimensions();
+    
+    // Add event listeners
+    window.addEventListener('resize', updateDimensions);
+    window.addEventListener('orientationchange', updateDimensions);
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('resize', updateDimensions);
+      window.removeEventListener('orientationchange', updateDimensions);
+    };
+  }, []);
+  
+  return responsive;
+};
+
+export default useResponsive;
+
+
+============================================================
+
+FILE: .\screens\CategoriesScreen.tsx
+SIZE: 2.11 KB
+LAST MODIFIED: 03/24/2025 10:01:20
+
+import React from 'react';
+import CircleBackground from '../components/CircleBackground';
+
+interface CategoriesScreenProps {
+  categories: string[];
+  selectedCategories: string[];
+  onToggleCategory: (category: string) => void;
+  onReturnToMenu: () => void;
+}
+
+const CategoriesScreen: React.FC<CategoriesScreenProps> = ({
+  categories,
+  selectedCategories,
+  onToggleCategory,
+  onReturnToMenu
+}) => {
+  return (
+    <div 
+      className="flex flex-col h-full bg-[#7b86eb]" 
+      style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+    >
+      <CircleBackground />
+      <div className="flex justify-between items-center p-4 relative z-10">
+        <button 
+          onClick={onReturnToMenu}
+          className="w-12 h-12 rounded-full bg-[#5bfdf8] flex items-center justify-center shadow-xl"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="#4B5563">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h2 className="text-xl font-bold">Categories</h2>
+        <div className="w-10"></div>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto p-4 relative z-10">
+        <div className="grid grid-cols-1 gap-3">
+          {categories.map((category, index) => (
+            <button
+              key={index}
+              onClick={() => onToggleCategory(category)}
+              className={`p-4 rounded-lg text-left ${
+                selectedCategories.includes(category)
+                  ? 'bg-white text-black border-2 border-black'
+                  : 'bg-gray-200 text-gray-800'
+              }`}
+            >
+              <span className="font-medium">{category}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      
+      <div className="p-4 border-t relative z-10">
+        <button 
+          onClick={onReturnToMenu}
+          className="w-full bg-white hover:bg-gray-100 text-black font-bold py-3 rounded-3xl shadow-lg"
+        >
+          Save Categories
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default CategoriesScreen;
+
+
+
+============================================================
+
+FILE: .\screens\GameScreen.tsx
+SIZE: 2.53 KB
+LAST MODIFIED: 03/24/2025 10:04:38
+
+import React from 'react';
+import PhraseDisplay from '../components/PhraseDisplay';
+
+interface GameScreenProps {
+  timeLeft: number;
+  totalTime: number;
+  isTimerRunning: boolean;
+  currentPhrase: string;
+  currentCategory: string;
+  isGameOver: boolean;
+  onReturnToMenu: () => void;
+  onNewGame: () => void;
+  onPassPhrase: () => void;
+  onGotIt: () => void;
+}
+
+const GameScreen: React.FC<GameScreenProps> = ({
+  timeLeft,
+  totalTime,
+  isTimerRunning,
+  currentPhrase,
+  currentCategory,
+  isGameOver,
+  onReturnToMenu,
+  onNewGame,
+  onPassPhrase,
+  onGotIt
+}) => {
+  return (
+    <div 
+      className="flex flex-col h-full bg-[#7b86eb] relative" 
+      style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+    >
+      <div className="flex justify-between items-center p-4 relative z-10">
+        <button 
+  onClick={onReturnToMenu}
+  className="w-12 h-12 rounded-full bg-[#5bfdf8] shadow-xl shadow-xl flex items-center justify-center shadow-lg"
+>
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="#4B5563">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+</button>
+        <div className="w-10"></div> {/* Empty div for flex balance */}
+      </div>
+      
+      <div className="flex-1 flex items-center justify-center p-6 relative z-10">
+        {isGameOver ? (
+          <div className="text-center">
+            <h2 className="text-3xl font-bold text-red-500 mb-4">Time's Up!</h2>
+            <button
+              onClick={onNewGame}
+              className="bg-white hover:bg-gray-100 text-black font-bold py-3 px-6 rounded-3xl text-xl shadow-lg"
+            >
+              New Game
+            </button>
+          </div>
+        ) : (
+          <PhraseDisplay phrase={currentPhrase} category={currentCategory} />
+        )}
+      </div>
+      
+      {!isGameOver && (
+        <div className="p-4 relative z-10">
+          <div className="max-w-md mx-auto flex flex-col gap-3">
+            <button 
+              onClick={onGotIt}
+              className="w-full bg-white hover:bg-gray-100 text-gray-800 font-bold py-4 px-6 rounded-3xl text-xl shadow-lg"
+            >
+              GOT IT!
+            </button>
+            <button 
+              onClick={onPassPhrase}
+              className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-4 px-6 rounded-3xl text-xl shadow-lg"
+            >
+              SKIP WORD
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default GameScreen;
+
+
+
+
+
+
+
+============================================================
+
+FILE: .\screens\HowToPlayScreen.tsx
+SIZE: 2.98 KB
+LAST MODIFIED: 03/24/2025 09:59:40
+
+import React from 'react';
+import CircleBackground from '../components/CircleBackground';
+
+interface HowToPlayScreenProps {
+  onReturnToMenu: () => void;
+}
+
+const HowToPlayScreen: React.FC<HowToPlayScreenProps> = ({ onReturnToMenu }) => {
+  return (
+    <div 
+      className="flex flex-col h-full bg-[#7b86eb]" 
+      style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+    >
+      <CircleBackground />
+      <div className="flex justify-between items-center p-4 relative z-10">
+        <button 
+          onClick={onReturnToMenu}
+          className="w-12 h-12 rounded-full bg-[#5bfdf8] flex items-center justify-center shadow-xl"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="#4B5563">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h2 className="text-xl font-bold">How to Play</h2>
+        <div className="w-10"></div>
+      </div>
+      
+      <div className="flex-1 overflow-y-auto p-6 relative z-10">
+        <div className="bg-white rounded-xl shadow-md p-5 mb-6">
+          <h3 className="text-lg font-bold mb-2 text-gray-800">Game Rules</h3>
+          <ol className="list-decimal pl-5 space-y-2 text-gray-800">
+            <li>Form two teams and sit in a circle alternating team members.</li>
+            <li>The first player starts with the device and sees a word or phrase.</li>
+            <li>They must describe the word WITHOUT saying any part of it.</li>
+            <li>When their team guesses correctly, they pass to the next player (on the opposing team).</li>
+            <li>If the timer runs out while a player is holding the device, the opposing team gets a point.</li>
+            <li>First team to reach 7 points wins!</li>
+          </ol>
+        </div>
+        
+        <div className="bg-white rounded-xl shadow-md p-5 mb-6">
+          <h3 className="text-lg font-bold mb-2 text-gray-800">What Not To Do</h3>
+          <ul className="list-disc pl-5 space-y-2 text-gray-800">
+            <li>Don't say any part of the word or phrase</li>
+            <li>Don't use "rhymes with" clues</li>
+            <li>Don't use "sounds like" clues</li>
+            <li>Don't use "first letter is..." clues</li>
+            <li>Don't use gestures or charades</li>
+          </ul>
+        </div>
+        
+        <div className="bg-white rounded-xl shadow-md p-5">
+          <h3 className="text-lg font-bold mb-2 text-gray-800">Tips for Success</h3>
+          <ul className="list-disc pl-5 space-y-2 text-gray-800">
+            <li>Use synonyms and related concepts</li>
+            <li>Describe the meaning or purpose</li>
+            <li>For expressions, explain what situation you might use it in</li>
+            <li>Break down compound phrases by describing each component separately</li>
+            <li>If your team is struggling, move on and try a new phrase!</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default HowToPlayScreen;
+
+
+
+============================================================
+
+FILE: .\screens\MenuScreen.tsx
+SIZE: 2.27 KB
+LAST MODIFIED: 03/23/2025 22:41:25
+
+import React from 'react';
+import Image from 'next/image';
+import Logo from '../components/Logo';
+import CircleBackground from '../components/CircleBackground';
+import useResponsive from '../hooks/useResponsive';
+
+interface MenuScreenProps {
+  onPlay: () => void;
+  onSelectSettings: () => void;
+  onSelectHowToPlay: () => void;
+}
+
+const MenuButton: React.FC<{ label: string; onClick: () => void }> = ({ label, onClick }) => (
+  <button 
+    onClick={onClick}
+    className="w-full bg-white hover:bg-gray-100 text-black font-bold py-4 
+    px-6 rounded-3xl text-xl shadow-lg transform transition-transform 
+    duration-150 hover:scale-[1.02] active:scale-[0.98]"
+  >
+    {label}
+  </button>
+);
+
+const MenuScreen: React.FC<MenuScreenProps> = ({ 
+  onPlay, 
+  onSelectSettings, 
+  onSelectHowToPlay 
+}) => {
+  const responsive = useResponsive();
+  
+  return (
+    <div 
+      className="flex flex-col items-center justify-between h-full bg-[#7b86eb]" 
+      style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+    >
+      <CircleBackground />
+      
+      {/* Center section with logo - positioned absolutely in the center */}
+      <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center">
+       {/* Logo image - made 200% larger */}
+       <div className="relative w-72 h-72 md:w-80 md:h-80">
+  <Image 
+    src="/images/game-logo.png?v=4" 
+    alt="Phrase Game Logo"
+    fill
+    sizes="(max-width: 768px) 288px, 320px"
+    style={{ 
+      objectFit: "contain",
+      filter: "drop-shadow(0px 8px 8px rgba(0, 0, 0, 0.3))"
+    }}
+    priority
+  />
+</div>
+        
+        {/* Text logo directly below the image */}
+        <div className="mt-6">
+          <Logo 
+            size="large"
+            className="font-extrabold" 
+          />
+        </div>
+      </div>
+      
+      {/* Button container - fixed at bottom with proper spacing */}
+      <div className="w-full max-w-xs sm:max-w-md px-4 sm:px-6 mb-8 sm:mb-10 mt-auto z-10">
+        <div className="flex flex-col gap-3 sm:gap-4">
+          <MenuButton label="Play" onClick={onPlay} />
+          <MenuButton label="Settings" onClick={onSelectSettings} />
+          <MenuButton label="How to Play" onClick={onSelectHowToPlay} />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default MenuScreen;
+
+============================================================
+
+FILE: .\screens\SettingsScreen.tsx
+SIZE: 4 KB
+LAST MODIFIED: 03/24/2025 09:59:35
+
+import React from 'react';
+import CircleBackground from '../components/CircleBackground';
+
+interface SettingsScreenProps {
+  totalTime: number;
+  onSetGameTime: (seconds: number) => void;
+  onReturnToMenu: () => void;
+}
+
+const SettingsScreen: React.FC<SettingsScreenProps> = ({ 
+  totalTime, 
+  onSetGameTime, 
+  onReturnToMenu 
+}) => {
+  // Available time options in seconds
+  const timeOptions = [30, 45, 60, 90, 120];
+  
+  return (
+    <div 
+      className="flex flex-col h-full bg-[#7b86eb]" 
+      style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+    >
+      <CircleBackground />
+      <div className="flex justify-between items-center p-4 relative z-10">
+        <button 
+          onClick={onReturnToMenu}
+          className="w-12 h-12 rounded-full bg-[#5bfdf8] flex items-center justify-center shadow-xl"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="#4B5563">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h2 className="text-xl font-bold">Settings</h2>
+        <div className="w-10"></div>
+      </div>
+      
+      <div className="flex-1 flex items-center justify-center p-6 relative z-10">
+        <div className="bg-white rounded-xl shadow-md p-6 max-w-md w-full">
+          <h3 className="text-gray-800 text-lg font-bold mb-4">Game Settings</h3>
+          
+          <div className="mb-6">
+            <h4 className="text-gray-800 font-medium mb-2">Timer Duration</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {timeOptions.map((seconds) => (
+                <button
+                  key={seconds}
+                  onClick={() => onSetGameTime(seconds)}
+                  className={`py-2 px-3 rounded-lg ${
+                    totalTime === seconds
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                  }`}
+                >
+                  {seconds} seconds
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="mb-6">
+            <h4 className="text-gray-800 font-medium mb-2">Sound Effects</h4>
+            <div className="flex items-center">
+              <div className="relative inline-block w-10 mr-2 align-middle select-none">
+                <input 
+                  type="checkbox" 
+                  name="soundEffects" 
+                  id="soundEffects" 
+                  defaultChecked={true}
+                  className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
+                />
+                <label 
+                  htmlFor="soundEffects" 
+                  className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"
+                ></label>
+              </div>
+              <label htmlFor="soundEffects" className="ml-2 text-gray-800">Enable sound effects</label>
+            </div>
+          </div>
+          
+          <div>
+            <h4 className="text-gray-800 font-medium mb-2">Vibration</h4>
+            <div className="flex items-center">
+              <div className="relative inline-block w-10 mr-2 align-middle select-none">
+                <input 
+                  type="checkbox" 
+                  name="vibration" 
+                  id="vibration" 
+                  defaultChecked={true}
+                  className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer"
+                />
+                <label 
+                  htmlFor="vibration" 
+                  className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"
+                ></label>
+              </div>
+              <label htmlFor="vibration" className="ml-2 text-gray-800">Enable vibration</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SettingsScreen;
+
+
+
+============================================================
+
+FILE: .\screens\TeamsScreen.tsx
+SIZE: 2.21 KB
+LAST MODIFIED: 03/24/2025 10:00:29
+
+import React from 'react';
+import CircleBackground from '../components/CircleBackground';
+
+interface TeamsScreenProps {
+  onReturnToMenu: () => void;
+}
+
+const TeamsScreen: React.FC<TeamsScreenProps> = ({ onReturnToMenu }) => {
+  return (
+    <div 
+      className="flex flex-col h-full bg-[#7b86eb]" 
+      style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+    >
+      <CircleBackground />
+      <div className="flex justify-between items-center p-4 relative z-10">
+        <button 
+          onClick={onReturnToMenu}
+          className="w-12 h-12 rounded-full bg-[#5bfdf8] flex items-center justify-center shadow-xl"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="#4B5563">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <h2 className="text-xl font-bold">Teams</h2>
+        <div className="w-10"></div>
+      </div>
+      
+      <div className="flex-1 flex items-center justify-center p-6 relative z-10">
+        <div className="text-center bg-white rounded-xl shadow-md p-6 max-w-md w-full">
+          <p className="text-xl font-medium mb-4 text-gray-800">Team setup will go here</p>
+          <p className="text-gray-700 mb-6">Coming soon!</p>
+          
+          {/* Placeholder UI for future implementation */}
+          <div className="border border-dashed border-gray-300 rounded-lg p-4 mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-medium">Team 1</span>
+              <button className="text-blue-500 text-sm">Edit</button>
+            </div>
+            <div className="h-8 bg-gray-100 rounded-md w-full mb-2"></div>
+          </div>
+          
+          <div className="border border-dashed border-gray-300 rounded-lg p-4 mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <span className="font-medium">Team 2</span>
+              <button className="text-blue-500 text-sm">Edit</button>
+            </div>
+            <div className="h-8 bg-gray-100 rounded-md w-full mb-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default TeamsScreen;
+
+
+
+============================================================
+
+FILE: .\utils\toggle-styles.css
+SIZE: 0.33 KB
+LAST MODIFIED: 03/23/2025 21:56:53
+
+/* Add this to your globals.css file */
+
+.toggle-checkbox:checked {
+  right: 0;
+  border-color: #3b82f6;
+}
+
+.toggle-checkbox:checked + .toggle-label {
+  background-color: #3b82f6;
+}
+
+.toggle-label {
+  transition: background-color 0.2s ease;
+}
+
+.toggle-checkbox {
+  transition: all 0.2s ease;
+  right: 50%;
+  border-color: #cbd5e1;
+}
+
+
+
+============================================================
+
 FILE: .\features\game\components\CatchPhraseGame.tsx
+SIZE: 4.67 KB
+LAST MODIFIED: 03/24/2025 10:16:41
+
+import React, { useState, useEffect } from 'react';
+import useGameState from '../hooks/useGameState';
+import useResponsive from '../hooks/useResponsive';
+import MenuScreen from '../screens/MenuScreen';
+import GameScreen from '../screens/GameScreen';
+import CategoriesScreen from '../screens/CategoriesScreen';
+import TeamsScreen from '../screens/TeamsScreen';
+import SettingsScreen from '../screens/SettingsScreen';
+import HowToPlayScreen from '../screens/HowToPlayScreen';
+
+// Use supabase for categories
+import { supabase } from '@/lib/services/supabase';
+
+// Type for game screens
+type GameScreen = 'menu' | 'game' | 'categories' | 'teams' | 'settings' | 'howtoplay';
+
+const CatchPhraseGame = () => {
+  // Current screen state
+  const [screen, setScreen] = useState<GameScreen>('menu');
+  
+  // Categories for the game
+  const [categories, setCategories] = useState<string[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+  
+  // Get responsive data
+  const responsive = useResponsive();
+  
+  // Get game state from custom hook
+  const gameState = useGameState(60);
+  
+  // Set viewport height CSS variable for mobile browsers
+  useEffect(() => {
+    const setVHVariable = () => {
+      const vh = window.innerHeight * 0.01;
+      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    };
+    
+    setVHVariable();
+    window.addEventListener('resize', setVHVariable);
+    
+    // Fetch categories
+    fetchCategories();
+    
+    return () => window.removeEventListener('resize', setVHVariable);
+  }, []);
+  
+  // Fetch categories from Supabase
+  const fetchCategories = async () => {
+    setLoadingCategories(true);
+    try {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('name')
+        .order('name');
+      
+      if (error) throw error;
+      
+      if (data) {
+        const categoryNames = data.map(c => c.name);
+        setCategories(categoryNames);
+      }
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+      // Fallback to some default categories
+      setCategories(['General', 'Movies', 'Sports', 'Music', 'Food']);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+  
+  // Start new game
+  const handleStartGame = () => {
+    gameState.startGame();
+    setScreen('game');
+  };
+  
+  // Handle Got It button press
+  const handleGotIt = () => {
+    gameState.passPhrase();
+  };
+  
+  // Return to menu
+  const handleReturnToMenu = () => {
+    gameState.resetGame();
+    setScreen('menu');
+  };
+  
+  // Render the appropriate screen
+  const renderScreen = () => {
+    switch(screen) {
+      case 'game':
+        return (
+          <GameScreen 
+            timeLeft={gameState.timeLeft}
+            totalTime={gameState.totalTime}
+            isTimerRunning={gameState.isTimerRunning}
+            currentPhrase={gameState.currentPhrase}
+            currentCategory={gameState.currentCategory}
+            isGameOver={gameState.isGameOver}
+            onReturnToMenu={handleReturnToMenu}
+            onNewGame={handleStartGame}
+            onPassPhrase={gameState.passPhrase}
+            onGotIt={handleGotIt}
+          />
+        );
+      case 'categories':
+        return (
+          <CategoriesScreen 
+            categories={categories}
+            selectedCategories={gameState.selectedCategories}
+            onToggleCategory={gameState.toggleCategory}
+            onReturnToMenu={handleReturnToMenu}
+          />
+        );
+      case 'teams':
+        return (
+          <TeamsScreen 
+            onReturnToMenu={handleReturnToMenu}
+          />
+        );
+      case 'settings':
+        return (
+          <SettingsScreen 
+            totalTime={gameState.totalTime}
+            onSetGameTime={gameState.setGameTime}
+            onReturnToMenu={handleReturnToMenu}
+          />
+        );
+      case 'howtoplay':
+        return (
+          <HowToPlayScreen 
+            onReturnToMenu={handleReturnToMenu}
+          />
+        );
+      default:
+        return (
+          <MenuScreen 
+            onPlay={handleStartGame}
+            onSelectCategories={() => setScreen('categories')}
+            onSelectTeams={() => setScreen('teams')}
+            onSelectSettings={() => setScreen('settings')}
+            onSelectHowToPlay={() => setScreen('howtoplay')}
+          />
+        );
+    }
+  };
+
+  return (
+    <div 
+      className="h-screen w-full overflow-hidden flex flex-col bg-[#7b86eb]" 
+      style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
+    >
+      {gameState.isLoading ? (
+        <div className="flex justify-center items-center h-full">
+          <div className="text-white text-lg">Loading game data...</div>
+        </div>
+      ) : (
+        renderScreen()
+      )}
+    </div>
+  );
+};
+
+export default CatchPhraseGame;
+
+
+============================================================
+
+FILE: .\features\game\components\CatchPhraseGame.tsx.bak
 SIZE: 4.97 KB
 LAST MODIFIED: 03/24/2025 08:55:41
 
@@ -6098,7 +7999,400 @@ export default Timer;
 
 ============================================================
 
+FILE: .\features\game\components\UnifiedGameBackground.tsx
+SIZE: 4.11 KB
+LAST MODIFIED: 03/25/2025 22:18:31
+
+import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
+import useResponsive from '../hooks/useResponsive';
+import Logo from './Logo';
+
+interface UnifiedGameBackgroundProps {
+  showLogo?: boolean;
+  logoVerticalOffset?: number; // Adjust logo position in pixels (positive = down)
+  logoScale?: number;          // Scale factor for the logo only (1 = normal, 1.2 = 20% larger)
+}
+
+const UnifiedGameBackground: React.FC<UnifiedGameBackgroundProps> = ({ 
+  showLogo = true,
+  logoVerticalOffset = 0,
+  logoScale = 1
+}) => {
+  const responsive = useResponsive();
+  const [circleSizes, setCircleSizes] = useState({
+    largest: '600px',
+    large: '480px',
+    medium: '360px',
+    small: '240px'
+  });
+
+  // Adjust circle sizes based on screen size
+  useEffect(() => {
+    if (responsive.width === 0) return;
+
+    const baseSize = Math.min(
+      window.innerWidth * 0.85,
+      window.innerHeight * 0.7
+    );
+
+    const scaledBaseSizePx = Math.min(1050, baseSize);
+
+    setCircleSizes({
+      largest: `${scaledBaseSizePx}px`,
+      large: `${scaledBaseSizePx * 0.8}px`,
+      medium: `${scaledBaseSizePx * 0.6}px`,
+      small: `${scaledBaseSizePx * 0.4}px`
+    });
+  }, [responsive.width, responsive.height]);
+
+  return (
+    <div className="fixed inset-0 pointer-events-none" style={{ zIndex: 5 }}>
+      <div
+        className="absolute flex items-center justify-center"
+        style={{
+          top: '25%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+        }}
+      >
+        <div
+          className="relative flex items-center justify-center"
+          style={{
+            width: circleSizes.largest,
+            height: circleSizes.largest
+          }}
+        >
+          {/* Background Circles */}
+          <div className="absolute inset-0 rounded-full bg-white opacity-10"></div>
+          <div className="absolute rounded-full bg-white opacity-10" style={{
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: circleSizes.large,
+            height: circleSizes.large
+          }}></div>
+          <div className="absolute rounded-full bg-white opacity-10" style={{
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: circleSizes.medium,
+            height: circleSizes.medium
+          }}></div>
+          <div className="absolute rounded-full bg-white opacity-10" style={{
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: circleSizes.small,
+            height: circleSizes.small
+          }}></div>
+
+          {/* Logo - centered and scaled independently */}
+          {showLogo && (
+            <div
+              className="absolute flex flex-col items-center justify-center"
+              style={{
+                top: '50%',
+                left: '50%',
+                transform: 'translate(-50%, -50%)',
+                marginTop: `${logoVerticalOffset}px`
+              }}
+            >
+              <div
+                style={{
+                  transform: `scale(${logoScale})`,
+                  transformOrigin: 'center center',
+                  width: `calc(${circleSizes.small} * 0.9)`,
+                  height: `calc(${circleSizes.small} * 0.9)`
+                }}
+              >
+                <div className="relative w-full h-full">
+                  <Image
+                    src="/images/game-logo.png?v=4"
+                    alt="Phrase Game Logo"
+                    fill
+                    style={{
+                      objectFit: 'contain',
+                      filter: 'drop-shadow(0px 8px 8px rgba(0, 0, 0, 0.3))'
+                    }}
+                    priority
+                  />
+                </div>
+                <div className="mt-4">
+                  <Logo size="large" className="font-extrabold" />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default UnifiedGameBackground;
+
+
+============================================================
+
 FILE: .\features\game\hooks\useGameState.ts
+SIZE: 7.23 KB
+LAST MODIFIED: 03/24/2025 10:16:41
+
+import { useState, useRef, useEffect } from 'react';
+import { supabase } from '@/lib/services/supabase';
+
+// Types
+export interface PhraseItem {
+  phrase: string;
+  category: string;
+}
+
+// Game state hook that manages all game logic
+export const useGameState = (initialTime: number = 60) => {
+  const [currentPhrase, setCurrentPhrase] = useState('');
+  const [currentCategory, setCurrentCategory] = useState('');
+  const [timeLeft, setTimeLeft] = useState(initialTime);
+  const [totalTime, setTotalTime] = useState(initialTime);
+  const [isTimerRunning, setIsTimerRunning] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [isGameOver, setIsGameOver] = useState(false);
+  const [phrases, setPhrases] = useState<PhraseItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Refs for interval timers
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const beepIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const beepTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Audio refs
+  const beepAudioRef = useRef<HTMLAudioElement | null>(null);
+  const endAudioRef = useRef<HTMLAudioElement | null>(null);
+  
+  // Initialize audio on component mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      beepAudioRef.current = new Audio('/beep.mp3');
+      endAudioRef.current = new Audio('/end.mp3');
+    }
+    
+    fetchPhrases();
+    
+    return () => {
+      // Clean up
+      cleanupTimers();
+    };
+  }, []);
+  
+  // Fetch phrases from Supabase
+  const fetchPhrases = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('phrases')
+        .select(`
+          phrase,
+          categories:category_id(name)
+        `);
+      
+      if (error) throw error;
+      
+      if (data) {
+        // Transform data to match the expected format
+        const formattedPhrases: PhraseItem[] = data.map(item => ({
+          phrase: item.phrase,
+          category: item.categories?.name || 'Uncategorized'
+        }));
+        setPhrases(formattedPhrases);
+      }
+    } catch (err) {
+      console.error('Error fetching phrases:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Cleanup function for all timers
+  const cleanupTimers = () => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
+    if (beepTimeoutRef.current) clearTimeout(beepTimeoutRef.current);
+    
+    timerRef.current = null;
+    beepIntervalRef.current = null;
+    beepTimeoutRef.current = null;
+  };
+  
+  // Generate a random phrase from the data
+  const getRandomPhrase = () => {
+    // If no phrases are loaded, return a default phrase
+    if (phrases.length === 0) {
+      return { phrase: "Loading phrases...", category: "System" };
+    }
+    
+    let filteredPhrases = phrases;
+    
+    // Filter by selected categories if any
+    if (selectedCategories.length > 0) {
+      filteredPhrases = phrases.filter(p => 
+        selectedCategories.includes(p.category)
+      );
+    }
+    
+    // If no phrases match the categories, use all phrases
+    if (filteredPhrases.length === 0) {
+      filteredPhrases = phrases;
+    }
+    
+    const randomIndex = Math.floor(Math.random() * filteredPhrases.length);
+    return filteredPhrases[randomIndex];
+  };
+  
+  // Start the game
+  const startGame = () => {
+    const randomPhrase = getRandomPhrase();
+    setCurrentPhrase(randomPhrase.phrase);
+    setCurrentCategory(randomPhrase.category);
+    setTimeLeft(totalTime);
+    setIsTimerRunning(true);
+    setIsGameOver(false);
+    startTimer();
+    scheduleBeeps();
+  };
+  
+  // Pass current phrase and get a new one
+  const passPhrase = () => {
+    const randomPhrase = getRandomPhrase();
+    setCurrentPhrase(randomPhrase.phrase);
+    setCurrentCategory(randomPhrase.category);
+  };
+  
+  // Start the timer
+  const startTimer = () => {
+    // Clear any existing timer
+    if (timerRef.current) clearInterval(timerRef.current);
+    
+    // Set new timer
+    timerRef.current = setInterval(() => {
+      setTimeLeft(prevTime => {
+        if (prevTime <= 1) {
+          handleTimerEnd();
+          return 0;
+        }
+        return prevTime - 1;
+      });
+    }, 1000);
+  };
+  
+  // Handle timer end
+  const handleTimerEnd = () => {
+    cleanupTimers();
+    setIsTimerRunning(false);
+    setIsGameOver(true);
+    
+    // Play end sound
+    if (endAudioRef.current) {
+      endAudioRef.current.play().catch(err => 
+        console.error("Could not play end sound:", err)
+      );
+    }
+  };
+  
+  // Schedule beeping sounds based on time remaining
+  const scheduleBeeps = () => {
+    // Clear any existing beep schedules
+    if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
+    if (beepTimeoutRef.current) clearTimeout(beepTimeoutRef.current);
+    
+    // Function to play beep sound
+    const playBeep = () => {
+      if (beepAudioRef.current) {
+        beepAudioRef.current.currentTime = 0;
+        beepAudioRef.current.play().catch(err => 
+          console.error("Could not play beep:", err)
+        );
+      }
+    };
+
+    // Set up beep intervals based on time remaining
+    if (timeLeft > 30) {
+      // Phase 1: Slow beeps every 5 seconds
+      beepIntervalRef.current = setInterval(playBeep, 5000);
+      
+      // Schedule transition to Phase 2
+      beepTimeoutRef.current = setTimeout(() => {
+        if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
+        beepIntervalRef.current = setInterval(playBeep, 2000);
+        
+        // Schedule transition to Phase 3
+        beepTimeoutRef.current = setTimeout(() => {
+          if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
+          beepIntervalRef.current = setInterval(playBeep, 500);
+        }, 15000); // After 15 more seconds (when ~15 seconds remain)
+        
+      }, (timeLeft - 30) * 1000); // When 30 seconds remain
+    }
+    else if (timeLeft > 15) {
+      // Phase 2: Medium beeps every 2 seconds
+      beepIntervalRef.current = setInterval(playBeep, 2000);
+      
+      // Schedule transition to Phase 3
+      beepTimeoutRef.current = setTimeout(() => {
+        if (beepIntervalRef.current) clearInterval(beepIntervalRef.current);
+        beepIntervalRef.current = setInterval(playBeep, 500);
+      }, (timeLeft - 15) * 1000); // When 15 seconds remain
+    }
+    else {
+      // Phase 3: Fast beeps every 0.5 seconds
+      beepIntervalRef.current = setInterval(playBeep, 500);
+    }
+  };
+  
+  // Toggle category selection
+  const toggleCategory = (category: string) => {
+    if (selectedCategories.includes(category)) {
+      setSelectedCategories(selectedCategories.filter(c => c !== category));
+    } else {
+      setSelectedCategories([...selectedCategories, category]);
+    }
+  };
+  
+  // Reset game state and cleanup
+  const resetGame = () => {
+    cleanupTimers();
+    setIsTimerRunning(false);
+    setIsGameOver(false);
+  };
+  
+  // Update game time setting
+  const setGameTime = (seconds: number) => {
+    setTotalTime(seconds);
+    setTimeLeft(seconds);
+  };
+  
+  return {
+    currentPhrase,
+    currentCategory,
+    timeLeft,
+    totalTime,
+    isTimerRunning,
+    selectedCategories,
+    isGameOver,
+    isLoading,
+    startGame,
+    passPhrase,
+    toggleCategory,
+    resetGame,
+    setGameTime
+  };
+};
+
+export default useGameState;
+
+
+============================================================
+
+FILE: .\features\game\hooks\useGameState.ts.bak
 SIZE: 6.19 KB
 LAST MODIFIED: 03/23/2025 21:54:53
 
@@ -6664,13 +8958,11 @@ export default HowToPlayScreen;
 ============================================================
 
 FILE: .\features\game\screens\MenuScreen.tsx
-SIZE: 2.27 KB
-LAST MODIFIED: 03/23/2025 22:41:25
+SIZE: 1.71 KB
+LAST MODIFIED: 03/25/2025 22:18:08
 
 import React from 'react';
-import Image from 'next/image';
-import Logo from '../components/Logo';
-import CircleBackground from '../components/CircleBackground';
+import UnifiedGameBackground from '../components/UnifiedGameBackground';
 import useResponsive from '../hooks/useResponsive';
 
 interface MenuScreenProps {
@@ -6693,7 +8985,7 @@ const MenuButton: React.FC<{ label: string; onClick: () => void }> = ({ label, o
 const MenuScreen: React.FC<MenuScreenProps> = ({ 
   onPlay, 
   onSelectSettings, 
-  onSelectHowToPlay 
+  onSelectHowToPlay
 }) => {
   const responsive = useResponsive();
   
@@ -6702,34 +8994,12 @@ const MenuScreen: React.FC<MenuScreenProps> = ({
       className="flex flex-col items-center justify-between h-full bg-[#7b86eb]" 
       style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
     >
-      <CircleBackground />
-      
-      {/* Center section with logo - positioned absolutely in the center */}
-      <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center">
-       {/* Logo image - made 200% larger */}
-       <div className="relative w-72 h-72 md:w-80 md:h-80">
-  <Image 
-    src="/images/game-logo.png?v=4" 
-    alt="Phrase Game Logo"
-    fill
-    sizes="(max-width: 768px) 288px, 320px"
-    style={{ 
-      objectFit: "contain",
-      filter: "drop-shadow(0px 8px 8px rgba(0, 0, 0, 0.3))"
-    }}
-    priority
-  />
-</div>
-        
-        {/* Text logo directly below the image */}
-        <div className="mt-6">
-          <Logo 
-            size="large"
-            className="font-extrabold" 
-          />
-        </div>
-      </div>
-      
+      {/* Using the unified background component with vertical position adjustment */}
+      <UnifiedGameBackground 
+        showLogo={true} 
+        logoVerticalOffset={25}   // move logo 10px down
+        logoScale={1.1}           // scale logo 30% larger
+      />
       {/* Button container - fixed at bottom with proper spacing */}
       <div className="w-full max-w-xs sm:max-w-md px-4 sm:px-6 mb-8 sm:mb-10 mt-auto z-10">
         <div className="flex flex-col gap-3 sm:gap-4">
@@ -8417,9 +10687,288 @@ export const useDeletePhrase = () => {
 
 ============================================================
 
+FILE: .\features\phrases\phrasesCardView\index.tsx
+SIZE: 8.73 KB
+LAST MODIFIED: 03/27/2025 10:55:07
+
+import React, { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Pencil, Trash, X, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import TagDisplay from '@/components/ui/tags';
+import { DifficultyIndicator } from '@/components/ui/difficulty-indicator';
+import { cn } from '@/lib/utils';
+import { useTheme } from '@/providers/ThemeContext';
+
+interface PhrasesCardViewProps {
+  phrases: any[];
+  loading?: boolean;
+  tableState: TableState;
+  onTableStateChange: (updates: Partial<TableState>) => void;
+  onEdit?: (id: number) => void;
+  onDelete?: (id: number) => void;
+  newIds?: number[];
+}
+
+export function PhrasesCardView({
+  phrases,
+  loading = false,
+  tableState,
+  onTableStateChange,
+  onEdit,
+  onDelete,
+  newIds = []
+}: PhrasesCardViewProps) {
+  const [searchValue, setSearchValue] = useState(tableState.filters.searchTerm || '');
+  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const { accent } = useTheme();
+
+  // Get accent-specific color values for various parts of the UI
+  const getAccentColors = () => {
+    switch (accent) {
+      case 'blue':
+        return {
+          highlight: 'bg-blue-500/10 border-blue-500/30',
+          button: 'bg-blue-500 hover:bg-blue-600',
+          outline: 'border-blue-500/50 text-blue-500',
+          text: 'text-blue-500'
+        };
+      case 'green':
+        return {
+          highlight: 'bg-emerald-500/10 border-emerald-500/30',
+          button: 'bg-emerald-500 hover:bg-emerald-600',
+          outline: 'border-emerald-500/50 text-emerald-500',
+          text: 'text-emerald-500'
+        };
+      case 'purple':
+        return {
+          highlight: 'bg-purple-500/10 border-purple-500/30',
+          button: 'bg-purple-500 hover:bg-purple-600',
+          outline: 'border-purple-500/50 text-purple-500',
+          text: 'text-purple-500'
+        };
+      case 'orange':
+        return {
+          highlight: 'bg-orange-500/10 border-orange-500/30',
+          button: 'bg-orange-500 hover:bg-orange-600',
+          outline: 'border-orange-500/50 text-orange-500',
+          text: 'text-orange-500'
+        };
+      default: // grayscale
+        return {
+          highlight: 'bg-gray-500/10 border-gray-500/30',
+          button: 'bg-gray-500 hover:bg-gray-600',
+          outline: 'border-gray-500/50 text-gray-500',
+          text: 'text-gray-500'
+        };
+    }
+  };
+
+  const accentColors = getAccentColors();
+
+  // Create flash animation class with accent color
+  const getNewRowClass = (id: number) => {
+    if (!newIds.includes(id)) return '';
+    
+    return cn("transition-colors", accentColors.highlight);
+  };
+
+  // Handle search input changes
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchValue(e.target.value);
+  };
+
+  // Handle search submit
+  const handleSearch = () => {
+    onTableStateChange({
+      filters: {
+        ...tableState.filters,
+        searchTerm: searchValue
+      },
+      pagination: {
+        ...tableState.pagination,
+        currentPage: 1
+      }
+    });
+  };
+
+  // Clear search
+  const clearSearch = () => {
+    setSearchValue('');
+    onTableStateChange({
+      filters: {
+        ...tableState.filters,
+        searchTerm: ''
+      }
+    });
+  };
+
+  // Handle key down for search
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
+  // Handle page change
+  const handlePageChange = (newPage: number) => {
+    onTableStateChange({
+      pagination: {
+        ...tableState.pagination,
+        currentPage: newPage
+      }
+    });
+  };
+
+  // Toggle row selection
+  const toggleRowSelection = (id: number) => {
+    if (selectedRows.includes(id)) {
+      setSelectedRows(prev => prev.filter(rowId => rowId !== id));
+    } else {
+      setSelectedRows(prev => [...prev, id]);
+    }
+  };
+
+  // Confirm delete
+  const confirmDelete = (id: number) => {
+    if (window.confirm('Are you sure you want to delete this phrase?')) {
+      onDelete?.(id);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Search and pagination header */}
+      <div className="flex flex-col gap-3">
+        {/* Search input */}
+        <div className="relative w-full">
+          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+            <Search className="h-4 w-4 text-muted-foreground" />
+          </div>
+          <Input
+            placeholder="Search phrases..."
+            value={searchValue}
+            onChange={handleSearchChange}
+            onKeyDown={handleKeyDown}
+            className={cn("pl-10 pr-10 border", accentColors.outline)}
+          />
+          {searchValue && (
+            <button
+              onClick={clearSearch}
+              className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        
+        {/* Pagination info and controls */}
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-muted-foreground">
+            {tableState.pagination.totalPages > 0
+              ? `Page ${tableState.pagination.currentPage} of ${tableState.pagination.totalPages}`
+              : 'No results'}
+          </span>
+          
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(tableState.pagination.currentPage - 1)}
+              disabled={tableState.pagination.currentPage <= 1}
+              className={cn("border", accentColors.outline)}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handlePageChange(tableState.pagination.currentPage + 1)}
+              disabled={tableState.pagination.currentPage >= tableState.pagination.totalPages}
+              className={cn("border", accentColors.outline)}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Phrases cards */}
+      {loading ? (
+        <div className="h-24 flex items-center justify-center">
+          <div className="animate-spin h-6 w-6 border-2 rounded-full border-b-transparent"></div>
+        </div>
+      ) : phrases.length === 0 ? (
+        <div className="h-24 flex items-center justify-center text-muted-foreground">
+          No phrases found.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {phrases.map((phrase) => (
+            <div 
+              key={phrase.id}
+              className={cn(
+                "p-4 rounded-md border",
+                selectedRows.includes(phrase.id) && accentColors.highlight,
+                getNewRowClass(phrase.id)
+              )}
+            >
+              {/* Header with phrase and actions */}
+              <div className="flex justify-between items-start">
+                <h3 className="font-medium">{phrase.phrase}</h3>
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => onEdit?.(phrase.id)}>
+                    <Pencil className={cn("h-4 w-4", accentColors.text)} />
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => confirmDelete(phrase.id)}>
+                    <Trash className="h-4 w-4 text-red-500" />
+                  </Button>
+                </div>
+              </div>
+              
+              {/* Category and difficulty */}
+              <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Category:</span>
+                  <span className="ml-1 font-medium">{phrase.category}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Difficulty:</span>
+                  <div className="mt-1">
+                    <DifficultyIndicator difficulty={phrase.difficulty} />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Hint */}
+              {phrase.hint && (
+                <div className="mt-3 text-sm">
+                  <span className="text-muted-foreground">Hint:</span>
+                  <span className="ml-1">{phrase.hint}</span>
+                </div>
+              )}
+              
+              {/* Tags */}
+              {phrase.tags && (
+                <div className="mt-3">
+                  <TagDisplay tags={phrase.tags} />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default PhrasesCardView;
+
+============================================================
+
 FILE: .\features\phrases\phrasesTable\index.tsx
-SIZE: 20.73 KB
-LAST MODIFIED: 03/23/2025 16:05:44
+SIZE: 22.8 KB
+LAST MODIFIED: 03/27/2025 11:11:24
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
@@ -8449,6 +10998,8 @@ import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/services/supabase';
 import { useTheme } from '@/providers/ThemeContext';
+import { PhrasesCardView } from '@/features/phrases/phrasesCardView';
+import { useResponsive } from '@/features/game/hooks/useResponsive';
 
 interface PhrasesTableProps {
   phrases: any[];
@@ -8471,6 +11022,644 @@ export function PhrasesTable({
   newIds = [],
   onShowFilters
 }: PhrasesTableProps) {
+  // Get responsive information first - before any conditional logic
+  const responsive = useResponsive();
+  
+  // All other hooks
+  const [selectedRows, setSelectedRows] = useState<number[]>([]);
+  const [searchValue, setSearchValue] = useState(tableState.filters.search || '');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const { accent } = useTheme();
+  
+  // Current visible columns - this hook must be called in every render
+  const [hiddenColumns, setHiddenColumns] = useState<string[]>([]);
+
+  // Get accent-specific color values for various parts of the UI
+  const getAccentColors = () => {
+    switch (accent) {
+      case 'blue':
+        return {
+          highlight: 'bg-blue-500/10 border-blue-500/30',
+          button: 'bg-blue-500 hover:bg-blue-600',
+          outline: 'border-blue-500/50 text-blue-500',
+          text: 'text-blue-500'
+        };
+      case 'green':
+        return {
+          highlight: 'bg-emerald-500/10 border-emerald-500/30',
+          button: 'bg-emerald-500 hover:bg-emerald-600',
+          outline: 'border-emerald-500/50 text-emerald-500',
+          text: 'text-emerald-500'
+        };
+      case 'purple':
+        return {
+          highlight: 'bg-purple-500/10 border-purple-500/30',
+          button: 'bg-purple-500 hover:bg-purple-600',
+          outline: 'border-purple-500/50 text-purple-500',
+          text: 'text-purple-500'
+        };
+      case 'orange':
+        return {
+          highlight: 'bg-orange-500/10 border-orange-500/30',
+          button: 'bg-orange-500 hover:bg-orange-600',
+          outline: 'border-orange-500/50 text-orange-500',
+          text: 'text-orange-500'
+        };
+      default: // grayscale
+        return {
+          highlight: 'bg-gray-500/10 border-gray-500/30',
+          button: 'bg-gray-500 hover:bg-gray-600',
+          outline: 'border-gray-500/50 text-gray-500',
+          text: 'text-gray-500'
+        };
+    }
+  };
+
+  const accentColors = getAccentColors();
+
+  // Columns configuration for dropdown - define this outside the component to avoid recreating on each render
+  const columns = [
+    { key: 'phrase', label: 'Phrase' },
+    { key: 'category', label: 'Category' },
+    { key: 'hint', label: 'Hint' }, 
+    { key: 'tags', label: 'Tags' },
+    { key: 'difficulty', label: 'Difficulty' },
+    { key: 'reviewed', label: 'Reviewed' }
+  ];
+
+  // Helper function to get difficulty bar
+  const getDifficultyBar = (difficulty: number) => {
+    return <DifficultyIndicator difficulty={difficulty} />;
+  };
+
+  // Handle search input changes
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchValue(e.target.value);
+  };
+
+  // Global search across the entire database - Only search phrase column
+  const performGlobalSearch = async () => {
+    if (!searchValue.trim()) {
+      onTableStateChange({
+        filters: {
+          ...tableState.filters,
+          search: ''
+        }
+      });
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const searchTerm = searchValue.toLowerCase().trim();
+      
+      // Search only the phrase column
+      const { data, error } = await supabase
+        .from('phrases')
+        .select(`
+          *,
+          categories:category_id(name),
+          subcategories:subcategory_id(name),
+          phrase_tags!inner(
+            tags(id, tag)
+          )
+        `)
+        .ilike('phrase', `%${searchTerm}%`); // Only search in phrase column
+
+      if (error) throw error;
+
+      const transformedData = (data || []).map(item => ({
+        ...item,
+        category: item.categories?.name || '',
+        subcategory: item.subcategories?.name || '',
+        tags: item.phrase_tags
+          ?.map((pt: any) => pt.tags.tag)
+          .filter(Boolean)
+          .join(',') || ''
+      }));
+
+      // Update search results and pagination
+      setSearchResults(transformedData);
+      
+      // Update filter state
+      onTableStateChange({
+        filters: {
+          ...tableState.filters,
+          search: searchValue
+        },
+        pagination: {
+          ...tableState.pagination,
+          currentPage: 1,
+          totalItems: transformedData.length,
+          totalPages: Math.ceil(transformedData.length / tableState.pagination.rowsPerPage)
+        }
+      });
+    } catch (err) {
+      console.error('Error searching phrases:', err);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Handle enter key
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      performGlobalSearch();
+    }
+  };
+
+  // Clear search
+  const clearSearch = () => {
+    setSearchValue('');
+    setSearchResults([]);
+    onTableStateChange({
+      filters: {
+        ...tableState.filters,
+        search: ''
+      }
+    });
+  };
+
+  const handleRowsPerPageChange = (value: string) => {
+    const newRowsPerPage = parseInt(value, 10);
+    
+    // Call the parent component's handler
+    onTableStateChange({
+      pagination: {
+        ...tableState.pagination,
+        rowsPerPage: newRowsPerPage,
+        currentPage: 1  // Reset to page 1 when changing rows per page
+      }
+    });
+  };
+
+  const handlePageChange = (newPage: number) => {
+    onTableStateChange({
+      pagination: {
+        ...tableState.pagination,
+        currentPage: newPage
+      }
+    });
+  };
+
+  const handleSort = (key: string) => {
+    onTableStateChange({
+      sortConfig: {
+        key,
+        direction: 
+          tableState.sortConfig.key === key && 
+          tableState.sortConfig.direction === 'asc' ? 'desc' : 'asc'
+      }
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedRows.length === phrases.length) {
+      setSelectedRows([]);
+    } else {
+      setSelectedRows(phrases.map(phrase => phrase.id));
+    }
+  };
+
+  const toggleRowSelection = (id: number) => {
+    if (selectedRows.includes(id)) {
+      setSelectedRows(prev => prev.filter(rowId => rowId !== id));
+    } else {
+      setSelectedRows(prev => [...prev, id]);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedRows.length > 0 && window.confirm(`Are you sure you want to delete ${selectedRows.length} phrases?`)) {
+      for (const id of selectedRows) {
+        await onDelete?.(id);
+      }
+      setSelectedRows([]);
+    }
+  };
+
+  // Determine which data to show
+  const displayData = searchValue && searchResults.length > 0 ? searchResults : phrases;
+
+  // Create flash animation class with accent color
+  const getNewRowClass = (id: number) => {
+    if (!newIds.includes(id)) return '';
+    
+    return cn("transition-colors", accentColors.highlight);
+  };
+
+  // IMPORTANT: Don't return early here - render conditionally instead
+  // This approach ensures all hooks are called in the same order on every render
+  return (
+    <>
+      {responsive.isMobile ? (
+        <PhrasesCardView
+          phrases={phrases}
+          loading={loading}
+          tableState={tableState}
+          onTableStateChange={onTableStateChange}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          newIds={newIds}
+        />
+      ) : (
+        <div className="space-y-2">
+          {/* Top toolbar with pagination and search */}
+          <div className="flex flex-wrap items-center justify-between pb-4">
+            <div className="flex items-center gap-4">
+              {/* Rows per page dropdown */}
+              <Select
+                value={tableState.pagination.rowsPerPage.toString()}
+                onValueChange={handleRowsPerPageChange}
+              >
+                <SelectTrigger className={cn("w-[120px] border", accentColors.outline)}>
+                  <SelectValue placeholder={`${tableState.pagination.rowsPerPage} per page`} />
+                </SelectTrigger>
+                <SelectContent>
+                  {[10, 25, 50, 100].map(value => (
+                    <SelectItem key={value} value={value.toString()}>
+                      {value} per page
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {/* Page info */}
+              <span className="text-sm text-muted-foreground">
+                {tableState.pagination.totalPages > 0
+                  ? `Page ${tableState.pagination.currentPage} of ${tableState.pagination.totalPages}`
+                  : 'No results'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {/* Search input */}
+              <div className="relative w-full md:w-64">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <Search className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <Input
+                  placeholder="Search phrases..."
+                  value={searchValue}
+                  onChange={handleSearchChange}
+                  onKeyDown={handleKeyDown}
+                  onBlur={performGlobalSearch}
+                  className={cn("pl-10 pr-10 border", accentColors.outline)}
+                />
+                {searchValue && (
+                  <button
+                    onClick={clearSearch}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              
+              {/* Column visibility */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className={cn("h-9 border", accentColors.outline)}>
+                    <Columns className={cn("mr-2 h-4 w-4", accentColors.text)} />
+                    Columns
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {columns.map((column) => (
+                    <DropdownMenuCheckboxItem
+                      key={column.key}
+                      checked={!hiddenColumns.includes(column.key)}
+                      onCheckedChange={(checked) => {
+                        setHiddenColumns(prev => 
+                          checked 
+                            ? prev.filter(key => key !== column.key)
+                            : [...prev, column.key]
+                        );
+                      }}
+                    >
+                      {column.label}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              
+              {/* Pagination buttons */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(tableState.pagination.currentPage - 1)}
+                disabled={tableState.pagination.currentPage <= 1}
+                className={cn("border", accentColors.outline)}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handlePageChange(tableState.pagination.currentPage + 1)}
+                disabled={tableState.pagination.currentPage >= tableState.pagination.totalPages}
+                className={cn("border", accentColors.outline)}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Main table */}
+          <div className={cn("rounded-md p-1 border", accentColors.outline)}>
+            <Table>
+              <TableHeader className="bg-card">
+                <TableRow>
+                  {/* Checkbox column */}
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedRows.length > 0 && selectedRows.length === displayData.length}
+                      indeterminate={selectedRows.length > 0 && selectedRows.length < displayData.length ? true : undefined}
+                      onCheckedChange={toggleSelectAll}
+                      className={accentColors.text}
+                    />
+                  </TableHead>
+                  
+                  {/* Phrase column */}
+                  {!hiddenColumns.includes('phrase') && (
+                    <TableHead onClick={() => handleSort('phrase')} className="cursor-pointer">
+                      Phrase
+                      {tableState.sortConfig.key === 'phrase' && (
+                        <span className={cn("ml-1", accentColors.text)}>
+                          {tableState.sortConfig.direction === 'asc' ? 'â†‘' : 'â†“'}
+                        </span>
+                      )}
+                    </TableHead>
+                  )}
+                  
+                  {/* Category column */}
+                  {!hiddenColumns.includes('category') && (
+                    <TableHead onClick={() => handleSort('category')} className="cursor-pointer">
+                      Category
+                      {tableState.sortConfig.key === 'category' && (
+                        <span className={cn("ml-1", accentColors.text)}>
+                          {tableState.sortConfig.direction === 'asc' ? 'â†‘' : 'â†“'}
+                        </span>
+                      )}
+                    </TableHead>
+                  )}
+                  
+                  {/* Hint column - Moved here */}
+                  {!hiddenColumns.includes('hint') && (
+                    <TableHead onClick={() => handleSort('hint')} className="cursor-pointer">
+                      Hint
+                      {tableState.sortConfig.key === 'hint' && (
+                        <span className={cn("ml-1", accentColors.text)}>
+                          {tableState.sortConfig.direction === 'asc' ? 'â†‘' : 'â†“'}
+                        </span>
+                      )}
+                    </TableHead>
+                  )}
+                  
+                  {/* Tags column */}
+                  {!hiddenColumns.includes('tags') && (
+                    <TableHead onClick={() => handleSort('tags')} className="cursor-pointer">
+                      Tags
+                      {tableState.sortConfig.key === 'tags' && (
+                        <span className={cn("ml-1", accentColors.text)}>
+                          {tableState.sortConfig.direction === 'asc' ? 'â†‘' : 'â†“'}
+                        </span>
+                      )}
+                    </TableHead>
+                  )}
+                  
+                  {/* Difficulty column */}
+                  {!hiddenColumns.includes('difficulty') && (
+                    <TableHead onClick={() => handleSort('difficulty')} className="cursor-pointer">
+                      Difficulty
+                      {tableState.sortConfig.key === 'difficulty' && (
+                        <span className={cn("ml-1", accentColors.text)}>
+                          {tableState.sortConfig.direction === 'asc' ? 'â†‘' : 'â†“'}
+                        </span>
+                      )}
+                    </TableHead>
+                  )}
+                  
+                  {/* Reviewed column */}
+                  {!hiddenColumns.includes('reviewed') && (
+                    <TableHead>Reviewed</TableHead>
+                  )}
+                  
+                  {/* Actions column */}
+                  <TableHead className="w-[80px]">
+                    {selectedRows.length > 0 ? (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleBulkDelete}
+                        className="h-8"
+                      >
+                        <Trash className="h-4 w-4 mr-2" />
+                        Delete
+                      </Button>
+                    ) : null}
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading || isSearching ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-24 text-center">
+                      {isSearching ? 'Searching...' : 'Loading...'}
+                    </TableCell>
+                  </TableRow>
+                ) : displayData.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-24 text-center">
+                      No phrases found.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  displayData.map((phrase) => (
+                    <TableRow 
+                      key={phrase.id}
+                      className={cn(
+                        selectedRows.includes(phrase.id) && accentColors.highlight,
+                        getNewRowClass(phrase.id)
+                      )}
+                    >
+                      {/* Checkbox */}
+                      <TableCell className="w-12">
+                        <Checkbox
+                          checked={selectedRows.includes(phrase.id)}
+                          onCheckedChange={() => toggleRowSelection(phrase.id)}
+                          className={accentColors.text}
+                        />
+                      </TableCell>
+                      
+                      {/* Phrase */}
+                      {!hiddenColumns.includes('phrase') && (
+                        <TableCell className="font-medium">{phrase.phrase}</TableCell>
+                      )}
+                      
+                      {/* Category */}
+                      {!hiddenColumns.includes('category') && (
+                        <TableCell>{phrase.category}</TableCell>
+                      )}
+                      
+                      {/* Hint - Moved here */}
+                      {!hiddenColumns.includes('hint') && (
+                        <TableCell>{phrase.hint || '-'}</TableCell>
+                      )}
+                      
+                      {/* Tags */}
+                      {!hiddenColumns.includes('tags') && (
+                        <TableCell>
+                          <TagDisplay tags={phrase.tags || ''} />
+                        </TableCell>
+                      )}
+                      
+                      {/* Difficulty - Bar Style */}
+                      {!hiddenColumns.includes('difficulty') && (
+                        <TableCell>
+                          {getDifficultyBar(phrase.difficulty)}
+                        </TableCell>
+                      )}
+                      
+                      {/* Reviewed Status */}
+                      {!hiddenColumns.includes('reviewed') && (
+                        <TableCell>
+                          <div className="flex justify-center">
+                            {phrase.reviewed ? (
+                              <Check className={cn("h-5 w-5", accentColors.text)} />
+                            ) : (
+                              <Check className="h-5 w-5 text-gray-300" />
+                            )}
+                          </div>
+                        </TableCell>
+                      )}
+                      
+                      {/* Actions */}
+                      <TableCell>
+                        <div className="flex justify-end">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <span className="sr-only">Open menu</span>
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                              <DropdownMenuItem onClick={() => onEdit?.(phrase.id)}>
+                                <Pencil className={cn("h-4 w-4 mr-2", accentColors.text)} />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                onClick={() => {
+                                  if (window.confirm('Are you sure you want to delete this phrase?')) {
+                                    onDelete?.(phrase.id);
+                                  }
+                                }}
+                                className="text-red-600"
+                              >
+                                <Trash className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+============================================================
+
+FILE: .\features\phrases\phrasesTable\index.tsx.bak
+SIZE: 21.3 KB
+LAST MODIFIED: 03/27/2025 10:04:03
+
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Search, Columns, Pencil, Trash, ChevronLeft, ChevronRight, MoreHorizontal, X } from 'lucide-react';
+import TagDisplay from '@/components/ui/tags';
+import { DifficultyIndicator } from '@/components/ui/difficulty-indicator';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuCheckboxItem,
+} from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Check } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { supabase } from '@/lib/services/supabase';
+import { useTheme } from '@/providers/ThemeContext';
+import { PhrasesCardView } from '@/features/phrases/phrasesCardView';
+
+// Import useResponsive hook
+import { useResponsive } from '@/features/game/hooks/useResponsive';
+
+interface PhrasesTableProps {
+  phrases: any[];
+  loading?: boolean;
+  tableState: TableState;
+  onTableStateChange: (updates: Partial<TableState>) => void;
+  onEdit?: (id: number) => void;
+  onDelete?: (id: number) => void;
+  newIds?: number[];
+  onShowFilters?: () => void;
+}
+
+export function PhrasesTable(props: PhrasesTableProps) {
+  const {
+    phrases,
+    loading = false,
+    tableState,
+    onTableStateChange,
+    onEdit,
+    onDelete,
+    newIds = [],
+    onShowFilters
+  } = props;
+  
+  // Get responsive information
+  const responsive = useResponsive();
+  
+  // Render card view for mobile devices
+  if (responsive.isMobile) {
+    return (
+      <PhrasesCardView
+        phrases={phrases}
+        loading={loading}
+        tableState={tableState}
+        onTableStateChange={onTableStateChange}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        newIds={newIds}
+      />
+    );
+  }
+  
+  // Rest of the original PhrasesTable code below:
   const [selectedRows, setSelectedRows] = useState<number[]>([]);
   const [searchValue, setSearchValue] = useState(tableState.filters.search || '');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -9007,6 +12196,7 @@ export function PhrasesTable({
     </div>
   );
 }
+
 
 ============================================================
 

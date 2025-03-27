@@ -3,8 +3,8 @@ import React, { useState, useEffect } from 'react';
 import { useTheme } from '@/providers/ThemeContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import {
-  PieChart, Pie, Cell, BarChart, Bar, 
-  ResponsiveContainer, Tooltip, Legend, XAxis, YAxis, CartesianGrid
+  PieChart, Pie, Cell, BarChart, Bar,
+  ResponsiveContainer, Tooltip, Legend, XAxis, YAxis, CartesianGrid, Customized
 } from 'recharts';
 import { supabase } from '@/lib/services/supabase';
 import { cn } from '@/lib/utils';
@@ -39,7 +39,7 @@ export const AnalyticsSection = () => {
         const categoryDataArray = Object.entries(categoryCounts)
           .map(([name, value]) => ({ name, value }))
           .sort((a, b) => b.value - a.value)
-          .slice(0, 10); // Take top 10 categories for better visualization
+          .slice(0, 6); // Take top 10 categories for better visualization
 
         setCategoryData(categoryDataArray);
 
@@ -153,37 +153,44 @@ export const AnalyticsSection = () => {
 
   // Gauge chart needle renderer
   const renderNeedle = (value, data, cx, cy, iRadius, oRadius, color) => {
-    const angle = 180 - value * 1.8; // Convert percentage to angle (180 to 0)
-    const length = oRadius * 0.8; // Length of the needle
-    const sin = Math.sin(-angle * Math.PI / 180);
-    const cos = Math.cos(-angle * Math.PI / 180);
-    const r = 5; // Needle base radius
+    const angle = 180 - value * 1.8;
+    const rad = Math.PI / 180;
+    const needleLength = oRadius * 0.85;
+    const needleBaseRadius = 5;
+  
     const x0 = cx;
     const y0 = cy;
-    const xba = x0 + r * sin;
-    const yba = y0 - r * cos;
-    const xbb = x0 - r * sin;
-    const ybb = y0 + r * cos;
-    const xp = x0 + length * sin;
-    const yp = y0 - length * cos;
-
-    // Use the first color from the COLORS array
-    const needleColor = COLORS[0];
-
+    const x = cx + needleLength * Math.cos(rad * angle);
+    const y = cy - needleLength * Math.sin(rad * angle);
+  
+    const xba = x0 + needleBaseRadius * Math.cos(rad * (angle - 90));
+    const yba = y0 - needleBaseRadius * Math.sin(rad * (angle - 90));
+  
+    const xbb = x0 + needleBaseRadius * Math.cos(rad * (angle + 90));
+    const ybb = y0 - needleBaseRadius * Math.sin(rad * (angle + 90));
+    
     return [
-      <circle cx={x0} cy={y0} r={r + 2} fill={needleColor} stroke="none" key="needle-center" />,
-      <path d={`M${xba} ${yba}L${xbb} ${ybb}L${xp} ${yp}Z`} fill={needleColor} key="needle-path" />
+      <circle key="needle-base" cx={x0} cy={y0} r={needleBaseRadius + 1} fill={color} />,
+      <path
+        key="needle"
+        d={`M${xba},${yba} L${xbb},${ybb} L${x},${y} Z`}
+        fill={color}
+      />
     ];
   };
 
   // Get accent-specific empty gauge color
   const getEmptyGaugeColor = () => {
-    return accent === 'default' ? '#E5E7EB' : '#E5E7EB';
+    return COLORS[0]; // Darkest tone for remaining portion
   };
 
   // Get accent-specific filled gauge color
   const getFilledGaugeColor = () => {
-    return COLORS[0];
+    return COLORS[4]; // Lightest tone for completed portion
+  };
+  
+  const getNeedleColor = () => {
+    return COLORS[2]; // Mid-tone gray/purple/green/etc.
   };
 
   const cardBorderClass = getCardBorderClass();
@@ -211,6 +218,7 @@ export const AnalyticsSection = () => {
                   dataKey="name" 
                   width={75}
                   tick={{ fontSize: 11 }}
+                  interval={0}
                 />
                 <Tooltip
                   formatter={(value) => [`${value} phrases`, 'Count']}
@@ -265,111 +273,144 @@ export const AnalyticsSection = () => {
 
       {/* Monthly Phrases Goal Gauge */}
       <Card className={cn("border rounded-md border-2", cardBorderClass)}>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Words Added This Month</CardTitle>
-          <CardDescription>Progress towards the goal of 100 words</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  startAngle={180}
-                  endAngle={0}
-                  data={[
-                    { name: 'Empty', value: 100 - phrasesPercentage, fill: getEmptyGaugeColor() },
-                    { name: 'Progress', value: phrasesPercentage, fill: getFilledGaugeColor() }
-                  ]}
-                  cx="50%"
-                  cy="80%"
-                  innerRadius={70}
-                  outerRadius={90}
-                  fill="#8884d8"
-                  paddingAngle={0}
-                  dataKey="value"
-                  stroke="none"
-                >
-                </Pie>
-                {renderNeedle(phrasesPercentage, null, '50%', '80%', 70, 90, COLORS[0])}
-                <text
-                  x="50%"
-                  y="50%"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  className="fill-foreground font-bold"
-                  fontSize="24"
-                >
-                  {phrasesPercentage}%
-                </text>
-                <text
-                  x="50%"
-                  y="75%"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  className="fill-foreground"
-                  fontSize="14"
-                >
-                  {phrasesAdded}/100 words
-                </text>
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+  <CardHeader className="pb-2">
+    <CardTitle className="text-lg">Words Added This Month</CardTitle>
+    <CardDescription>Progress towards the goal of 100 words</CardDescription>
+  </CardHeader>
+  <CardContent>
+    <div className="h-[250px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            startAngle={180}
+            endAngle={0}
+            data={[
+              { name: 'Progress', value: phrasesPercentage, fill: getFilledGaugeColor() },
+              { name: 'Empty', value: 100 - phrasesPercentage, fill: getEmptyGaugeColor() }
+            ]}
+            cx="50%"
+            cy="80%"
+            innerRadius={70}
+            outerRadius={90}
+            paddingAngle={0}
+            dataKey="value"
+            stroke="none"
+          />
+
+          <Customized
+            component={({ width, height }) =>
+              renderNeedle(
+                phrasesPercentage,
+                null,
+                width / 2,
+                height * 0.8,
+                70,
+                90,
+                getNeedleColor()
+              )
+            }
+          />
+
+          {/* Top-centered percentage */}
+          <text
+            x="50%"
+            y="35%"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="fill-foreground font-bold"
+            fontSize="24"
+          >
+            {phrasesPercentage}%
+          </text>
+
+          {/* Bottom-centered count */}
+          <text
+            x="50%"
+            y="85%"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="fill-foreground"
+            fontSize="14"
+          >
+            {phrasesAdded}/100 words
+          </text>
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  </CardContent>
+</Card>
+
 
       {/* Monthly Reviews Goal Gauge */}
       <Card className={cn("border rounded-md border-2", cardBorderClass)}>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Reviews Completed This Month</CardTitle>
-          <CardDescription>Progress towards 100 reviews this month</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  startAngle={180}
-                  endAngle={0}
-                  data={[
-                    { name: 'Empty', value: 100 - reviewsPercentage, fill: getEmptyGaugeColor() },
-                    { name: 'Progress', value: reviewsPercentage, fill: getFilledGaugeColor() }
-                  ]}
-                  cx="50%"
-                  cy="80%"
-                  innerRadius={70}
-                  outerRadius={90}
-                  fill="#8884d8"
-                  paddingAngle={0}
-                  dataKey="value"
-                  stroke="none"
-                >
-                </Pie>
-                {renderNeedle(reviewsPercentage, null, '50%', '80%', 70, 90, COLORS[0])}
-                <text
-                  x="50%"
-                  y="50%"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  className="fill-foreground font-bold"
-                  fontSize="24"
-                >
-                  {reviewsPercentage}%
-                </text>
-                <text
-                  x="50%"
-                  y="75%"
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  className="fill-foreground"
-                  fontSize="14"
-                >
-                  {reviewsCompleted}/100 reviews
-                </text>
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
+  <CardHeader className="pb-2">
+    <CardTitle className="text-lg">Reviews Completed This Month</CardTitle>
+    <CardDescription>Progress towards 100 reviews this month</CardDescription>
+  </CardHeader>
+  <CardContent>
+    <div className="h-[250px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            startAngle={180}
+            endAngle={0}
+            data={[
+              { name: 'Progress', value: reviewsPercentage, fill: getFilledGaugeColor() },
+              { name: 'Empty', value: 100 - reviewsPercentage, fill: getEmptyGaugeColor() }
+            ]}
+            cx="50%"
+            cy="80%"
+            innerRadius={70}
+            outerRadius={90}
+            paddingAngle={0}
+            dataKey="value"
+            stroke="none"
+          />
+
+          {/* Render needle with actual cx/cy */}
+          <Customized
+  component={({ width, height }) =>
+    renderNeedle(
+      reviewsPercentage,
+      null,
+      width / 2,
+      height * 0.8,
+      70,
+      90,
+      getNeedleColor()
+    )
+  }
+/>
+
+          {/* Top-centered percentage */}
+          <text
+            x="50%"
+            y="35%"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="fill-foreground font-bold"
+            fontSize="24"
+          >
+            {reviewsPercentage}%
+          </text>
+
+          {/* Bottom-centered count */}
+          <text
+            x="50%"
+            y="85%"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="fill-foreground"
+            fontSize="14"
+          >
+            {reviewsCompleted}/100 reviews
+          </text>
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  </CardContent>
+</Card>
+
     </div>
   );
 };

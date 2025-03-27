@@ -1,7 +1,5 @@
 import React from 'react';
-import Image from 'next/image';
-import Logo from '../components/Logo';
-import CircleBackground from '../components/CircleBackground';
+import UnifiedGameBackground from '../components/UnifiedGameBackground';
 import useResponsive from '../hooks/useResponsive';
 
 interface MenuScreenProps {
@@ -24,7 +22,7 @@ const MenuButton: React.FC<{ label: string; onClick: () => void }> = ({ label, o
 const MenuScreen: React.FC<MenuScreenProps> = ({ 
   onPlay, 
   onSelectSettings, 
-  onSelectHowToPlay 
+  onSelectHowToPlay
 }) => {
   const responsive = useResponsive();
   
@@ -33,34 +31,12 @@ const MenuScreen: React.FC<MenuScreenProps> = ({
       className="flex flex-col items-center justify-between h-full bg-[#7b86eb]" 
       style={{ height: 'calc(var(--vh, 1vh) * 100)' }}
     >
-      <CircleBackground />
-      
-      {/* Center section with logo - positioned absolutely in the center */}
-      <div className="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center">
-       {/* Logo image - made 200% larger */}
-       <div className="relative w-72 h-72 md:w-80 md:h-80">
-  <Image 
-    src="/images/game-logo.png?v=4" 
-    alt="Phrase Game Logo"
-    fill
-    sizes="(max-width: 768px) 288px, 320px"
-    style={{ 
-      objectFit: "contain",
-      filter: "drop-shadow(0px 8px 8px rgba(0, 0, 0, 0.3))"
-    }}
-    priority
-  />
-</div>
-        
-        {/* Text logo directly below the image */}
-        <div className="mt-6">
-          <Logo 
-            size="large"
-            className="font-extrabold" 
-          />
-        </div>
-      </div>
-      
+      {/* Using the unified background component with vertical position adjustment */}
+      <UnifiedGameBackground 
+        showLogo={true} 
+        logoVerticalOffset={25}   // move logo 10px down
+        logoScale={1.1}           // scale logo 30% larger
+      />
       {/* Button container - fixed at bottom with proper spacing */}
       <div className="w-full max-w-xs sm:max-w-md px-4 sm:px-6 mb-8 sm:mb-10 mt-auto z-10">
         <div className="flex flex-col gap-3 sm:gap-4">
